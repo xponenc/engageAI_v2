@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load static %}
+
+
+{% block title %}Обратная связь{% endblock title %}
+
+
+{% block css %}
+{% endblock css %}
+
+
+{% block content %}
+<section class="user">
+    <div class="user__messages" id="messages"></div>
+    <div class="user__container container">
+        <div class="user__header">
+            <h2 class="user__heading">Обратная связь</h2>
+        </div>
+        <form class="feedback__form form" method="post" action="{% url 'app_users:feedback' %}">
+            {% csrf_token %}
+            <div class="form__wrapper">
+                {% include "widgets/_custom-form.html" %}
+            </div>
+            <div class="form__btn-block">
+                <button class="form__btn btn btn_reset" type="submit">Отправить</button>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock content %}
+
+
+{% block script %}
+<script src="{% static 'libs/jquery/jquery-3.6.0.min.js' %}"></script>
+
+<script>
+    $(document).ready(function(){
+        $('.feedback__form').on('submit', function(event){
+            event.preventDefault();
+            var formData = $(this).serialize();
+            console.log($(this).attr('action'))
+
+            $.ajax({
+                url: $(this).attr('action'), 
+                type: "POST",
+                data: formData,
+                success: function(response){
+                    $(".feedback__form").trigger("reset");
+                    let msg = 
+                    `<ul class="messages">
+                        <li onclick="this.remove()" class="messages__item message message_success" role="alert">
+                            <div class="message__icon" aria-hidden="true"></div>
+                            <div class="message__text">${response.message}</div>
+                        </li>
+                    </ul>`
+                    $("#messages").append(msg);
+                    setTimeout(function() {
+                        window.location.href = response.redirect_url;
+                    }, 2000);
+                },
+                error: function(response){
+                    $('.feedback__form .form__wrapper').html(response.responseJSON.form_html);
+                }
+            });
+        });
+    });
+</script>
+{% endblock script %}

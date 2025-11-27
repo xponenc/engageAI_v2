@@ -1,0 +1,557 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ user.profile|yesno:"Редактирование,Создание" }} профиля {{ object.name }}{% endblock title %}
+
+{% block css %}
+<link href="{% static 'css/users/user.css' %}" rel="stylesheet">
+{% endblock css %}
+
+{% block content %}
+<section class="profile-edit">
+    <div class="profile-edit__container container">
+        
+        <!-- Хлебные крошки -->
+        <nav class="breadcrumbs">
+            <a href="{% url 'users:profile' user.id %}" class="breadcrumbs__link">Личный кабинет</a>
+            <span class="breadcrumbs__separator">/</span>
+            <span class="breadcrumbs__current">{{ user.profile|yesno:"Редактирование,Создание" }} профиля {{ object.name }}</span>
+        </nav>
+
+        <div class="profile-edit__header">
+            <h1 class="profile-edit__title">{{ user.profile|yesno:"Редактирование,Создание" }} профиля {{ object.name }}</h1>
+            <p class="profile-edit__subtitle">Обновите вашу персональную информацию</p>
+        </div>
+
+        <form class="profile-edit__form form" method="post" enctype="multipart/form-data" id="profile-form">
+            {% csrf_token %}
+            
+            <div class="profile-edit__content">
+                <!-- Левая колонка - Основная информация -->
+                <div class="profile-edit__main">
+                    
+                    <!-- Аватар -->
+                    <div class="form-section card">
+                        <h3 class="form-section__title">Аватар профиля</h3>
+                        <div class="avatar-upload">
+                            <div class="avatar-upload__preview">
+                                {% comment %} <pre>
+instance: {{ form.instance }}
+avatar: {{ form.instance.avatar }}
+avatar.url: {% if form.instance.avatar %}{{ form.instance.avatar.url }}{% else %}NONE{% endif %}
+</pre> {% endcomment %}
+                                {% if form.instance.avatar %}
+                                    <img id="avatar-preview" src="{{ form.instance.avatar.url }}" alt="Текущий аватар" class="avatar-upload__image">
+                                {% else %}
+                                    <div id="avatar-preview" class="avatar-upload__placeholder">
+                                        {{ user.first_name|first|default:user.username|first|upper }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="avatar-upload__controls">
+                                <label for="{{ form.avatar.id_for_label }}" class="btn btn_outline btn_sm">
+                                    Выбрать изображение
+                                </label>
+                                {{ form.avatar }}
+                                <button type="button" class="btn btn_ghost btn_sm" id="remove-avatar">
+                                    Удалить
+                                </button>
+                                <div class="avatar-upload__hint">
+                                    Рекомендуемый размер: 200×200 px. JPG, PNG или GIF.
+                                </div>
+                            </div>
+                        </div>
+                        {% if form.avatar.errors %}
+                            <div class="form-field__errors">
+                                {{ form.avatar.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Основная информация -->
+                    <div class="form-section card">
+                        <h3 class="form-section__title">Основная информация</h3>
+                        
+                        <div class="form-grid">
+                            <div class="form-field">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-field__label">
+                                    Имя
+                                </label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}
+                                    <div class="form-field__errors">
+                                        {{ form.first_name.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="form-field">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-field__label">
+                                    Фамилия
+                                </label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}
+                                    <div class="form-field__errors">
+                                        {{ form.last_name.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="{{ form.email.id_for_label }}" class="form-field__label">
+                                Электронная почта
+                            </label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="form-field__errors">
+                                    {{ form.email.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Контактная информация -->
+                    <div class="form-section card">
+                        <h3 class="form-section__title">Контактная информация</h3>
+                        
+                        <div class="form-field">
+                            <label for="{{ form.phone.id_for_label }}" class="form-field__label">
+                                Телефон
+                                <span class="form-field__hint">Формат: 79991234567 (7 + 10 цифр)</span>
+                            </label>
+                            {{ form.phone }}
+                            <div class="form-field__hint" id="phone-hint">
+                                Введите номер в формате 7XXXXXXXXXX
+                            </div>
+                            {% if form.phone.errors %}
+                                <div class="form-field__errors">
+                                    {{ form.phone.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-field">
+                            <label for="{{ form.location.id_for_label }}" class="form-field__label">
+                                Город проживания
+                            </label>
+                            {{ form.location }}
+                            {% if form.location.errors %}
+                                <div class="form-field__errors">
+                                    {{ form.location.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Правая колонка - Дополнительная информация -->
+                <div class="profile-edit__sidebar">
+                    
+                    <!-- Дата рождения -->
+                    <div class="form-section card">
+                        <h3 class="form-section__title">Личные данные</h3>
+                        
+                        <div class="form-field">
+                            <label for="{{ form.birthdate.id_for_label }}" class="form-field__label">
+                                Дата рождения
+                                <span class="form-field__hint">Формат: дд.мм.гггг</span>
+                            </label>
+                            {{ form.birthdate }}
+                            <div class="form-field__hint" id="birthdate-hint">
+                                Введите дату в формате ДД.ММ.ГГГГ
+                            </div>
+                            {% if form.birthdate.errors %}
+                                <div class="form-field__errors">
+                                    {{ form.birthdate.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- О себе -->
+                    <div class="form-section card">
+                        <h3 class="form-section__title">О себе</h3>
+                        
+                        <div class="form-field">
+                            <label for="{{ form.bio.id_for_label }}" class="form-field__label">
+                                Биография
+                                <span class="form-field__counter">
+                                    <span id="bio-counter">0</span>/1000
+                                </span>
+                            </label>
+                            {{ form.bio }}
+                            {% if form.bio.errors %}
+                                <div class="form-field__errors">
+                                    {{ form.bio.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Статус верификации -->
+                    <div class="form-section card">
+                        <h3 class="form-section__title">Статус аккаунта</h3>
+                        
+                        <div class="verification-status">
+                            <div class="verification-status__icon">
+                                {% if user.profile.is_verified %}
+                                    ✅
+                                {% else %}
+                                    ⏳
+                                {% endif %}
+                            </div>
+                            <div class="verification-status__content">
+                                <h4 class="verification-status__title">
+                                    {% if user.profile.is_verified %}
+                                        Аккаунт верифицирован
+                                    {% else %}
+                                        Ожидает проверки
+                                    {% endif %}
+                                </h4>
+                                <p class="verification-status__description">
+                                    {% if user.profile.is_verified %}
+                                        Ваш аккаунт прошел проверку модератором
+                                    {% else %}
+                                        После проверки вам станут доступны все функции
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Кнопки действий -->
+            <div class="profile-edit__actions">
+                <div class="action-buttons">
+                    <button type="submit" class="btn btn_primary btn_lg" id="submit-btn">
+                        <span class="btn__icon">💾</span>
+                        Сохранить изменения
+                    </button>
+                    <a href="{% url 'users:profile' user.id %}" class="btn btn_outline btn_lg">
+                        Отменить
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock content %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Предпросмотр аватара
+    const avatarInput = document.querySelector('#id_avatar');
+    const avatarPreview = document.querySelector('#avatar-preview');
+    const removeAvatarBtn = document.querySelector('#remove-avatar');
+    
+    if (avatarInput) {
+        avatarInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (avatarPreview.tagName === 'IMG') {
+                        avatarPreview.src = e.target.result;
+                    } else {
+                        // Заменяем placeholder на изображение
+                        const newImg = document.createElement('img');
+                        newImg.id = 'avatar-preview';
+                        newImg.src = e.target.result;
+                        newImg.className = 'avatar-upload__image';
+                        avatarPreview.parentNode.replaceChild(newImg, avatarPreview);
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    // Удаление аватара
+    if (removeAvatarBtn) {
+        removeAvatarBtn.addEventListener('click', function() {
+            if (avatarInput) {
+                avatarInput.value = '';
+            }
+            // Возвращаем placeholder
+            if (avatarPreview.tagName === 'IMG') {
+                const placeholder = document.createElement('div');
+                placeholder.id = 'avatar-preview';
+                placeholder.className = 'avatar-upload__placeholder';
+                placeholder.textContent = '{{ user.first_name|first|default:user.username|first|upper }}';
+                avatarPreview.parentNode.replaceChild(placeholder, avatarPreview);
+            }
+        });
+    }
+    
+    // Счетчик символов для биографии
+    const bioTextarea = document.getElementById('{{ form.bio.id_for_label }}');
+    const bioCounter = document.getElementById('bio-counter');
+    
+    if (bioTextarea && bioCounter) {
+        bioTextarea.addEventListener('input', function() {
+            bioCounter.textContent = this.value.length;
+        });
+        
+        // Инициализация счетчика
+        bioCounter.textContent = bioTextarea.value.length;
+    }
+    
+    // Валидация даты рождения
+    const birthdateInput = document.getElementById('{{ form.birthdate.id_for_label }}');
+    const birthdateHint = document.getElementById('birthdate-hint');
+    
+    if (birthdateInput) {
+        // Добавляем маску для даты
+        birthdateInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            
+            if (value.length > 2) {
+                value = value.substring(0, 2) + '.' + value.substring(2);
+            }
+            if (value.length > 5) {
+                value = value.substring(0, 5) + '.' + value.substring(5, 9);
+            }
+            
+            e.target.value = value;
+        });
+        
+        birthdateInput.addEventListener('blur', function() {
+            validateBirthdate();
+        });
+        
+        birthdateInput.addEventListener('input', function() {
+            clearValidationStyle(this);
+            if (birthdateHint) {
+                birthdateHint.style.color = 'var(--color-text-muted)';
+            }
+        });
+    }
+    
+    // Валидация телефона
+    const phoneInput = document.getElementById('{{ form.phone.id_for_label }}');
+    const phoneHint = document.getElementById('phone-hint');
+    
+    if (phoneInput) {
+        // Добавляем маску для телефона
+        phoneInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            
+            // Ограничиваем длину 11 цифрами
+            if (value.length > 11) {
+                value = value.substring(0, 11);
+            }
+            
+            // Если номер начинается не с 7, добавляем 7
+            if (value.length > 0 && value[0] !== '7') {
+                value = '7' + value;
+            }
+            
+            e.target.value = value;
+        });
+        
+        phoneInput.addEventListener('blur', function() {
+            validatePhone();
+        });
+        
+        phoneInput.addEventListener('input', function() {
+            clearValidationStyle(this);
+            if (phoneHint) {
+                phoneHint.style.color = 'var(--color-text-muted)';
+            }
+        });
+    }
+    
+    // Валидация формы при отправке
+    const profileForm = document.getElementById('profile-form');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    if (profileForm) {
+        profileForm.addEventListener('submit', function(e) {
+            let isValid = true;
+            
+            // Проверяем телефон
+            if (phoneInput && !validatePhone()) {
+                isValid = false;
+            }
+            
+            // Проверяем дату рождения
+            if (birthdateInput && !validateBirthdate()) {
+                isValid = false;
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+                showFormError('Пожалуйста, исправьте ошибки в форме');
+            } else {
+                // Блокируем кнопку при валидной форме
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="btn__icon">⏳</span>Сохранение...';
+                }
+            }
+        });
+    }
+    
+    // Функции валидации
+    function validatePhone() {
+        if (!phoneInput) return true;
+        
+        const value = phoneInput.value.trim();
+        const phoneRegex = /^7\d{10}$/;
+        
+        if (value && !phoneRegex.test(value)) {
+            phoneInput.classList.add('input-error');
+            if (phoneHint) {
+                phoneHint.style.color = 'var(--color-error)';
+                phoneHint.textContent = 'Неверный формат телефона. Должно быть 11 цифр, начинающихся с 7';
+            }
+            return false;
+        }
+        
+        phoneInput.classList.remove('input-error');
+        if (phoneHint) {
+            phoneHint.style.color = 'var(--color-success)';
+            phoneHint.textContent = '✓ Формат телефона корректен';
+        }
+        return true;
+    }
+    
+    function validateBirthdate() {
+        if (!birthdateInput) return true;
+        
+        const value = birthdateInput.value.trim();
+        const dateRegex = /^(\d{2})\.(\d{2})\.(\d{4})$/;
+        
+        if (value && !dateRegex.test(value)) {
+            birthdateInput.classList.add('input-error');
+            if (birthdateHint) {
+                birthdateHint.style.color = 'var(--color-error)';
+                birthdateHint.textContent = 'Неверный формат даты. Используйте ДД.ММ.ГГГГ';
+            }
+            return false;
+        }
+        
+        // Проверяем, что дата валидна
+        if (value && dateRegex.test(value)) {
+            const match = value.match(dateRegex);
+            const day = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10);
+            const year = parseInt(match[3], 10);
+            
+            const date = new Date(year, month - 1, day);
+            const today = new Date();
+            
+            if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
+                birthdateInput.classList.add('input-error');
+                if (birthdateHint) {
+                    birthdateHint.style.color = 'var(--color-error)';
+                    birthdateHint.textContent = 'Несуществующая дата';
+                }
+                return false;
+            }
+            
+            if (date >= today) {
+                birthdateInput.classList.add('input-error');
+                if (birthdateHint) {
+                    birthdateHint.style.color = 'var(--color-error)';
+                    birthdateHint.textContent = 'Дата рождения должна быть в прошлом';
+                }
+                return false;
+            }
+        }
+        
+        birthdateInput.classList.remove('input-error');
+        if (birthdateHint) {
+            birthdateHint.style.color = 'var(--color-success)';
+            birthdateHint.textContent = '✓ Формат даты корректен';
+        }
+        return true;
+    }
+    
+    function clearValidationStyle(element) {
+        element.classList.remove('input-error');
+    }
+    
+    function showFormError(message) {
+        // Создаем или обновляем сообщение об ошибке формы
+        let errorDiv = document.querySelector('.form-global-error');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'form-global-error';
+            profileForm.insertBefore(errorDiv, profileForm.firstChild);
+        }
+        
+        errorDiv.innerHTML = `
+            <div class="alert alert--error">
+                <div class="alert__icon">⚠️</div>
+                <div class="alert__content">
+                    <p class="alert__message">${message}</p>
+                </div>
+            </div>
+        `;
+        
+        // Прокручиваем к ошибке
+        errorDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    // Инициализация валидации при загрузке
+    if (phoneInput && phoneInput.value) {
+        validatePhone();
+    }
+    
+    if (birthdateInput && birthdateInput.value) {
+        validateBirthdate();
+    }
+});
+</script>
+
+<style>
+/* Дополнительные стили для валидации */
+.input-error {
+    border-color: var(--color-error) !important;
+    box-shadow: 0 0 0 2px var(--color-error-bg) !important;
+}
+
+.form-global-error {
+    margin-bottom: 20px;
+}
+
+.alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    border-radius: var(--radius-md);
+    border-left: 4px solid transparent;
+}
+
+.alert--error {
+    background: var(--color-error-bg);
+    border-left-color: var(--color-error);
+}
+
+.alert__icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.alert__message {
+    font-size: 0.9rem;
+    color: var(--color-text);
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* Адаптивность для сообщений */
+@media (max-width: 768px) {
+    .alert {
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+    }
+}
+</style>
+{% endblock script %}

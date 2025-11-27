@@ -1,0 +1,285 @@
+/* Переменные дизайн-системы */
+:root {
+    /* --- Colors --- */
+    --color-bg: #f8fafc;
+    /* page background — slightly warmer than pure #fff for reduced eye strain */
+    --color-surface: #ffffff;
+    /* cards, panels — clean white with sufficient contrast on bg */
+    --color-surface-alt: #f1f5f9;
+    /* subtle surface — distinct but soft */
+    --color-border: #e2e8f0;
+    /* neutral, low-contrast border for visual separation without harshness */
+
+    --color-text: #0f172a;
+    /* primary text — improved contrast ratio (AAA on white) */
+    --color-text-muted: #64748b;
+    /* secondary text — readable but subdued */
+    --color-informer-text: #334155;
+    /* messages text — clear mid-tone for alerts/notifications */
+
+    --color-accent: #3b82f6;
+    /* primary / AI accent — vibrant but not overwhelming */
+    --color-accent-dark: #1d4ed8;
+    /* hover/focus/state variant — maintains contrast on surfaces */
+    --color-accent-soft: rgba(59, 130, 246, 0.1);
+
+    --color-success: #10b981;
+    --color-success-bg: #f0fdf4;
+
+    --color-error: #ef4444;
+    --color-error-bg: #fef2f2;
+
+    --color-warning: #f59e0b;
+    --color-warning-bg: #fffbeb;
+
+    --color-muted-bg: #f8fafc;
+    /* consistent with --color-bg for seamless blending */
+
+    /* --- Typography & sizing --- */
+    --font-family-system: "Inter", "Montserrat", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --base-font-size: 14px;
+    --index: max(18px, calc(0.9vh + 0.9vw));
+    /* scalable spacing base */
+
+    --double-gap: calc(2 * var(--index));
+    --standard-gap: var(--index);
+    --half-gap: calc(0.5 * var(--index));
+    --third-gap: calc(0.33 * var(--index));
+
+    /* Border radius & shadows */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+
+    --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.06);
+
+    /* forms */
+    --field-padding: 12px;
+    --form-input-border-color: #cbd5e1;
+    --form-input-border-hover-color: #94a3b8;
+    --input-text-color: var(--color-text);
+    --placeholder-color: #94a3b8;
+
+    /* buttons */
+    --btn-radius: var(--radius-md);
+    --btn-padding: 12px 22px;
+
+    /* Тема по умолчанию */
+    --theme-name: 'light';
+}
+
+/* Темная тема */
+[data-theme="dark"] {
+    --color-bg: #0b0f19;
+    /* deeper than before for better visual "ground" */
+    --color-surface: #111827;
+    --color-surface-alt: #1e293b;
+    --color-border: #334155;
+
+    --color-text: #f1f5f9;
+    /* AAA contrast on dark surfaces */
+    --color-text-muted: #94a3b8;
+    --color-informer-text: #cbd5e1;
+
+    --color-accent: #3385ff;
+    /* slightly brighter for visibility on dark */
+    --color-accent-dark: #60a5fa;
+    --color-accent-soft: rgba(96, 165, 250, 0.12);
+
+    --color-success: #34d399;
+    --color-success-bg: rgba(52, 211, 153, 0.12);
+
+    --color-error: #f87171;
+    --color-error-bg: rgba(248, 113, 113, 0.12);
+
+    --color-warning: #fbbf24;
+    --color-warning-bg: rgba(251, 191, 36, 0.12);
+
+    --color-muted-bg: #1e293b;
+
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+
+    --form-input-border-color: #475569;
+    --form-input-border-hover-color: #60a5fa;
+    --placeholder-color: #64748b;
+
+    --theme-name: 'dark';
+}
+
+/* Solarized тема */
+[data-theme="solarized"] {
+    --color-bg: #002b36;
+    --color-surface: #073642;
+    --color-surface-alt: #0a404d;
+    --color-border: #586e75;
+
+    --color-text: #839496;
+    /* Solarized standard base0 */
+    --color-text-muted: #657b83;
+    /* base01 */
+    --color-informer-text: #93a1a1;
+    /* base1 */
+
+    --color-accent: #114b58;
+    --color-accent-dark: #05313c;
+    --color-accent-soft: rgba(42, 161, 152, 0.15);
+
+    --color-success: #859900;
+    --color-success-bg: rgba(133, 153, 0, 0.12);
+
+    --color-error: #dc322f;
+    --color-error-bg: rgba(220, 50, 47, 0.12);
+
+    --color-warning: #b58900;
+    --color-warning-bg: rgba(181, 137, 0, 0.12);
+
+    --color-muted-bg: #073642;
+
+    --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
+
+    --form-input-border-color: #586e75;
+    --form-input-border-hover-color: #2aa198;
+    --placeholder-color: #657b83;
+
+    --theme-name: 'solarized-dark';
+}
+
+/* Отключение переходов для улучшения производительности при загрузке */
+.initial-load * {
+    transition: none !important;
+}
+
+/* helper utilities */
+.hidden {
+    display: none !important;
+}
+
+.visually-hidden {
+    position: absolute !important;
+    clip: rect(1px, 1px, 1px, 1px);
+    padding: 0 !important;
+    border: 0 !important;
+    height: 1px !important;
+    width: 1px !important;
+    overflow: hidden;
+}
+
+/* base elements */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-family-system);
+    font-size: var(--base-font-size);
+    line-height: 1.45;
+    color: var(--color-text);
+    background-color: var(--color-bg);
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* links */
+a {
+    color: inherit;
+    text-decoration: none;
+    outline: none;
+}
+
+a:focus {
+    outline: 3px solid var(--color-accent-soft);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* images */
+img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+/* lists */
+ul,
+ol {
+    list-style: none;
+}
+
+/* forms defaults */
+input,
+textarea,
+select,
+button {
+    font-family: inherit;
+    font-size: 1rem;
+    color: var(--input-text-color);
+    background: transparent;
+    border-radius: 6px;
+}
+
+/* remove native number/spinner controls */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+/* autofill */
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+    -webkit-text-fill-color: var(--input-text-color);
+    -webkit-box-shadow: 0 0 0px 1000px var(--color-surface) inset;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+/* grid container */
+.container {
+    margin: 0 auto;
+    padding: 12px 20px;
+    max-width: 1280px;
+    width: 100%;
+}
+
+/* cards/common surfaces */
+.surface {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+/* small helpers */
+.row {
+    display: flex;
+    gap: var(--standard-gap);
+    align-items: center;
+}
+
+.col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--half-gap);
+}
+
+/* small responsive utility */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+        animation-duration: 0 !important;
+    }
+}

@@ -1,0 +1,978 @@
+[
+  {
+    "level": "A1",
+    "type": "mcq",
+    "question_text": "What is your name?",
+    "options": ["I am 10", "My name is John", "I am fine", "Thank you"],
+    "correct_answer": {"index": 1},
+    "explanation": "The correct response to 'What is your name?' is 'My name is John'."
+  },
+  {
+    "level": "A1",
+    "type": "mcq",
+    "question_text": "How are you?",
+    "options": ["I am 10", "I am fine", "My name is John", "Thank you"],
+    "correct_answer": {"index": 1},
+    "explanation": "The correct response to 'How are you?' is 'I am fine'."
+  },
+  {
+    "level": "A1",
+    "type": "mcq",
+    "question_text": "Where are you from?",
+    "options": ["I am from Spain", "I am 25 years old", "I am a student", "Yes, I am"],
+    "correct_answer": {"index": 0},
+    "explanation": "The question asks about nationality/origin."
+  },
+  {
+    "level": "A1",
+    "type": "mcq",
+    "question_text": "How old are you?",
+    "options": ["I live in London", "I am 25 years old", "I am a teacher", "No, I'm not"],
+    "correct_answer": {"index": 1},
+    "explanation": "The question asks about age."
+  },
+  {
+    "level": "A1",
+    "type": "mcq",
+    "question_text": "What do you do?",
+    "options": ["I am fine", "I am a student", "I am 20", "I like music"],
+    "correct_answer": {"index": 1},
+    "explanation": "The question asks about occupation."
+  },
+  {
+    "level": "A1",
+    "type": "mcq",
+    "question_text": "This is ______ book.",
+    "options": ["a", "an", "the", "-"],
+    "correct_answer": {"index": 0},
+    "explanation": "Indefinite article 'a' is used before consonant sounds."
+  },
+  {
+    "level": "A1",
+    "type": "mcq",
+    "question_text": "I ______ to school every day.",
+    "options": ["go", "going", "went", "goes"],
+    "correct_answer": {"index": 0},
+    "explanation": "Present simple for habitual actions."
+  },
+  {
+    "level": "A1",
+    "type": "mcq",
+    "question_text": "She ______ two brothers.",
+    "options": ["have", "has", "having", "had"],
+    "correct_answer": {"index": 1},
+    "explanation": "Third person singular requires 'has'."
+  },
+  {
+    "level": "A1",
+    "type": "mcq",
+    "question_text": "______ you like coffee?",
+    "options": ["Do", "Does", "Are", "Is"],
+    "correct_answer": {"index": 0},
+    "explanation": "'Do' is used with 'you' for questions."
+  },
+  {
+    "level": "A1",
+    "type": "mcq",
+    "question_text": "I can ______ English.",
+    "options": ["speak", "speaks", "speaking", "spoke"],
+    "correct_answer": {"index": 0},
+    "explanation": "Modal verb 'can' is followed by base form."
+  },
+  {
+    "level": "A1",
+    "type": "mcq",
+    "question_text": "There ______ three apples on the table.",
+    "options": ["is", "are", "am", "be"],
+    "correct_answer": {"index": 1},
+    "explanation": "Plural noun requires 'are'."
+  },
+  {
+    "level": "A1",
+    "type": "mcq",
+    "question_text": "What time is it?",
+    "options": ["It's 3 o'clock", "It's Monday", "It's sunny", "It's red"],
+    "correct_answer": {"index": 0},
+    "explanation": "The question asks for the time."
+  },
+  {
+    "level": "A1",
+    "type": "mcq",
+    "question_text": "My birthday is ______ June.",
+    "options": ["in", "on", "at", "by"],
+    "correct_answer": {"index": 0},
+    "explanation": "'In' is used for months."
+  },
+  {
+    "level": "A1",
+    "type": "mcq",
+    "question_text": "This book is ______ than that one.",
+    "options": ["more interesting", "interesting", "most interesting", "interestinger"],
+    "correct_answer": {"index": 0},
+    "explanation": "Comparative form of long adjectives uses 'more'."
+  },
+  {
+    "level": "A1",
+    "type": "mcq",
+    "question_text": "I ______ TV yesterday.",
+    "options": ["watched", "watch", "watching", "watches"],
+    "correct_answer": {"index": 0},
+    "explanation": "Past simple for completed actions in the past."
+  },
+  {
+    "level": "A1",
+    "type": "open",
+    "question_text": "Where do you live?",
+    "options": null,
+    "correct_answer": {"text": ["I live in London", "In London", "London"]},
+    "explanation": "The question asks for place of residence."
+  },
+  {
+    "level": "A1",
+    "type": "open",
+    "question_text": "What's your favorite color?",
+    "options": null,
+    "correct_answer": {"text": ["My favorite color is blue", "Blue", "I like blue"]},
+    "explanation": "The question asks about color preference."
+  },
+  {
+    "level": "A1",
+    "type": "open",
+    "question_text": "How many people are in your family?",
+    "options": null,
+    "correct_answer": {"text": ["There are four people in my family", "Four", "We are four"]},
+    "explanation": "The question asks about family size."
+  },
+  {
+    "level": "A1",
+    "type": "open",
+    "question_text": "What do you like to do in your free time?",
+    "options": null,
+    "correct_answer": {"text": ["I like to read books", "I enjoy watching movies", "I play sports"]},
+    "explanation": "The question asks about hobbies."
+  },
+  {
+    "level": "A1",
+    "type": "open",
+    "question_text": "What did you do last weekend?",
+    "options": null,
+    "correct_answer": {"text": ["I visited my friends", "I went shopping", "I stayed at home"]},
+    "explanation": "The question asks about past activities."
+  },
+  {
+    "level": "A1",
+    "type": "open",
+    "question_text": "What's your favorite food?",
+    "options": null,
+    "correct_answer": {"text": ["I like pizza", "My favorite food is pasta", "I love sushi"]},
+    "explanation": "The question asks about food preference."
+  },
+  {
+    "level": "A1",
+    "type": "open",
+    "question_text": "When is your birthday?",
+    "options": null,
+    "correct_answer": {"text": ["My birthday is in May", "It's on May 15th", "May 15th"]},
+    "explanation": "The question asks about birth date."
+  },
+  {
+    "level": "A1",
+    "type": "open",
+    "question_text": "What time do you usually wake up?",
+    "options": null,
+    "correct_answer": {"text": ["I wake up at 7 AM", "At 7 o'clock", "7 AM"]},
+    "explanation": "The question asks about daily routine."
+  },
+  {
+    "level": "A1",
+    "type": "open",
+    "question_text": "Where do you work?",
+    "options": null,
+    "correct_answer": {"text": ["I work in an office", "I work at a school", "I don't work"]},
+    "explanation": "The question asks about workplace."
+  },
+  {
+    "level": "A1",
+    "type": "open",
+    "question_text": "What's the weather like today?",
+    "options": null,
+    "correct_answer": {"text": ["It's sunny", "It's raining", "It's cloudy"]},
+    "explanation": "The question asks about current weather."
+  },
+  {
+    "level": "A1",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: My name is Anna. I am 10 years old. I live in London. Question: How old is Anna?",
+    "options": ["10", "12", "Anna", "London"],
+    "correct_answer": {"index": 0},
+    "explanation": "The text says 'I am 10 years old', so Anna is 10."
+  },
+  {
+    "level": "A1",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: This is my family. My father is a doctor. My mother is a teacher. I have one brother. Question: What does the father do?",
+    "options": ["Teacher", "Doctor", "Student", "Engineer"],
+    "correct_answer": {"index": 1},
+    "explanation": "The text states 'My father is a doctor'."
+  },
+  {
+    "level": "A1",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: I like animals. I have a dog and a cat. My dog is black and my cat is white. Question: What color is the cat?",
+    "options": ["Black", "White", "Brown", "Grey"],
+    "correct_answer": {"index": 1},
+    "explanation": "The text says 'my cat is white'."
+  },
+  {
+    "level": "A1",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: Today is Monday. I go to school from Monday to Friday. On Saturday and Sunday, I don't go to school. Question: What day is it today?",
+    "options": ["Monday", "Friday", "Saturday", "Sunday"],
+    "correct_answer": {"index": 0},
+    "explanation": "The text begins with 'Today is Monday'."
+  },
+  {
+    "level": "A1",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: My house has three bedrooms, one kitchen, and one living room. There is a garden behind the house. Question: How many bedrooms are there?",
+    "options": ["One", "Two", "Three", "Four"],
+    "correct_answer": {"index": 2},
+    "explanation": "The text says 'three bedrooms'."
+  },
+  {
+    "level": "A2",
+    "type": "mcq",
+    "question_text": "What did you do yesterday?",
+    "options": ["I go to the park", "I went to the park", "I am going to the park", "I will go to the park"],
+    "correct_answer": {"index": 1},
+    "explanation": "Past simple tense is used for completed actions in the past."
+  },
+  {
+    "level": "A2",
+    "type": "mcq",
+    "question_text": "I was watching TV when the phone ______.",
+    "options": ["ring", "rang", "rings", "ringing"],
+    "correct_answer": {"index": 1},
+    "explanation": "Past simple in the when-clause with past continuous in the main clause."
+  },
+  {
+    "level": "A2",
+    "type": "mcq",
+    "question_text": "If it rains tomorrow, we ______ the picnic.",
+    "options": ["cancel", "will cancel", "would cancel", "cancelled"],
+    "correct_answer": {"index": 1},
+    "explanation": "First conditional for real future possibilities."
+  },
+  {
+    "level": "A2",
+    "type": "mcq",
+    "question_text": "She has lived here ______ 2015.",
+    "options": ["for", "since", "from", "during"],
+    "correct_answer": {"index": 1},
+    "explanation": "'Since' is used with specific points in time with present perfect."
+  },
+  {
+    "level": "A2",
+    "type": "mcq",
+    "question_text": "This is the ______ book I've ever read.",
+    "options": ["more interesting", "most interesting", "interestinger", "interestingest"],
+    "correct_answer": {"index": 1},
+    "explanation": "Superlative form of long adjectives uses 'most'."
+  },
+  {
+    "level": "A2",
+    "type": "mcq",
+    "question_text": "You ______ smoke in hospitals.",
+    "options": ["mustn't", "don't have to", "shouldn't to", "can't to"],
+    "correct_answer": {"index": 0},
+    "explanation": "'Mustn't' expresses prohibition."
+  },
+  {
+    "level": "A2",
+    "type": "mcq",
+    "question_text": "I'm not used to ______ early.",
+    "options": ["wake up", "waking up", "woke up", "waken up"],
+    "correct_answer": {"index": 1},
+    "explanation": "'Be used to' is followed by gerund."
+  },
+  {
+    "level": "A2",
+    "type": "mcq",
+    "question_text": "He ______ be at home. The lights are on.",
+    "options": ["can", "might", "must", "would"],
+    "correct_answer": {"index": 2},
+    "explanation": "'Must' expresses strong deduction."
+  },
+  {
+    "level": "A2",
+    "type": "mcq",
+    "question_text": "I'll call you as soon as I ______ there.",
+    "options": ["get", "will get", "got", "getting"],
+    "correct_answer": {"index": 0},
+    "explanation": "Present simple in time clauses for future reference."
+  },
+  {
+    "level": "A2",
+    "type": "mcq",
+    "question_text": "The movie was ______ that I fell asleep.",
+    "options": ["so boring", "such boring", "so bored", "such bored"],
+    "correct_answer": {"index": 0},
+    "explanation": "'So' is used with adjectives, 'such' with nouns."
+  },
+  {
+    "level": "A2",
+    "type": "mcq",
+    "question_text": "We'd better ______ now or we'll be late.",
+    "options": ["leave", "to leave", "leaving", "left"],
+    "correct_answer": {"index": 0},
+    "explanation": "'Had better' is followed by base form."
+  },
+  {
+    "level": "A2",
+    "type": "mcq",
+    "question_text": "She made me ______ the dishes.",
+    "options": ["wash", "to wash", "washing", "washed"],
+    "correct_answer": {"index": 0},
+    "explanation": "Causative 'make' is followed by base form."
+  },
+  {
+    "level": "A2",
+    "type": "mcq",
+    "question_text": "I wish I ______ speak French.",
+    "options": ["can", "could", "will", "would"],
+    "correct_answer": {"index": 1},
+    "explanation": "'Could' is used for present wishes about ability."
+  },
+  {
+    "level": "A2",
+    "type": "mcq",
+    "question_text": "By next year, I ______ English for five years.",
+    "options": ["will study", "will be studying", "will have studied", "study"],
+    "correct_answer": {"index": 2},
+    "explanation": "Future perfect for actions completed before a future time."
+  },
+  {
+    "level": "A2",
+    "type": "mcq",
+    "question_text": "The test was ______ than I expected.",
+    "options": ["difficulter", "more difficult", "most difficult", "difficultest"],
+    "correct_answer": {"index": 1},
+    "explanation": "Comparative form of long adjectives uses 'more'."
+  },
+  {
+    "level": "A2",
+    "type": "open",
+    "question_text": "What's your favorite hobby and why?",
+    "options": null,
+    "correct_answer": {"text": ["My favorite hobby is reading because it's relaxing", "I like swimming because it's healthy", "I enjoy cooking because I can make delicious food"]},
+    "explanation": "The question requires stating a hobby and giving a reason."
+  },
+  {
+    "level": "A2",
+    "type": "open",
+    "question_text": "Describe your best friend.",
+    "options": null,
+    "correct_answer": {"text": ["My best friend is tall with brown hair and he's very funny", "She has blonde hair and blue eyes and she's very kind"]},
+    "explanation": "The question asks for physical description and personality traits."
+  },
+  {
+    "level": "A2",
+    "type": "open",
+    "question_text": "What did you do on your last vacation?",
+    "options": null,
+    "correct_answer": {"text": ["I went to the beach and swam in the ocean", "I visited my grandparents in the countryside", "I traveled to Paris and saw the Eiffel Tower"]},
+    "explanation": "The question asks about past vacation activities."
+  },
+  {
+    "level": "A2",
+    "type": "open",
+    "question_text": "What are your plans for next weekend?",
+    "options": null,
+    "correct_answer": {"text": ["I'm going to visit my friends", "I plan to go shopping and watch a movie", "I might go hiking if the weather is nice"]},
+    "explanation": "The question asks about future plans."
+  },
+  {
+    "level": "A2",
+    "type": "open",
+    "question_text": "Describe your daily routine.",
+    "options": null,
+    "correct_answer": {"text": ["I wake up at 7, have breakfast, go to work, come home at 6, and watch TV", "I usually exercise in the morning, then work from 9 to 5, and relax in the evening"]},
+    "explanation": "The question asks for description of typical daily activities."
+  },
+  {
+    "level": "A2",
+    "type": "open",
+    "question_text": "What kind of music do you like? Why?",
+    "options": null,
+    "correct_answer": {"text": ["I like pop music because it's catchy and makes me happy", "I prefer classical music because it's relaxing and beautiful"]},
+    "explanation": "The question asks about music preference with reasons."
+  },
+  {
+    "level": "A2",
+    "type": "open",
+    "question_text": "What's your favorite season and why?",
+    "options": null,
+    "correct_answer": {"text": ["I like summer because I can go swimming and the weather is warm", "My favorite is autumn because of the beautiful colors and cool weather"]},
+    "explanation": "The question asks about seasonal preference with reasons."
+  },
+  {
+    "level": "A2",
+    "type": "open",
+    "question_text": "Describe your dream job.",
+    "options": null,
+    "correct_answer": {"text": ["I'd like to be a doctor to help people", "My dream job is to be a photographer and travel the world"]},
+    "explanation": "The question asks about ideal occupation."
+  },
+  {
+    "level": "A2",
+    "type": "open",
+    "question_text": "What would you do if you won the lottery?",
+    "options": null,
+    "correct_answer": {"text": ["I would travel around the world", "I'd buy a big house and help my family", "I would start my own business"]},
+    "explanation": "The question asks about hypothetical situation using second conditional."
+  },
+  {
+    "level": "A2",
+    "type": "open",
+    "question_text": "How do you usually spend your evenings?",
+    "options": null,
+    "correct_answer": {"text": ["I usually watch TV or read books", "I often cook dinner and then relax with my family", "I sometimes go out with friends or exercise"]},
+    "explanation": "The question asks about typical evening activities."
+  },
+  {
+    "level": "A2",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: Yesterday, Tom went to the supermarket. He bought milk, bread, and eggs. Then he visited his grandmother. Question: What did Tom buy at the supermarket?",
+    "options": ["Milk, bread, and eggs", "Fruits and vegetables", "Only milk", "Nothing"],
+    "correct_answer": {"index": 0},
+    "explanation": "The text explicitly states he bought milk, bread, and eggs."
+  },
+  {
+    "level": "A2",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: Sarah loves animals. She has two cats and one dog. Every morning, she feeds them before she goes to work. On weekends, she takes her dog for long walks in the park. Question: When does Sarah take her dog for long walks?",
+    "options": ["Every morning", "Before work", "On weekends", "Never"],
+    "correct_answer": {"index": 2},
+    "explanation": "The text states 'On weekends, she takes her dog for long walks'."
+  },
+  {
+    "level": "A2",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: The weather forecast for tomorrow predicts rain in the morning, but it will clear up in the afternoon. Temperatures will be around 15 degrees Celsius. Question: What will the weather be like in the afternoon?",
+    "options": ["Rainy", "Snowy", "Clear", "Windy"],
+    "correct_answer": {"index": 2},
+    "explanation": "The text says 'it will clear up in the afternoon'."
+  },
+  {
+    "level": "A2",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: Our school library is open from 8 AM to 6 PM from Monday to Friday. On Saturdays, it's open from 9 AM to 1 PM. It's closed on Sundays. Question: When is the library closed?",
+    "options": ["Monday", "Friday", "Saturday", "Sunday"],
+    "correct_answer": {"index": 3},
+    "explanation": "The text explicitly states 'It's closed on Sundays'."
+  },
+  {
+    "level": "A2",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: John is looking for a new apartment. He needs two bedrooms and wants to live near the city center. His budget is $1000 per month. Question: How many bedrooms does John need?",
+    "options": ["One", "Two", "Three", "Four"],
+    "correct_answer": {"index": 1},
+    "explanation": "The text states 'He needs two bedrooms'."
+  },
+  {
+    "level": "A2",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: The museum has special exhibitions every month. This month, there's an exhibition about ancient Egypt. Next month, there will be one about modern art. Question: What is this month's exhibition about?",
+    "options": ["Modern art", "Ancient Egypt", "Space exploration", "Marine life"],
+    "correct_answer": {"index": 1},
+    "explanation": "The text states 'this month, there's an exhibition about ancient Egypt'."
+  },
+  {
+    "level": "B1",
+    "type": "mcq",
+    "question_text": "If I had more money, I ______ a new car.",
+    "options": ["will buy", "would buy", "bought", "buying"],
+    "correct_answer": {"index": 1},
+    "explanation": "Second conditional requires 'would + base verb' in the main clause."
+  },
+  {
+    "level": "B1",
+    "type": "mcq",
+    "question_text": "By the time we arrived, the movie ______.",
+    "options": ["already started", "had already started", "has already started", "would start"],
+    "correct_answer": {"index": 1},
+    "explanation": "Past perfect for action completed before another past action."
+  },
+  {
+    "level": "B1",
+    "type": "mcq",
+    "question_text": "She suggested ______ to the cinema.",
+    "options": ["go", "to go", "going", "went"],
+    "correct_answer": {"index": 2},
+    "explanation": "'Suggest' is followed by gerund."
+  },
+  {
+    "level": "B1",
+    "type": "mcq",
+    "question_text": "I'm looking forward ______ you soon.",
+    "options": ["to see", "to seeing", "see", "seeing"],
+    "correct_answer": {"index": 1},
+    "explanation": "'Look forward to' is followed by gerund."
+  },
+  {
+    "level": "B1",
+    "type": "mcq",
+    "question_text": "This is the house ______ I was born.",
+    "options": ["where", "which", "that", "who"],
+    "correct_answer": {"index": 0},
+    "explanation": "'Where' is used for places in relative clauses."
+  },
+  {
+    "level": "B1",
+    "type": "mcq",
+    "question_text": "You ______ have told me you were coming!",
+    "options": ["must", "should", "would", "might"],
+    "correct_answer": {"index": 1},
+    "explanation": "'Should have' expresses regret about past actions."
+  },
+  {
+    "level": "B1",
+    "type": "mcq",
+    "question_text": "Despite ______ tired, she finished her work.",
+    "options": ["be", "being", "been", "to be"],
+    "correct_answer": {"index": 1},
+    "explanation": "'Despite' is followed by gerund."
+  },
+  {
+    "level": "B1",
+    "type": "mcq",
+    "question_text": "If I ______ you, I would take that job.",
+    "options": ["am", "was", "were", "be"],
+    "correct_answer": {"index": 2},
+    "explanation": "'Were' is used in second conditional for all persons."
+  },
+  {
+    "level": "B1",
+    "type": "mcq",
+    "question_text": "The report ______ by tomorrow morning.",
+    "options": ["will finish", "will be finished", "will have finished", "finishes"],
+    "correct_answer": {"index": 1},
+    "explanation": "Passive voice for future actions."
+  },
+  {
+    "level": "B1",
+    "type": "mcq",
+    "question_text": "He's the man ______ car was stolen.",
+    "options": ["who", "whom", "whose", "which"],
+    "correct_answer": {"index": 2},
+    "explanation": "'Whose' shows possession in relative clauses."
+  },
+  {
+    "level": "B1",
+    "type": "mcq",
+    "question_text": "I wish I ______ to the party last night.",
+    "options": ["went", "had gone", "would go", "go"],
+    "correct_answer": {"index": 1},
+    "explanation": "Past perfect for regrets about the past."
+  },
+  {
+    "level": "B1",
+    "type": "mcq",
+    "question_text": "By next month, she ______ here for five years.",
+    "options": ["will work", "will be working", "will have been working", "works"],
+    "correct_answer": {"index": 2},
+    "explanation": "Future perfect continuous for duration up to a future point."
+  },
+  {
+    "level": "B1",
+    "type": "mcq",
+    "question_text": "The test was ______ difficult that many students failed.",
+    "options": ["so", "such", "too", "very"],
+    "correct_answer": {"index": 0},
+    "explanation": "'So' with adjectives, 'such' with nouns."
+  },
+  {
+    "level": "B1",
+    "type": "mcq",
+    "question_text": "I'd rather you ______ that.",
+    "options": ["don't do", "didn't do", "won't do", "not do"],
+    "correct_answer": {"index": 1},
+    "explanation": "'Would rather' with different subject takes past simple."
+  },
+  {
+    "level": "B1",
+    "type": "mcq",
+    "question_text": "Not until yesterday ______ the truth.",
+    "options": ["I knew", "did I know", "I know", "I have known"],
+    "correct_answer": {"index": 1},
+    "explanation": "Negative adverbial at beginning requires inversion."
+  },
+  {
+    "level": "B1",
+    "type": "open",
+    "question_text": "Describe your favorite season and explain why you like it.",
+    "options": null,
+    "correct_answer": {"text": ["My favorite season is spring because the weather is pleasant and flowers bloom", "I prefer winter because I enjoy snow sports and Christmas", "I like summer best because I can go swimming and on vacation"]},
+    "explanation": "The answer should include both the season and reasons for preference."
+  },
+  {
+    "level": "B1",
+    "type": "open",
+    "question_text": "What are the advantages and disadvantages of living in a big city?",
+    "options": null,
+    "correct_answer": {"text": ["Advantages include job opportunities and entertainment, while disadvantages are high cost of living and pollution", "Big cities offer cultural events but can be crowded and noisy"]},
+    "explanation": "The answer should present balanced view with both positives and negatives."
+  },
+  {
+    "level": "B1",
+    "type": "open",
+    "question_text": "Describe a memorable trip you've taken.",
+    "options": null,
+    "correct_answer": {"text": ["I visited Rome last year and was amazed by the historical sites", "My trip to Japan was memorable because of the unique culture and delicious food"]},
+    "explanation": "The answer should describe a specific trip with details."
+  },
+  {
+    "level": "B1",
+    "type": "open",
+    "question_text": "What do you think are the most important qualities in a friend?",
+    "options": null,
+    "correct_answer": {"text": ["Honesty, loyalty, and a good sense of humor are important", "I value trustworthiness and being supportive in difficult times"]},
+    "explanation": "The answer should list and explain important friendship qualities."
+  },
+  {
+    "level": "B1",
+    "type": "open",
+    "question_text": "How has technology changed our lives?",
+    "options": null,
+    "correct_answer": {"text": ["Technology has made communication faster but sometimes reduces face-to-face interaction", "It has improved healthcare and education but created privacy concerns"]},
+    "explanation": "The answer should discuss both positive and negative impacts."
+  },
+  {
+    "level": "B1",
+    "type": "open",
+    "question_text": "What are your goals for the next five years?",
+    "options": null,
+    "correct_answer": {"text": ["I hope to finish my studies and start my career", "I plan to travel more and learn a new language", "I want to buy a house and start a family"]},
+    "explanation": "The answer should describe personal or professional goals."
+  },
+  {
+    "level": "B1",
+    "type": "open",
+    "question_text": "Describe a difficult decision you had to make.",
+    "options": null,
+    "correct_answer": {"text": ["I had to choose between two job offers in different cities", "Deciding whether to study abroad was difficult because I would miss my family"]},
+    "explanation": "The answer should describe a specific decision and its challenges."
+  },
+  {
+    "level": "B1",
+    "type": "open",
+    "question_text": "What do you think about social media?",
+    "options": null,
+    "correct_answer": {"text": ["It's useful for staying connected but can be addictive and spread misinformation", "Social media helps businesses but may negatively affect mental health"]},
+    "explanation": "The answer should present balanced perspective on social media."
+  },
+  {
+    "level": "B1",
+    "type": "open",
+    "question_text": "How do you deal with stress?",
+    "options": null,
+    "correct_answer": {"text": ["I exercise regularly and practice meditation", "I talk to friends or listen to music to relax", "I make sure to get enough sleep and maintain a balanced schedule"]},
+    "explanation": "The answer should describe stress management techniques."
+  },
+  {
+    "level": "B1",
+    "type": "open",
+    "question_text": "What makes a good leader?",
+    "options": null,
+    "correct_answer": {"text": ["Good leaders communicate clearly and inspire their team", "Effective leadership requires empathy, decisiveness, and integrity"]},
+    "explanation": "The answer should describe leadership qualities."
+  },
+  {
+    "level": "B1",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: The company was founded in 1990 and has since expanded to over 20 countries. Despite initial financial difficulties, it now employs more than 5,000 people worldwide and has become a leader in its industry. Question: What challenges did the company face initially?",
+    "options": ["Expansion problems", "Financial difficulties", "Employment issues", "Leadership problems"],
+    "correct_answer": {"index": 1},
+    "explanation": "The text mentions 'initial financial difficulties' as the early challenge."
+  },
+  {
+    "level": "B1",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: Many experts believe that regular exercise is essential for both physical and mental health. It can reduce the risk of chronic diseases, improve mood, and help maintain a healthy weight. However, it's important to start slowly and gradually increase intensity to avoid injury. Question: According to the text, why should someone start exercising slowly?",
+    "options": ["To save time", "To avoid injury", "To make it more enjoyable", "To see faster results"],
+    "correct_answer": {"index": 1},
+    "explanation": "The text states 'to avoid injury' as the reason for starting slowly."
+  },
+  {
+    "level": "B1",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: The new environmental policy aims to reduce plastic waste by 50% within five years. This will be achieved through a combination of public awareness campaigns, recycling incentives, and restrictions on single-use plastics. Question: What is the goal of the new environmental policy?",
+    "options": ["Eliminate all plastic", "Reduce plastic waste by 50%", "Increase plastic production", "Ban all recycling"],
+    "correct_answer": {"index": 1},
+    "explanation": "The text states the goal is to 'reduce plastic waste by 50% within five years'."
+  },
+  {
+    "level": "B1",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: While online learning offers flexibility and accessibility, it also presents challenges such as lack of social interaction and requires strong self-discipline. Many students find they need to develop new study habits to succeed in virtual classrooms. Question: What is mentioned as a challenge of online learning?",
+    "options": ["Too much social interaction", "Lack of flexibility", "Lack of social interaction", "Too much discipline required"],
+    "correct_answer": {"index": 2},
+    "explanation": "The text mentions 'lack of social interaction' as a challenge."
+  },
+  {
+    "level": "B1",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: The research indicates that people who read regularly have better vocabulary, improved focus, and reduced stress levels. Reading just 30 minutes a day can significantly impact cognitive function over time. Question: According to the text, how much reading is needed to see benefits?",
+    "options": ["One hour daily", "30 minutes a day", "Only on weekends", "Several hours weekly"],
+    "correct_answer": {"index": 1},
+    "explanation": "The text states 'Reading just 30 minutes a day can significantly impact cognitive function'."
+  },
+  {
+    "level": "B1",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: Remote work has become increasingly common, with many companies adopting hybrid models. This shift has led to reduced commuting time and increased flexibility, but some employees report feeling isolated and missing spontaneous office interactions. Question: What positive aspect of remote work is mentioned?",
+    "options": ["More office parties", "Increased commuting", "Reduced commuting time", "Feeling isolated"],
+    "correct_answer": {"index": 2},
+    "explanation": "The text mentions 'reduced commuting time' as a positive aspect."
+  },
+  {
+    "level": "B1",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: Sustainable tourism focuses on minimizing environmental impact while supporting local communities. Travelers are encouraged to choose eco-friendly accommodations, respect local cultures, and reduce their carbon footprint during their journeys. Question: What does sustainable tourism aim to support?",
+    "options": ["Only the environment", "Only local businesses", "Local communities and environment", "International hotel chains"],
+    "correct_answer": {"index": 2},
+    "explanation": "The text mentions 'minimizing environmental impact while supporting local communities'."
+  },
+  {
+    "level": "B2",
+    "type": "mcq",
+    "question_text": "Not only ______ late, but he also forgot the documents.",
+    "options": ["he was", "was he", "he is", "is he"],
+    "correct_answer": {"index": 1},
+    "explanation": "'Not only' at the beginning of a sentence triggers subject-verb inversion."
+  },
+  {
+    "level": "B2",
+    "type": "mcq",
+    "question_text": "I'd rather you ______ me the truth yesterday.",
+    "options": ["told", "had told", "would tell", "tell"],
+    "correct_answer": {"index": 1},
+    "explanation": "'Would rather' with different subject in past context takes past perfect."
+  },
+  {
+    "level": "B2",
+    "type": "mcq",
+    "question_text": "But for your help, I ______ the project on time.",
+    "options": ["wouldn't complete", "wouldn't have completed", "didn't complete", "hadn't completed"],
+    "correct_answer": {"index": 1},
+    "explanation": "'But for' expresses hypothetical past situation requiring third conditional."
+  },
+  {
+    "level": "B2",
+    "type": "mcq",
+    "question_text": "Hardly ______ home when the phone rang.",
+    "options": ["I had arrived", "had I arrived", "I arrived", "arrived I"],
+    "correct_answer": {"index": 1},
+    "explanation": "Inversion after negative adverbs like 'hardly'."
+  },
+  {
+    "level": "B2",
+    "type": "mcq",
+    "question_text": "The proposal, ______ by the committee, will be implemented next month.",
+    "options": ["approving", "approved", "approves", "approve"],
+    "correct_answer": {"index": 1},
+    "explanation": "Reduced relative clause with past participle for passive meaning."
+  },
+  {
+    "level": "B2",
+    "type": "mcq",
+    "question_text": "Were I in your position, I ______ differently.",
+    "options": ["will act", "would act", "act", "acted"],
+    "correct_answer": {"index": 1},
+    "explanation": "Inverted conditional without 'if' requires 'would' in main clause."
+  },
+  {
+    "level": "B2",
+    "type": "mcq",
+    "question_text": "So compelling ______ that everyone stayed until the end.",
+    "options": ["was the evidence", "the evidence was", "the evidence", "was it the evidence"],
+    "correct_answer": {"index": 0},
+    "explanation": "Inversion with 'so + adjective' at beginning of sentence."
+  },
+  {
+    "level": "B2",
+    "type": "mcq",
+    "question_text": "No sooner ______ the offer than he accepted it.",
+    "options": ["had I made", "I had made", "I made", "made I"],
+    "correct_answer": {"index": 0},
+    "explanation": "Inversion with 'no sooner' requires past perfect and 'than'."
+  },
+  {
+    "level": "B2",
+    "type": "mcq",
+    "question_text": "Little ______ about the consequences at the time.",
+    "options": ["he knew", "did he know", "he knows", "does he know"],
+    "correct_answer": {"index": 1},
+    "explanation": "Inversion with negative adverbs like 'little' at beginning."
+  },
+  {
+    "level": "B2",
+    "type": "mcq",
+    "question_text": "Under no circumstances ______ late for the meeting.",
+    "options": ["you should be", "should you be", "you be", "be you"],
+    "correct_answer": {"index": 1},
+    "explanation": "Inversion with negative adverbial phrases at beginning."
+  },
+  {
+    "level": "B2",
+    "type": "open",
+    "question_text": "Discuss the advantages and disadvantages of remote work.",
+    "options": null,
+    "correct_answer": {"text": ["Advantages include flexibility and no commute, while disadvantages can be isolation and difficulty separating work from home life", "Remote work offers better work-life balance but may reduce team cohesion and spontaneous collaboration"]},
+    "explanation": "A balanced answer should mention both positive and negative aspects."
+  },
+  {
+    "level": "B2",
+    "type": "open",
+    "question_text": "To what extent do you think social media has changed communication patterns?",
+    "options": null,
+    "correct_answer": {"text": ["Social media has made communication more immediate but potentially less deep, and has created new forms of interaction like viral content", "It has enabled global connections while sometimes reducing face-to-face communication quality"]},
+    "explanation": "The answer should analyze the degree and nature of changes in communication."
+  },
+  {
+    "level": "B2",
+    "type": "open",
+    "question_text": "Discuss the impact of globalization on local cultures.",
+    "options": null,
+    "correct_answer": {"text": ["Globalization has led to cultural homogenization in some areas while creating new hybrid cultures, and has both threatened and preserved local traditions", "While it introduces foreign influences, it can also increase awareness and appreciation of cultural diversity"]},
+    "explanation": "The answer should present nuanced analysis of cultural impacts."
+  },
+  {
+    "level": "B2",
+    "type": "open",
+    "question_text": "What are the most pressing environmental issues facing our planet today?",
+    "options": null,
+    "correct_answer": {"text": ["Climate change, biodiversity loss, and plastic pollution are critical issues requiring immediate international action", "Deforestation, ocean acidification, and freshwater scarcity represent major environmental challenges"]},
+    "explanation": "The answer should identify and briefly explain key environmental problems."
+  },
+  {
+    "level": "B2",
+    "type": "open",
+    "question_text": "How has technology transformed education in recent years?",
+    "options": null,
+    "correct_answer": {"text": ["Digital platforms have made education more accessible but raised questions about digital divide and quality of online interaction", "Technology enables personalized learning but challenges traditional teaching methods and assessment"]},
+    "explanation": "The answer should discuss both transformative aspects and challenges."
+  },
+  {
+    "level": "B2",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: The phenomenon of climate change, while still debated by a small minority of scientists, is widely accepted as a pressing global issue. The Intergovernmental Panel on Climate Change has compiled extensive evidence demonstrating rising global temperatures, sea level changes, and increased frequency of extreme weather events. These changes are predominantly attributed to human activities, particularly the emission of greenhouse gases from industrial processes and fossil fuel combustion. Question: According to the text, what is the main cause of climate change?",
+    "options": ["Natural weather cycles", "Solar radiation variations", "Human activities and greenhouse gas emissions", "Unspecified natural processes"],
+    "correct_answer": {"index": 2},
+    "explanation": "The text states these changes are 'predominantly attributed to human activities, particularly the emission of greenhouse gases'."
+  },
+  {
+    "level": "C1",
+    "type": "mcq",
+    "question_text": "Had the authorities heeded the warnings, the catastrophe ______.",
+    "options": ["would be averted", "would have been averted", "had been averted", "was averted"],
+    "correct_answer": {"index": 1},
+    "explanation": "Third conditional structure requires 'would have + past participle' in the main clause."
+  },
+  {
+    "level": "C1",
+    "type": "mcq",
+    "question_text": "So intricate ______ that few could comprehend its full complexity.",
+    "options": ["the design was", "was the design", "the design", "was it the design"],
+    "correct_answer": {"index": 1},
+    "explanation": "Inversion with 'so + adjective' at beginning of sentence."
+  },
+  {
+    "level": "C1",
+    "type": "mcq",
+    "question_text": "Were the situation to arise again, appropriate measures ______ immediately.",
+    "options": ["will be taken", "would be taken", "are taken", "were taken"],
+    "correct_answer": {"index": 1},
+    "explanation": "Formal conditional with inversion requires 'would' in main clause."
+  },
+  {
+    "level": "C1",
+    "type": "mcq",
+    "question_text": "Not until much later ______ the full implications of their discovery.",
+    "options": ["they realized", "did they realize", "they had realized", "had they realized"],
+    "correct_answer": {"index": 1},
+    "explanation": "Inversion with 'not until' at beginning of sentence."
+  },
+  {
+    "level": "C1",
+    "type": "mcq",
+    "question_text": "Such ______ the public outcry that the policy was hastily withdrawn.",
+    "options": ["was", "were", "is", "are"],
+    "correct_answer": {"index": 0},
+    "explanation": "Inversion with 'such' requires singular verb agreement."
+  },
+  {
+    "level": "C1",
+    "type": "open",
+    "question_text": "Critically evaluate the impact of social media on political discourse in contemporary society.",
+    "options": null,
+    "correct_answer": {"text": ["Social media has democratized political discourse by giving voice to marginalized groups, but it has also facilitated echo chambers and the spread of misinformation, ultimately polarizing public debate", "While social media has increased political engagement among younger demographics, it has also reduced complex issues to simplistic soundbites and enabled foreign interference in domestic politics"]},
+    "explanation": "A critical evaluation should present balanced analysis with evidence of both positive and negative impacts."
+  },
+  {
+    "level": "C1",
+    "type": "open",
+    "question_text": "Discuss the ethical implications of artificial intelligence in decision-making processes.",
+    "options": null,
+    "correct_answer": {"text": ["AI raises concerns about algorithmic bias, accountability for automated decisions, and potential job displacement, while offering efficiency gains and data-driven insights", "The deployment of AI necessitates consideration of transparency, privacy protection, and maintaining human oversight in critical domains"]},
+    "explanation": "The answer should address multiple ethical dimensions of AI implementation."
+  },
+  {
+    "level": "C1",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: The epistemological underpinnings of post-modern thought challenge the very notion of objective truth, positing instead that all knowledge is socially constructed and context-dependent. This relativistic stance, while liberating marginalized perspectives, has drawn criticism for potentially leading to nihilistic conclusions where all claims become equally valid or invalid. Question: What is the main criticism of postmodern epistemology mentioned in the text?",
+    "options": ["It is too focused on objective truth", "It fails to consider marginalized perspectives", "It may lead to nihilistic conclusions", "It reinforces traditional power structures"],
+    "correct_answer": {"index": 2},
+    "explanation": "The text states this stance 'has drawn criticism for potentially leading to nihilistic conclusions'."
+  },
+  {
+    "level": "C2",
+    "type": "mcq",
+    "question_text": "Such ______ the complexity of the situation that no straightforward solution presented itself.",
+    "options": ["was", "were", "is", "are"],
+    "correct_answer": {"index": 0},
+    "explanation": "Inversions with 'such' take singular verb agreement when followed by a singular subject."
+  },
+  {
+    "level": "C2",
+    "type": "mcq",
+    "question_text": "Had they but known the consequences, their approach ______ markedly different.",
+    "options": ["would have been", "would be", "had been", "was"],
+    "correct_answer": {"index": 0},
+    "explanation": "Formal third conditional with inversion requires 'would have + past participle'."
+  },
+  {
+    "level": "C2",
+    "type": "open",
+    "question_text": "Examine the contention that linguistic determinism fundamentally constrains cognitive processes across different cultures.",
+    "options": null,
+    "correct_answer": {"text": ["The Sapir-Whorf hypothesis of linguistic determinism posits that language limits cognitive categories, but contemporary research suggests language influences rather than determines thought, with universal cognitive constraints existing alongside linguistic relativity", "While early formulations of linguistic determinism argued that language constrains cognition, modern understanding acknowledges language as one of several factors shaping thought, with evidence from color perception and spatial reasoning demonstrating both universal and culture-specific patterns"]},
+    "explanation": "A sophisticated response should engage with both the deterministic and relativistic aspects of the Sapir-Whorf hypothesis."
+  },
+  {
+    "level": "C2",
+    "type": "open",
+    "question_text": "Critically assess the proposition that technological advancement inevitably entails a diminution of authentic human interaction.",
+    "options": null,
+    "correct_answer": {"text": ["While technology mediates many interactions, it also creates new forms of community and connection, suggesting augmentation rather than replacement of authentic engagement", "The relationship between technology and human interaction is dialectical, with digital platforms both enabling unprecedented connectivity and potentially altering the qualitative nature of interpersonal exchanges"]},
+    "explanation": "A critical assessment should avoid technological determinism and present nuanced analysis."
+  },
+  {
+    "level": "C2",
+    "type": "reading",
+    "question_text": "Read the text and answer the question. Text: The hermeneutic circle, a foundational concept in philosophical hermeneutics, describes the iterative process of understanding a text through reference to the individual parts and the whole. This dialectical movement between part and whole creates a cognitive framework wherein preliminary understanding is continuously revised through engagement with textual particulars, ultimately leading to more profound comprehension. Heidegger further developed this concept beyond textual interpretation to encompass the fundamental structure of human understanding itself. Question: How did Heidegger expand the concept of the hermeneutic circle?",
+    "options": ["He limited it to literary texts", "He applied it to mathematical reasoning", "He extended it to the fundamental structure of human understanding", "He rejected it as logically flawed"],
+    "correct_answer": {"index": 2},
+    "explanation": "The text states 'Heidegger further developed this concept beyond textual interpretation to encompass the fundamental structure of human understanding itself'."
+  }
+]

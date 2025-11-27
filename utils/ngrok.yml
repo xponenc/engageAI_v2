@@ -1,0 +1,13 @@
+version: "3"
+agent:
+    authtoken: 307y3mK5yocf4SONJqqIGot9Fnc_6Vqi2wyaRfeWMi16EWrjS
+tunnels:
+  web:
+    proto: http
+    addr: 8000
+  main_gateway_api:
+    proto: http
+    addr: 8001
+  bot_gateway_api:
+    proto: http
+    addr: 8002

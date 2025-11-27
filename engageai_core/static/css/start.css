@@ -1,0 +1,88 @@
+/* start.css — resets, layout basics, typography scale and responsive breakpoints */
+
+/* Typography scale */
+h1, h2, h3, h4, h5 { color: var(--color-text); margin: 0 0 8px 0; font-weight: 700; line-height: 1.2; }
+p, label { color: var(--color-text); margin: 0 0 12px 0; }
+
+/* Headings sizes */
+h1 { font-size: 1.6rem; }
+h2 { font-size: 1.25rem; }
+h3 { font-size: 1.05rem; }
+
+small, .muted { font-size: 0.85rem; color: var(--color-text-muted); }
+
+/* layout geometry */
+.header {
+    width: 100%;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+    padding: 12px 0;
+}
+.header__inner { display:flex; align-items:center; justify-content:space-between; gap: 12px; }
+
+/* main content area */
+.main {
+    padding: var(--double-gap) 0;
+    display: block;
+}
+
+/* typography utility for subheadings (keeps your .subheadings class) */
+.subheadings {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin-bottom: 6px;
+}
+
+/* messages (Django) — modernized */
+.messages {
+    position: fixed;
+    z-index: 20000;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--third-gap);
+    width: min(420px, calc(100% - 40px));
+}
+
+.message {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 12px;
+    align-items: center;
+    padding: 14px;
+    border-radius: 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+.message_success { background: var(--color-success-bg); border-color: color-mix(in oklch, var(--color-success-bg), var(--color-border) 30%); }
+.message_danger  { background: var(--color-error-bg);   border-color: color-mix(in oklch, var(--color-error-bg), var(--color-border) 30%); }
+.message_warning { background: var(--color-warning-bg); border-color: color-mix(in oklch, var(--color-warning-bg), var(--color-border) 30%); }
+
+.message__icon { width: 48px; height: 48px; display: block; border-radius: 8px; background-size: 24px 24px; background-position: center; background-repeat: no-repeat; }
+.message__text { color: var(--color-informer-text); font-size: 0.95rem; }
+
+/* container centers and spacing */
+.container--narrow { max-width: 980px; }
+
+/* small print */
+.muted-text { color: var(--color-text-muted); font-size: 0.9rem; }
+
+/* responsive breakpoints (mobile-first): */
+@media (max-width: 480px) {
+    .container { padding: 10px; }
+    h1 { font-size: 1.25rem; }
+    .messages { right: 12px; left: 12px; top: 12px; width: auto; }
+    .message { grid-template-columns: 40px 1fr; padding: 10px; border-radius: 10px; }
+}
+@media (min-width: 481px) and (max-width: 768px) {
+    .container { padding: 12px 16px; }
+}
+@media (min-width: 769px) and (max-width: 1024px) {
+    .container { padding: 14px 18px; }
+}

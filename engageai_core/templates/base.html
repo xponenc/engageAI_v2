@@ -1,0 +1,34 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="{% static 'css/start.css' %}" rel="stylesheet">
+    <link href="{% static 'css/nav.css' %}" rel="stylesheet">
+    <link href="{% static 'css/common.css' %}" rel="stylesheet">
+    <link href="{% static 'css/ui.css' %}" rel="stylesheet">
+    {% block css %}
+    {% endblock css %}
+    <title>
+        {% block title %}
+        {% endblock title %}
+    </title>
+</head>
+
+<body>
+    <main>
+        <div class="site-container">
+            <h1 class="visually-hidden">EngageAI. Онлайн-школа английского языка с использованием AI</h1>
+            {% include 'include/nav.html' %}
+            {% block content %}
+            {% endblock content %}
+        </div>
+    </main>
+    <script src="{% static 'js/script.js' %}"></script>
+    {% block script %}
+    {% endblock script %}
+</body>
+
+</html>

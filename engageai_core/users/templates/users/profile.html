@@ -1,0 +1,407 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Личный кабинет — {{ user.get_full_name|default:user.username }}{% endblock title %}
+
+{% block css %}
+<link href="{% static 'css/users/user.css' %}" rel="stylesheet">
+{% endblock css %}
+
+{% block content %}
+
+<section class="dashboard">
+    <div class="dashboard__container container">
+        
+        <!-- Хедер профиля -->
+        <div class="dashboard__header card">
+            <div class="profile-hero">
+                <div class="profile-hero__main">
+                    <div class="profile-hero__avatar">
+                        {% if user.profile.avatar %}
+                            <img class="profile-hero__avatar-img" src="{{ user.profile.avatar.url }}" alt="Аватар">
+                        {% else %}
+                            <div class="profile-hero__avatar-placeholder">
+                                {{ user.first_name|first|default:user.username|first|upper }}
+                            </div>
+                        {% endif %}
+                        <div class="profile-hero__status"></div>
+                    </div>
+                    <div class="profile-hero__info">
+                        <h1 class="profile-hero__name">{{ user.get_full_name|default:user.username }}</h1>
+                        <div class="profile-hero__meta">
+                            <span class="profile-hero__level">Уровень: {{ user.study_profile.get_english_level_display|default:"-" }}</span>
+                            <span class="profile-hero__streak">🔥 Серия: {{ user.profile.streak_days|default:"0" }} дней</span>
+                        </div>
+                        {% if not user.profile.is_verified %}
+                            <div class="profile-hero__verification">
+                                <span class="verification-badge verification-badge--pending">Аккаунт на проверке</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="profile-hero__actions">
+                    <a href="{% url 'users:profile-update' user.profile.id %}" class="btn btn_outline">Редактировать профиль</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Статистика обучения -->
+        <div class="dashboard__stats">
+            <div class="stat-card">
+                <div class="stat-card__icon stat-card__icon--primary">📚</div>
+                <div class="stat-card__content">
+                    <div class="stat-card__value">{{ user.profile.completed_courses|default:"0" }}</div>
+                    <div class="stat-card__label">Пройдено курсов</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-card__icon stat-card__icon--success">✅</div>
+                <div class="stat-card__content">
+                    <div class="stat-card__value">{{ user.profile.completed_lessons|default:"0" }}</div>
+                    <div class="stat-card__label">Завершено уроков</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-card__icon stat-card__icon--warning">⏱️</div>
+                <div class="stat-card__content">
+                    <div class="stat-card__value">{{ user.profile.study_time|default:"0" }}ч</div>
+                    <div class="stat-card__label">Время обучения</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-card__icon stat-card__icon--accent">🏆</div>
+                <div class="stat-card__content">
+                    <div class="stat-card__value">{{ user.profile.achievements|default:"0" }}</div>
+                    <div class="stat-card__label">Достижения</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Основной контент в две колонки -->
+        <div class="dashboard__content">
+            <!-- Левая колонка - Учебные материалы -->
+            <div class="dashboard__main">
+                
+                <!-- Текущий прогресс -->
+                <div class="dashboard__section card">
+                    <div class="section-header">
+                        <h2 class="section-header__title">Текущий прогресс</h2>
+                        <a href="/courses" class="btn btn_ghost btn_sm">Все курсы</a>
+                    </div>
+                    
+                    <div class="progress-course">
+                        <div class="progress-course__header">
+                            <h3 class="progress-course__title">Английский для начинающих</h3>
+                            <span class="progress-course__percent">65%</span>
+                        </div>
+                        <div class="progress-course__progress">
+                            <div class="progress-course__bar" style="width: 65%"></div>
+                        </div>
+                        <div class="progress-course__meta">
+                            <span>Прогресс: 13/20 уроков</span>
+                            <span>Следующий урок: Завтра</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Быстрый старт -->
+                <div class="dashboard__section card">
+                    <div class="section-header">
+                        <h2 class="section-header__title">Продолжить обучение</h2>
+                    </div>
+                    
+                    <div class="quick-actions">
+                        <a href="{% url 'assessment:start_test' %}" class="quick-action">
+                            <div class="quick-action__icon">🎯</div>
+                            <div class="quick-action__content">
+                                <h3 class="quick-action__title">Тестирование уровня</h3>
+                                <p class="quick-action__desc">Пройдите тест для точной оценки</p>
+                            </div>
+                        </a>
+                        
+                        <a href="/courses" class="quick-action">
+                            <div class="quick-action__icon">📖</div>
+                            <div class="quick-action__content">
+                                <h3 class="quick-action__title">Новый урок</h3>
+                                <p class="quick-action__desc">Продолжите обучение</p>
+                            </div>
+                        </a>
+                        
+                        <a href="/practice" class="quick-action">
+                            <div class="quick-action__icon">💬</div>
+                            <div class="quick-action__content">
+                                <h3 class="quick-action__title">Разговорная практика</h3>
+                                <p class="quick-action__desc">Тренировка с AI-репетитором</p>
+                            </div>
+                        </a>
+                        
+                        <a href="/vocabulary" class="quick-action">
+                            <div class="quick-action__icon">📝</div>
+                            <div class="quick-action__content">
+                                <h3 class="quick-action__title">Повторение слов</h3>
+                                <p class="quick-action__desc">15 слов ждут повторения</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Последние активности -->
+                <div class="dashboard__section card">
+                    <div class="section-header">
+                        <h2 class="section-header__title">Последние активности</h2>
+                    </div>
+                    
+                    <div class="activity-feed">
+                        {% for test in user.testsession_set.all %}
+                            <div class="activity-item">
+                                <div class="activity-item__icon activity-item__icon--primary">🎯</div>
+                                <div class="activity-item__content">
+                                    <p class="activity-item__text">
+                                        <a href="{% url 'assessment:finish_view' test.id %}" class="activity-item__link">
+                                            Пройден вступительный тест на уровень CEFR
+                                        </a>
+                                    </p>
+                                    <span class="activity-item__time">{{ test.finished_at }}</span>
+                                </div>
+                                <div class="activity-item__score">+25 XP</div>
+                            </div>
+                        {% endfor %}
+                        <div class="activity-item">
+                            <div class="activity-item__icon activity-item__icon--success">✓</div>
+                            <div class="activity-item__content">
+                                <p class="activity-item__text">Завершён урок "Present Simple"</p>
+                                <span class="activity-item__time">2 часа назад</span>
+                            </div>
+                            <div class="activity-item__score">+10 XP</div>
+                        </div>
+                        
+                        <div class="activity-item">
+                            <div class="activity-item__icon activity-item__icon--accent">🏆</div>
+                            <div class="activity-item__content">
+                                <p class="activity-item__text">Получено достижение "Неделя обучения"</p>
+                                <span class="activity-item__time">3 дня назад</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                 <!-- Предстоящие дедлайны -->
+                <div class="dashboard__section card">
+                    <div class="section-header">
+                        <h2 class="section-header__title">Ближайшие задачи</h2>
+                    </div>
+                    
+                    <div class="deadlines">
+                        <div class="deadline-item">
+                            <div class="deadline-item__date">
+                                <span class="deadline-item__day">15</span>
+                                <span class="deadline-item__month">Дек</span>
+                            </div>
+                            <div class="deadline-item__content">
+                                <h3 class="deadline-item__title">Домашнее задание</h3>
+                                <p class="deadline-item__desc">Урок 5: Времена группы Perfect</p>
+                            </div>
+                        </div>
+                        
+                        <div class="deadline-item">
+                            <div class="deadline-item__date">
+                                <span class="deadline-item__day">18</span>
+                                <span class="deadline-item__month">Дек</span>
+                            </div>
+                            <div class="deadline-item__content">
+                                <h3 class="deadline-item__title">Промежуточный тест</h3>
+                                <p class="deadline-item__desc">Модуль 3: Грамматика</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Рекомендации от AI -->
+                <div class="dashboard__section card">
+                    <div class="section-header">
+                        <h2 class="section-header__title">Рекомендации AI</h2>
+                    </div>
+                    
+                    <div class="ai-recommendations">
+                        <div class="ai-recommendation">
+                            <div class="ai-recommendation__icon">💡</div>
+                            <div class="ai-recommendation__content">
+                                <p class="ai-recommendation__text">Сосредоточьтесь на временах группы Continuous для улучшения результатов</p>
+                            </div>
+                        </div>
+                        
+                        <div class="ai-recommendation">
+                            <div class="ai-recommendation__icon">🎯</div>
+                            <div class="ai-recommendation__content">
+                                <p class="ai-recommendation__text">Попрактикуйте 10 новых слов из темы "Путешествия"</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                
+            </div>
+
+            <!-- Правая колонка - Дополнительная информация -->
+            <div class="dashboard__sidebar">
+                
+                <!-- Telegram профиль (перемещен первый) -->
+                <div class="dashboard__section card">
+                    <div class="section-header">
+                        <h2 class="section-header__title">Telegram профиль</h2>
+                    </div>
+                    
+                    <div class="telegram-profile">
+                        {% if user.telegram_profile.telegram_id %}
+                            <!-- Если профиль привязан -->
+                            <div class="telegram-connected">
+                                <div class="telegram-connected__header">
+                                    <div class="telegram-connected__icon">📱</div>
+                                    <div class="telegram-connected__status">
+                                        <span class="telegram-status-badge telegram-status-badge--connected">Подключен</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="telegram-connected__info">
+                                    <div class="telegram-info-item">
+                                        <span class="telegram-info-item__label">Telegram ID:</span>
+                                        <span class="telegram-info-item__value">{{ user.telegram_profile.telegram_id }}</span>
+                                    </div>
+                                    {% if user.telegram_profile.username %}
+                                    <div class="telegram-info-item">
+                                        <span class="telegram-info-item__label">Username:</span>
+                                        <span class="telegram-info-item__value">@{{ user.telegram_profile.username }}</span>
+                                    </div>
+                                    {% endif %}
+                                    <div class="telegram-info-item">
+                                        <span class="telegram-info-item__label">Подключен:</span>
+                                        <span class="telegram-info-item__value">{{ user.telegram_profile.created_at|date:"d.m.Y" }}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="telegram-connected__benefits">
+                                    <h4 class="telegram-benefits__title">Преимущества:</h4>
+                                    <ul class="telegram-benefits__list">
+                                        <li class="telegram-benefits__item">✅ Уведомления о новых уроках</li>
+                                        <li class="telegram-benefits__item">✅ Напоминания о занятиях</li>
+                                        <li class="telegram-benefits__item">✅ Быстрый доступ к боту</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        {% else %}
+                            <!-- Если профиль не привязан -->
+                            <div class="telegram-connect">
+                                <div class="telegram-connect__header">
+                                    <div class="telegram-connect__icon">🔗</div>
+                                    <h3 class="telegram-connect__title">Привяжите Telegram</h3>
+                                </div>
+                                
+                                <p class="telegram-connect__description">
+                                    Подключите Telegram для получения уведомлений и быстрого доступа к обучению
+                                </p>
+                                
+                                {% if invite_link and invite_qr %}
+                                <div class="telegram-connect__methods">
+                                    <div class="telegram-method">
+                                        <h4 class="telegram-method__title">Способ 1: QR-код</h4>
+                                        <div class="telegram-qr">
+                                            <img src="{{ invite_qr }}" alt="QR-код для подключения Telegram" class="telegram-qr__image">
+                                        </div>
+                                        <p class="telegram-method__hint">
+                                            Отсканируйте код в Telegram
+                                        </p>
+                                    </div>
+                                    
+                                    <div class="telegram-method">
+                                        <h4 class="telegram-method__title">Способ 2: Ссылка</h4>
+                                        <div class="telegram-link">
+                                            <a href="{{ invite_link }}" target="_blank" class="btn btn_primary btn_sm telegram-link__btn">
+                                                <span class="btn__icon">✈️</span>
+                                                Перейти в бота
+                                            </a>
+                                        </div>
+                                        <p class="telegram-method__hint">
+                                            Нажмите в меню бота команду "Регистрация" и отправьте ему этот код {{ user.telegram_profile.invite_code }}
+                                        </p>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="telegram-connect__features">
+                                    <h4 class="telegram-features__title">Что вы получите:</h4>
+                                    <ul class="telegram-features__list">
+                                        <li class="telegram-features__item">🎯 Ежедневные напоминания</li>
+                                        <li class="telegram-features__item">📚 Уведомления о новых уроках</li>
+                                        <li class="telegram-features__item">🏆 Отслеживание прогресса</li>
+                                        <li class="telegram-features__item">💬 Быстрая связь с поддержкой</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+               
+
+                <!-- Информация о профиле -->
+                <div class="dashboard__section card">
+                    <div class="section-header">
+                        <h2 class="section-header__title">Персональная информация</h2>
+                    </div>
+                    
+                    <div class="profile-info">
+                        <dl class="info-list">
+                            {% comment %} <div class="info-item">
+                                <dt class="info-item__label">Имя пользователя</dt>
+                                <dd class="info-item__value">{{ user.username }}</dd>
+                            </div> {% endcomment %}
+                            <div class="info-item">
+                                <dt class="info-item__label">Электронная почта</dt>
+                                <dd class="info-item__value">{{ user.email }}</dd>
+                            </div>
+                            <div class="info-item">
+                                <dt class="info-item__label">Телефон</dt>
+                                <dd class="info-item__value">{{ user.profile.phone|default:"Не указан" }}</dd>
+                            </div>
+                            <div class="info-item">
+                                <dt class="info-item__label">Дата рождения</dt>
+                                <dd class="info-item__value">{{ user.profile.birthdate|default:"Не указана" }}</dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+
+                <!-- Достижения -->
+                <div class="dashboard__section card">
+                    <div class="section-header">
+                        <h2 class="section-header__title">Последние достижения</h2>
+                        <a href="/achievements" class="btn btn_ghost btn_sm">Все</a>
+                    </div>
+                    
+                    <div class="achievements-preview">
+                        <div class="achievement-badge">
+                            <div class="achievement-badge__icon">🔥</div>
+                            <div class="achievement-badge__info">
+                                <h4 class="achievement-badge__title">7 дней подряд</h4>
+                                <p class="achievement-badge__desc">Непрерывное обучение</p>
+                            </div>
+                        </div>
+                        
+                        <div class="achievement-badge">
+                            <div class="achievement-badge__icon">📚</div>
+                            <div class="achievement-badge__info">
+                                <h4 class="achievement-badge__title">Быстрый старт</h4>
+                                <p class="achievement-badge__desc">5 уроков за неделю</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock content %}

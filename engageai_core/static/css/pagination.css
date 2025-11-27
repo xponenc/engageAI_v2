@@ -1,0 +1,16 @@
+.pagination {
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    max-width: 200px;
+}
+.pagination__item {
+}
+.pagination__item--dots {
+}
+.pagination__link {
+}
+.active {
+    font-weight: 600;
+}

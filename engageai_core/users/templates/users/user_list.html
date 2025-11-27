@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Список пользователей{% endblock title %}
+{% block css %}
+{% endblock css %}
+{% block content %}
+<h1>Список пользователей</h1>
+
+{% for message in messages %}
+    <p>{{ message }}</p>
+{% endfor %}
+
+<table>
+    <tr>
+        <td>Имя</td><td>Фамилия</td>
+        <td>Электронная почта</td>
+        <td>Телефон</td>
+        <td>Дата рождения</td>
+        <td>Город проживания</td>
+        <td>Верифицирован</td>
+        <td>Роль</td>
+    </tr>
+{%  for user in user_list %}
+     <tr>
+         <td><a href="{{ user.profile.get_absolute_url }}">{{ user.first_name }}</a></td>
+        <td>{{ user.last_name }}</td>
+         <td>{{ user.email }}</td>
+         <td>{{ user.profile.phone }}</td>
+         <td>{{ user.profile.birthdate }}</td>
+         <td>{{ user.profile.location }}</td>
+         <td>{% if user.profile.is_verified == True %}Да{% else %}Нет{% endif %}</td>
+         <td>{% for group in user.groups.all %}
+            <span>{{ group.name }} </span>
+            {% endfor %}
+        </td>
+         <td>
+             {% if user.profile.is_verified != True %}
+             <a class="btn" href="{% url 'app_users:verify' user.id %}">Верифицировать</a> {{ perms.app_users.verify }}
+             {% endif %}
+         </td>
+    </tr>
+{% endfor %}
+
+
+</table>
+{% endblock content %}
+
+{% block script %}
+{% endblock script %}

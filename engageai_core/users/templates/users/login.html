@@ -1,0 +1,233 @@
+{% extends 'base_without_nav.html' %}
+{% load static %}
+
+{% block title %}Вход в систему{% endblock title %}
+
+{% block css %}
+<link href="{% static 'css/users/user.css' %}" rel="stylesheet">
+<link href="{% static 'css/users/auth.css' %}" rel="stylesheet">
+{% endblock css %}
+
+
+{% block content %}
+<section class="auth">
+    <div class="auth__container container">
+        <div class="auth__wrapper">
+            
+            <!-- Левая колонка - Приветствие и информация -->
+            <div class="auth__hero">
+                <div class="auth__hero-content">
+                    <a href="/" class="auth__logo">
+                        <div class="auth__logo-icon">🎯</div>
+                        <span class="auth__logo-text">EngageAI</span>
+                    </a>
+                    
+                    <div class="auth__welcome">
+                        <h1 class="auth__title">С возвращением!</h1>
+                        <p class="auth__subtitle">
+                            Продолжайте ваше путешествие в изучении английского с AI-репетитором
+                        </p>
+                    </div>
+
+                    <div class="auth__features">
+                        <div class="feature-item">
+                            <div class="feature-item__icon">🤖</div>
+                            <div class="feature-item__content">
+                                <h3 class="feature-item__title">AI-репетитор</h3>
+                                <p class="feature-item__desc">Персонализированные уроки и рекомендации</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-item">
+                            <div class="feature-item__icon">📊</div>
+                            <div class="feature-item__content">
+                                <h3 class="feature-item__title">Отслеживание прогресса</h3>
+                                <p class="feature-item__desc">Детальная статистика и аналитика</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-item">
+                            <div class="feature-item__icon">🎮</div>
+                            <div class="feature-item__content">
+                                <h3 class="feature-item__title">Геймификация</h3>
+                                <p class="feature-item__desc">Достижения, бейджи и система мотивации</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Правая колонка - Форма авторизации -->
+            <div class="auth__form-section">
+                <div class="auth-form card">
+                    <div class="auth-form__header">
+                        <h2 class="auth-form__title">Вход в аккаунт</h2>
+                        <p class="auth-form__subtitle">
+                            Введите ваши данные для входа в систему
+                        </p>
+                    </div>
+
+                    <!-- Сообщения об ошибках -->
+                    {% if form.errors %}
+                    <div class="auth-form__errors">
+                        <div class="alert alert--error">
+                            <div class="alert__icon">⚠️</div>
+                            <div class="alert__content">
+                                <h4 class="alert__title">Ошибка входа</h4>
+                                <p class="alert__message">
+                                    Пожалуйста, проверьте правильность введенных данных
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if messages %}
+                    <div class="auth-form__messages">
+                        {% for message in messages %}
+                        <div class="alert alert--{{ message.tags }}">
+                            <div class="alert__icon">
+                                {% if message.tags == 'success' %}✅
+                                {% elif message.tags == 'error' %}⚠️
+                                {% elif message.tags == 'warning' %}⚠️
+                                {% else %}ℹ️{% endif %}
+                            </div>
+                            <div class="alert__content">
+                                <p class="alert__message">{{ message }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <form class="auth-form__form form" method="post">
+                        {% csrf_token %}
+                        
+                        <div class="form-fields">
+                            <!-- Поле username/email -->
+                            <div class="form-field">
+                                <label for="{{ form.username.id_for_label }}" class="form-field__label">
+                                    Email пользователя
+                                </label>
+                                <div class="input-wrapper">
+                                    <div class="input-icon">👤</div>
+                                    {{ form.username }}
+                                </div>
+                                {% if form.username.errors %}
+                                <div class="form-field__errors">
+                                    {{ form.username.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Поле пароля -->
+                            <div class="form-field">
+                                <div class="form-field__header">
+                                    <label for="{{ form.password.id_for_label }}" class="form-field__label">
+                                        Пароль
+                                    </label>
+                                    <a href="/" class="form-field__link">
+                                        Забыли пароль?
+                                    </a>
+                                </div>
+                                <div class="input-wrapper">
+                                    <div class="input-icon">🔒</div>
+                                    {{ form.password }}
+                                    <button type="button" class="password-toggle" id="password-toggle">
+                                        <span class="password-toggle__icon">👁️</span>
+                                    </button>
+                                </div>
+                                {% if form.password.errors %}
+                                <div class="form-field__errors">
+                                    {{ form.password.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Запомнить меня -->
+                        <div class="form-option">
+                            <label class="checkbox">
+                                {{ form.remember_me }}
+                                <span class="checkbox__custom"></span>
+                                <span class="checkbox__label">Запомнить меня</span>
+                            </label>
+                        </div>
+
+                        <!-- Кнопка входа -->
+                        <div class="auth-form__actions">
+                            <button type="submit" class="btn btn_primary btn_lg auth-form__submit">
+                                <span class="btn__icon">🚀</span>
+                                Войти в систему
+                            </button>
+                        </div>
+
+                        <!-- Разделитель -->
+                        <div class="auth-form__divider">
+                            <span class="auth-form__divider-text">или</span>
+                        </div>
+
+                        <!-- Социальные сети (опционально) -->
+                        <div class="auth-form__social">
+                            <p class="auth-form__social-text">Войти с помощью</p>
+                            <div class="social-buttons">
+                                <button type="button" class="social-btn social-btn--google">
+                                    <span class="social-btn__icon">🔍</span>
+                                    Google
+                                </button>
+                                <button type="button" class="social-btn social-btn--github">
+                                    <span class="social-btn__icon">💻</span>
+                                    GitHub
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Ссылка на регистрацию -->
+                        <div class="auth-form__footer">
+                            <p class="auth-form__footer-text">
+                                Еще нет аккаунта?
+                                <a href="{% url 'users:sign-up' %}" class="auth-form__footer-link">
+                                    Зарегистрироваться
+                                </a>
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Переключение видимости пароля
+    const passwordToggle = document.getElementById('password-toggle');
+    const passwordInput = document.getElementById('{{ form.password.id_for_label }}');
+    
+    if (passwordToggle && passwordInput) {
+        passwordToggle.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            // Меняем иконку
+            const icon = this.querySelector('.password-toggle__icon');
+            icon.textContent = type === 'password' ? '👁️' : '🔒';
+        });
+    }
+    
+    // Добавляем фокус-стили к полям ввода
+    const inputs = document.querySelectorAll('.input-wrapper input');
+    inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            this.parentElement.classList.add('input-wrapper--focused');
+        });
+        
+        input.addEventListener('blur', function() {
+            this.parentElement.classList.remove('input-wrapper--focused');
+        });
+    });
+});
+</script>
+{% endblock script %}

@@ -1,0 +1,38 @@
+<!-- Error messaging -->
+{% if form.errors %}
+<ul class="form__errors" id="errors">
+    <li class="form__error">Форма заполнена некорректно. Пожалуйста, исправьте:</li>
+    {% for field in form %}
+        {% if field.errors %}   
+            {% for error in field.errors %}
+            <li class="form__error">{{ field.label }}: {{ error|striptags }}</li>
+            {% endfor %}
+        {% endif %}
+    {% endfor %}
+</ul>
+{% endif %}
+<!-- /Error messaging -->
+<div class="form__container">
+    {% for field in form %}
+    <div class="field-container just-validate-tooltip-container {% if 'custom-field__input_hidden' in field.field.widget.attrs.class %} _crm-hidden-field {% elif 'custom-field__input_wide' in field.field.widget.attrs.class %} field-container_wide{% endif %}">
+        {% if field.is_hidden %}
+            {{ field }}
+        {% else %}
+            {% if 'form__moretoggles' in field.field.widget.attrs.class %}
+            <label class="crm-form__input-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            <div class="mt-square-tomato" style="font-size: 10px;">
+                {{ field }}
+                <label class="filter__name" for="id_active_status"></label>
+            </div>
+            {% elif 'switch' in field.field.widget.attrs.class %}
+                {% include "catalog/widgets/_switch-widget.html" %}
+            {% else %}
+                {% include "catalog/widgets/_custom-field__input-placeholder-widget.html" %}
+            {% endif %}
+            {% if field.help_text %}
+            <p class="help">{{ field.help_text|safe }}</p>
+            {% endif %}
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>

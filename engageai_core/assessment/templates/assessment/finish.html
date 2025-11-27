@@ -1,0 +1,488 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Результат тестирования{% endblock title %}
+
+{% block content %}
+
+<section class="result">
+  <div class="result__container container">
+
+    <!-- HERO -->
+    <div class="result__hero card">
+        <h1 class="result__title">Ваш уровень определён!</h1>
+
+        <div class="result__level-block">
+            <div class="result__level">{{ protocol.estimated_level }}</div>
+            <div class="result__level-label">Уровень владения языком</div>
+        </div>
+
+        <p class="result__subtitle">
+            Наш алгоритм проанализировал ваши ответы и сформировал детальный профиль.
+        </p>
+
+        <!-- CTA -->
+        <div class="result__actions result__actions_top">
+            <a href="/courses" class="btn btn_primary btn_lg">Начать обучение</a>
+            <a href="{% url 'users:profile' request.user.id %}" class="btn btn_outline btn_lg">Личный кабинет</a>
+            <a href="{% url 'assessment:start_test' %}" class="btn btn_ghost">Пройти тест снова</a>
+        </div>
+    </div>
+
+    <!-- CARDS -->
+    <div class="result__stats">
+        <div class="result-card">
+            <div class="result-card__value">{{ protocol.total_score }}</div>
+            <div class="result-card__label">Количество правильных</div>
+        </div>
+
+        <div class="result-card">
+            <div class="result-card__value">{{ protocol.total_questions }}</div>
+            <div class="result-card__label">Всего вопросов</div>
+        </div>
+
+        <div class="result-card">
+            <div class="result-card__value">{{ protocol.ratio }}%</div>
+            <div class="result-card__label">Точность</div>
+        </div>
+
+        <div class="result-card result-card_highlight">
+            <div class="result-card__value">
+                {{ protocol.estimated_level }}
+            </div>
+            <div class="result-card__label">Определённый уровень</div>
+        </div>
+    </div>
+
+    <!-- AI SUMMARY - ПЕРЕРАБОТАННЫЙ БЛОК -->
+    <div class="result__ai card">
+        <div class="result__ai-header">
+            <div class="result__ai-title-wrapper">
+                <h3 class="result__section-title">Персонализированный анализ от нейро-репетитора</h3>
+                <div class="result__ai-confidence">
+                    <span class="result__confidence-label">Уверенность анализа</span>
+                    <div class="result__confidence-value">{{ protocol.llm_report.confidence }}%</div>
+                </div>
+            </div>
+        </div>
+
+        {% if protocol.llm_report %}
+            <div class="result__ai-content">
+                <!-- Введение -->
+                <div class="result__ai-section result__ai-intro">
+                    <p class="result__ai-text">Поздравляем с достижением уровня <strong class="result__highlight">{{ protocol.llm_report.estimated_level }}</strong>. 
+                    Ваш общий балл: <strong>{{ protocol.llm_report.overall_score }}</strong>. Вы демонстрируете хороший прогресс — давайте развивать его дальше!</p>
+                </div>
+
+                <!-- Навыки -->
+                <div class="result__ai-section">
+                    <h4 class="result__subsection-title">Оценка навыков</h4>
+                    <div class="result__skills-grid">
+                        <div class="skill-card">
+                            <div class="skill-card__header">
+                                <span class="skill-card__name">Грамматика</span>
+                                <span class="skill-card__score">{{ protocol.llm_report.score_summary.grammar }}</span>
+                            </div>
+                            <div class="skill-card__progress">
+                                <div class="skill-card__progress-bar" style="width: {{ protocol.llm_report.score_summary.grammar }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="skill-card">
+                            <div class="skill-card__header">
+                                <span class="skill-card__name">Словарный запас</span>
+                                <span class="skill-card__score">{{ protocol.llm_report.score_summary.vocabulary }}</span>
+                            </div>
+                            <div class="skill-card__progress">
+                                <div class="skill-card__progress-bar" style="width: {{ protocol.llm_report.score_summary.vocabulary }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="skill-card">
+                            <div class="skill-card__header">
+                                <span class="skill-card__name">Восприятие на слух</span>
+                                <span class="skill-card__score">{{ protocol.llm_report.score_summary.listening }}</span>
+                            </div>
+                            <div class="skill-card__progress">
+                                <div class="skill-card__progress-bar" style="width: {{ protocol.llm_report.score_summary.listening }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="skill-card">
+                            <div class="skill-card__header">
+                                <span class="skill-card__name">Разговорная речь</span>
+                                <span class="skill-card__score">{{ protocol.llm_report.score_summary.speaking }}</span>
+                            </div>
+                            <div class="skill-card__progress">
+                                <div class="skill-card__progress-bar" style="width: {{ protocol.llm_report.score_summary.speaking }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="skill-card">
+                            <div class="skill-card__header">
+                                <span class="skill-card__name">Письмо</span>
+                                <span class="skill-card__score">{{ protocol.llm_report.score_summary.writing }}</span>
+                            </div>
+                            <div class="skill-card__progress">
+                                <div class="skill-card__progress-bar" style="width: {{ protocol.llm_report.score_summary.writing }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Сильные стороны и области роста -->
+                <div class="result__ai-columns">
+                    <div class="result__ai-col">
+                        <div class="result__ai-section">
+                            <h4 class="result__subsection-title result__subsection-title--success">Сильные стороны</h4>
+                            <ul class="result__list result__list--success">
+                                {% for strength in protocol.llm_report.strengths %}
+                                    <li class="result__list-item">{{ strength }}</li>
+                                {% empty %}
+                                    <li class="result__list-item">Начните занятия, чтобы раскрыть ваши сильные стороны</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="result__ai-col">
+                        <div class="result__ai-section">
+                            <h4 class="result__subsection-title result__subsection-title--warning">Области для развития</h4>
+                            <ul class="result__list result__list--warning">
+                                {% for weakness in protocol.llm_report.weaknesses %}
+                                    <li class="result__list-item">{{ weakness }}</li>
+                                {% empty %}
+                                    <li class="result__list-item">Продолжайте в том же духе!</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Рекомендации -->
+                <div class="result__ai-section">
+                    <h4 class="result__subsection-title">Рекомендации по обучению</h4>
+                    <div class="result__recommendations">
+                        {% for recommendation in protocol.llm_report.recommendations %}
+                            <div class="recommendation-card">
+                                <div class="recommendation-card__number">{% if forloop.counter < 10 %}0{% endif %}{{ forloop.counter }}</div>
+                                <div class="recommendation-card__content">
+                                    <p class="recommendation-card__text">{{ recommendation }}</p>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="recommendation-card">
+                                <div class="recommendation-card__content">
+                                    <p class="recommendation-card__text">Изучите базовые модули для закрепления уровня</p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Учебный план -->
+                <div class="result__ai-section">
+                    <h4 class="result__subsection-title">Персональный учебный план на 7 дней</h4>
+                    <div class="result__study-plan">
+                        {% for day in protocol.llm_report.study_plan %}
+                            <div class="study-day">
+                                <div class="study-day__header">
+                                    <span class="study-day__number">День {{ forloop.counter }}</span>
+                                    <div class="study-day__status" aria-label="Статус выполнения"></div>
+                                </div>
+                                <p class="study-day__task">{{ day }}</p>
+                            </div>
+                        {% empty %}
+                            <div class="study-day">
+                                <div class="study-day__header">
+                                    <span class="study-day__number">День 1-7</span>
+                                </div>
+                                <p class="study-day__task">Начните с базовых упражнений — персонализированный план будет сгенерирован после тестирования</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Заметки -->
+                {% if protocol.llm_report %}
+                <div class="result__ai-section">
+                    <div class="result__notes">
+                        <h4 class="result__subsection-title">Дополнительные заметки</h4>
+                        <p class="result__notes-text">{{ protocol.llm_report.notes }}</p>
+                        
+                        <details class="result__debug">
+                            <summary class="result__debug-summary">Техническая информация</summary>
+                            <div class="debug-content">
+                                <pre class="debug-json">{{ protocol.llm_report|pprint }}</pre>
+                                
+                                <div class="session-questions">
+                                    <h5 class="session-questions__title">Детализация вопросов и ответов</h5>
+                                    
+                                    {% for question in session.questions.all %}
+                                    <div class="question-card">
+                                        <div class="question-card__header">
+                                            <span class="question-card__number">Вопрос {{ forloop.counter }}</span>
+                                            <span class="question-card__type">{{ question.source_type }}</span>
+                                        </div>
+                                        
+                                        <div class="question-card__content">
+                                            <!-- Текст вопроса -->
+                                            <div class="question-text">
+                                                <h6 class="question-text__title">Текст вопроса:</h6>
+                                                <div class="question-text__content">
+                                                    {% if question.question_json.text %}
+                                                        {{ question.question_json.text }}
+                                                    {% elif question.question_json.question_text %}
+                                                        {{ question.question_json.question_text }}
+                                                    {% else %}
+                                                        <pre class="question-json">{{ question.question_json|pprint }}</pre>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Варианты ответа (если есть) -->
+                                            {{ question.question_json }}
+                                            {% if question.question_json.options %}
+                                            <div class="question-options">
+                                                <h6 class="question-options__title">Варианты ответов:</h6>
+                                                <ul class="options-list">
+                                                    {% for option in question.question_json.options %}
+                                                    <li class="options-list__item">{{ option }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                            {% endif %}
+                                            
+                                            <!-- Ответы пользователя -->
+                                            <div class="question-answers">
+                                                <h6 class="question-answers__title">Ответ пользователя:</h6>
+                                                {% if question.answer %}
+                                                <div class="answer-item">
+                                                    <div class="answer-item__header">
+                                                        {% if question.answer.score is not None %}
+                                                        <span class="answer-item__score {% if question.answer.score >= 0.8 %}score-high{% elif question.answer.score >= 0.5 %}score-medium{% else %}score-low{% endif %}">
+                                                            Оценка: {{ question.answer.score|floatformat:2 }}
+                                                        </span>
+                                                        {% endif %}
+                                                    </div>
+                                                    
+                                                    <div class="answer-item__content">
+                                                        {% if question.answer.answer_text %}
+                                                        <div class="answer-text">
+                                                            <strong>Текст ответа:</strong> {{ question.answer.answer_text }}
+                                                        </div>
+                                                        {% endif %}
+                                                        
+                                                        {% if question.answer.recognized_text %}
+                                                        <div class="answer-recognized">
+                                                            <strong>Распознанный текст:</strong> {{ question.answer.recognized_text }}
+                                                        </div>
+                                                        {% endif %}
+                                                        
+                                                        {% if question.answer.ai_feedback %}
+                                                        <div class="answer-feedback">
+                                                            <strong>AI Feedback:</strong>
+                                                            <pre class="feedback-json">{{ question.answer.ai_feedback|pprint }}</pre>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    
+                                                    <div class="answer-item__meta">
+                                                        <span class="answer-time">{{ question.answer.answered_at|date:"H:i:s" }}</span>
+                                                    </div>
+                                                </div>
+                                                {% else %}
+                                                <div class="no-answers">
+                                                    <span class="no-answers__text">Нет ответов</span>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- CTA -->
+                <div class="result__ai-actions">
+                    <a href="/courses" class="btn btn_primary btn_lg">Начать обучение по персональному плану</a>
+                </div>
+            </div>
+
+        {% else %}
+            <div class="result__ai-empty">
+                <div class="result__ai-empty-icon"></div>
+                <h4 class="result__subsection-title">Персональные рекомендации</h4>
+                <p class="result__ai-empty-text">Пройдите тестирование для получения детального анализа и персонализированных рекомендаций от нейро-репетитора</p>
+                <a href="{% url 'assessment:start_test' %}" class="btn btn_outline">Пройти тестирование</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- AI SUMMARY -->
+    <div class="result__ai card">
+        <div class="result-ai">
+            <!-- Header -->
+            <div class="result-ai__header">
+                <h3 class="result-ai__title">AI-анализ ваших результатов</h3>
+                <p class="result-ai__subtitle">Персонализированный отчет на основе ответов на тест</p>
+            </div>
+
+            {% if protocol.llm_report %}
+            <!-- Intro: Score + Level + Confidence -->
+            <div class="result-ai__intro">
+                <div class="result-ai__score">
+                    <span class="result-ai__score-value">{{ protocol.llm_report.overall_score }}%</span>
+                    <span class="result-ai__score-label">Общий балл</span>
+                </div>
+                
+                <div class="result-ai__level">
+                    <span class="result-ai__level-badge">{{ protocol.llm_report.estimated_level }}</span>
+                </div>
+                
+                <div class="result-ai__confidence">
+                    <div class="result-ai__confidence-label">
+                        <span>Точность анализа</span>
+                        <span class="result-ai__confidence-value">{{ protocol.llm_report.confidence }}%</span>
+                    </div>
+                    <div class="result-ai__confidence-bar">
+                        <div class="result-ai__confidence-fill" style="width: {{ protocol.llm_report.confidence }}%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skills Radar (grid) -->
+            <div class="result-ai__skills">
+                <h4 class="result-ai__section-title">Оценка по навыкам</h4>
+                <div class="result-ai__skills-grid">
+                    {% for skill_name, score in protocol.llm_report.score_summary.items %}
+                    <div class="result-ai__skill">
+                        <div class="result-ai__skill-header">
+                            <span class="result-ai__skill-name">{{ skill_name|title }}</span>
+                            <span class="result-ai__skill-score">{{ score }}%</span>
+                        </div>
+                        <div class="result-ai__skill-bar">
+                            <div class="result-ai__skill-fill" style="width: {{ score }}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Strengths -->
+            <div class="result-ai__section result-ai__section--strengths">
+                <h4 class="result-ai__section-title">
+                    <span class="result-ai__section-icon result-ai__section-icon--success"></span>
+                    Сильные стороны
+                </h4>
+                <ul class="result-ai__list">
+                    {% for strength in protocol.llm_report.strengths %}
+                    <li class="result-ai__list-item result-ai__list-item--success">
+                        {{ strength }}
+                    </li>
+                    {% empty %}
+                    <li class="result-ai__list-item result-ai__list-item--empty">AI отметит сильные стороны после анализа</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- Growth Areas -->
+            <div class="result-ai__section result-ai__section--growth">
+                <h4 class="result-ai__section-title">
+                    <span class="result-ai__section-icon result-ai__section-icon--growth"></span>
+                    Области для роста
+                </h4>
+                <ul class="result-ai__list">
+                    {% for weakness in protocol.llm_report.weaknesses %}
+                    <li class="result-ai__list-item result-ai__list-item--growth">
+                        {{ weakness }}
+                    </li>
+                    {% empty %}
+                    <li class="result-ai__list-item result-ai__list-item--empty">Все навыки на достойном уровне</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="result-ai__section">
+                <h4 class="result-ai__section-title">
+                    <span class="result-ai__section-icon result-ai__section-icon--rec"></span>
+                    Персональные рекомендации
+                </h4>
+                <ul class="result-ai__list result-ai__list--recommendations">
+                    {% for rec in protocol.llm_report.recommendations %}
+                    <li class="result-ai__list-item result-ai__list-item--rec">
+                        {{ rec }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- 7-Day Study Plan -->
+            <div class="result-ai__section">
+                <h4 class="result-ai__section-title">
+                    <span class="result-ai__section-icon result-ai__section-icon--plan"></span>
+                    7-дневный план обучения
+                </h4>
+                <ol class="result-ai__plan">
+                    {% for day in protocol.llm_report.study_plan %}
+                    <li class="result-ai__plan-item">
+                        <div class="result-ai__plan-day">{{ forloop.counter }}</div>
+                        <div class="result-ai__plan-content">
+                            <p class="result-ai__plan-text">{{ day }}</p>
+                            <div class="result-ai__plan-progress">
+                                <div class="result-ai__plan-progress-bar">
+                                    <div class="result-ai__plan-progress-fill" style="width: 0%"></div>
+                                </div>
+                                <span class="result-ai__plan-progress-label">0%</span>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ol>
+            </div>
+
+            <!-- CTA Button -->
+            <div class="result-ai__cta">
+                <a href="/courses" class="btn btn_primary result-ai__btn">
+                    <span class="result-ai__btn-main">Начать обучение</span>
+                    <span class="result-ai__btn-sub">Проходите уроки и отслеживайте прогресс</span>
+                </a>
+            </div>
+
+            {% else %}
+            <!-- Fallback state -->
+            <div class="result-ai__empty">
+                <p class="result-ai__empty-text">AI-репетитор готовит персональный отчет...</p>
+                <div class="result-ai__empty-loader"></div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- PROGRESSION -->
+    <div class="result__progress card">
+        <h3 class="result__section-title">Прогноз развития</h3>
+        <p class="result__progress-text">
+            На основе вашего уровня система может предложить оптимальный путь обучения.
+        </p>
+
+        <div class="result__progress-bar">
+            <div class="result__progress-filled" style="width: {{ protocol.ratio }}%"></div>
+        </div>
+    </div>
+
+    <!-- CTA #2 -->
+    <div class="result__actions result__actions_bottom">
+        <a href="/courses" class="btn btn_primary">Перейти к обучению</a>
+        <a href="{% url 'assessment:start_test' %}" class="btn btn_outline">Пройти тест снова</a>
+    </div>
+
+  </div>
+</section>
+
+{% endblock content %}

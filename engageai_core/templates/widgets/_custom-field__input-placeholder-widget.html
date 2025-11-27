@@ -1,0 +1,29 @@
+{% comment %} <label class="form__input-label" for="{{ field.id_for_label }}">{{ field.label }}</label> {% endcomment %}
+<!-- {{ field.label_tag }}  -->
+{% comment %} <label class="custom-field" {% if widget.attrs.id %} for="{{ widget.attrs.id }}"{% endif %}>
+    <input class="custom-field__input" type="{{ widget.type }}" name="{{ widget.name }}" 
+    {% if widget.value %} value={{ widget.value }}{% endif %}
+    {% for name, value in widget.attrs.items %}
+        {% if value is not False %} {{ name }}
+            {% if value is not True %}="{{ value }}"{% endif %}
+        {% endif %}
+    {% endfor %}
+    />
+    <span class="custom-field__placeholder">1111{{ widget.label }} {{ widget.attrs.label }}</span>
+    {% if field.errors %}
+    <span class="custom-field__error-message" aria-live="polite">{{ widget.errors }}</span>
+    {% endif %}
+</label> {% endcomment %}
+
+<label class="custom-field">
+    {% if field.field.widget.attrs.placeholder != " " %}
+    <span class="custom-field__label">{{ field.label }}</span>
+    {% endif %}
+    {{ field }}
+    {% if field.field.widget.attrs.placeholder == " " %}
+    <span class="custom-field__placeholder">{{ field.label }}</span>
+    {% endif %}
+    {% if field.errors %}
+    <span class="custom-field__error-message" aria-live="polite">{{ field.errors }}</span>
+    {% endif %}
+</label>

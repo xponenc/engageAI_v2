@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Подтверждение email | EngageAI{% endblock title %}
+
+{% block css %}
+<link href="{% static 'css/index.css' %}" rel="stylesheet">
+<link href="{% static 'css/users/user.css' %}" rel="stylesheet">
+<link href="{% static 'css/users/auth.css' %}" rel="stylesheet">
+<link href="{% static 'css/users/email.css' %}" rel="stylesheet">
+{% endblock css %}
+
+{% block content %}
+<section class="email-verification">
+    <div class="email-verification__container container">
+        <div class="email-verification__card card">
+            <!-- Анимированная иконка -->
+            <div class="email-verification__icon">
+                <div class="email-icon">
+                    <div class="email-icon__envelope">📧</div>
+                    <div class="email-icon__arrow">➡️</div>
+                    <div class="email-icon__inbox">📥</div>
+                </div>
+            </div>
+
+            <!-- Основной контент -->
+            <div class="email-verification__content">
+                <h1 class="email-verification__title">Проверьте вашу почту</h1>
+                
+                <div class="email-verification__message">
+                    <p class="email-verification__text">
+                        Мы отправили вам письмо с ссылкой для подтверждения email адреса.
+                    </p>
+                    
+                    <div class="email-verification__details">
+                        <div class="detail-item">
+                            <div class="detail-item__icon">✅</div>
+                            <div class="detail-item__text">
+                                <strong>Ссылка для подтверждения</strong>
+                                <span>Действительна в течение 24 часов</span>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <div class="detail-item__icon">🕒</div>
+                            <div class="detail-item__text">
+                                <strong>Обычное время доставки</strong>
+                                <span>1-5 минут</span>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <div class="detail-item__icon">📁</div>
+                            <div class="detail-item__text">
+                                <strong>Не пришло письмо?</strong>
+                                <span>Проверьте папку «Спам» или «Рассылки»</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Действия -->
+                <div class="email-verification__actions">
+                    <a href="{% url 'users:login' %}" class="btn btn_primary btn_lg">
+                        <span class="btn__icon">🔐</span>
+                        Перейти к входу
+                    </a>
+                    <a href="/" class="btn btn_outline btn_lg">
+                        <span class="btn__icon">🏠</span>
+                        На главную
+                    </a>
+                </div>
+
+                <!-- Дополнительная помощь -->
+                <div class="email-verification__help">
+                    <div class="help-card">
+                        <div class="help-card__icon">❓</div>
+                        <div class="help-card__content">
+                            <h4 class="help-card__title">Возникли проблемы?</h4>
+                            <p class="help-card__text">
+                                Если вы не получили письмо в течение 10 минут, 
+                                <a href="mailto:support@EngageAI.com" class="help-card__link">
+                                    свяжитесь с нашей поддержкой
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Бонусная информация -->
+        <div class="email-verification__bonus">
+            <div class="bonus-card card">
+                <h3 class="bonus-card__title">Что дальше?</h3>
+                <div class="bonus-card__steps">
+                    <div class="bonus-step">
+                        <div class="bonus-step__number">1</div>
+                        <div class="bonus-step__content">
+                            <strong>Подтвердите email</strong>
+                            <span>Перейдите по ссылке в письме</span>
+                        </div>
+                    </div>
+                    <div class="bonus-step">
+                        <div class="bonus-step__number">2</div>
+                        <div class="bonus-step__content">
+                            <strong>Войдите в систему</strong>
+                            <span>Используйте ваш email и пароль</span>
+                        </div>
+                    </div>
+                    <div class="bonus-step">
+                        <div class="bonus-step__number">3</div>
+                        <div class="bonus-step__content">
+                            <strong>Пройти тестирование</strong>
+                            <span>Определите ваш уровень английского</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Простая анимация для иконки email
+    const emailIcon = document.querySelector('.email-icon');
+    if (emailIcon) {
+        let animationFrame;
+        let startTime = null;
+        
+        function animate(timestamp) {
+            if (!startTime) startTime = timestamp;
+            const progress = (timestamp - startTime) / 2000; // 2 секунды цикл
+            
+            const envelope = emailIcon.querySelector('.email-icon__envelope');
+            const arrow = emailIcon.querySelector('.email-icon__arrow');
+            const inbox = emailIcon.querySelector('.email-icon__inbox');
+            
+            // Плавное перемещение стрелки
+            const arrowX = Math.sin(progress * Math.PI * 2) * 20;
+            arrow.style.transform = `translateX(${arrowX}px)`;
+            
+            // Мигание конверта и inbox
+            if (Math.sin(progress * Math.PI * 2) > 0.5) {
+                envelope.style.opacity = '0.7';
+                inbox.style.opacity = '1';
+            } else {
+                envelope.style.opacity = '1';
+                inbox.style.opacity = '0.7';
+            }
+            
+            animationFrame = requestAnimationFrame(animate);
+        }
+        
+        animationFrame = requestAnimationFrame(animate);
+        
+        // Останавливаем анимацию при уходе со страницы для производительности
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                cancelAnimationFrame(animationFrame);
+            } else {
+                animationFrame = requestAnimationFrame(animate);
+            }
+        });
+    }
+    
+    // Добавляем небольшой эффект при наведении на карточки
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+});
+</script>
+{% endblock script %}

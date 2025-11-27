@@ -1,0 +1,33 @@
+<!-- Error messaging -->
+{% if form.errors %}
+<ul class="form__errors" id="errors">
+    <li class="form__error">Форма заполнена некорректно. Пожалуйста, исправьте:</li>
+    {% for field in form %}
+        {% if field.errors %}   
+            {% for error in field.errors %}
+            <li class="form__error">{{ field.label }}: {{ error|striptags }}</li>
+            {% endfor %}
+        {% endif %}
+    {% endfor %}
+</ul>
+{% endif %}
+<!-- /Error messaging -->
+<div class="form__container">
+    {% for field in form %}
+        {% if field.is_hidden %}
+            {{ field }}
+        {% else %}
+            <div class="field-container just-validate-tooltip-container{% if 'custom-field__input_wide' in field.field.widget.attrs.class %} field-container_wide{% endif %}">
+                
+                {% if 'switch' in field.field.widget.attrs.class %}
+                    {% include "catalog/widgets/_switch-widget.html" %}
+                {% else %}
+                    {% include "widgets/_custom-field__input-placeholder-widget.html" %}
+                {% endif %}
+                {% if field.help_text %}
+                    <p class="field-container_help">{{ field.help_text|safe }}</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endfor %}
+</div>

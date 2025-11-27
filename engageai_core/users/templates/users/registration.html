@@ -1,0 +1,403 @@
+{% extends 'base_without_nav.html' %}
+{% load static %}
+
+{% block title %}Регистрация в EngageAI{% endblock title %}
+
+{% block css %}
+<link href="{% static 'css/index.css' %}" rel="stylesheet">
+<link href="{% static 'css/users/user.css' %}" rel="stylesheet">
+<link href="{% static 'css/users/auth.css' %}" rel="stylesheet">
+{% endblock css %}
+
+{% block content %}
+<section class="auth">
+    <div class="auth__container container">
+        <div class="auth__wrapper">
+            
+            <!-- Левая колонка - Приветствие и информация -->
+            <div class="auth__hero">
+                <div class="auth__hero-content">
+                    <a href="/" class="auth__logo">
+                        <div class="auth__logo-icon">🎯</div>
+                        <span class="auth__logo-text">EngageAI</span>
+                    </a>
+                    
+                    <div class="auth__welcome">
+                        <h1 class="auth__title">Присоединяйтесь к EngageAI!</h1>
+                        <p class="auth__subtitle">
+                            Начните свой путь к свободному английскому с AI-репетитором. 
+                            Персонализированное обучение, геймификация и мгновенный прогресс.
+                        </p>
+                    </div>
+
+                    <div class="auth__features">
+                        <div class="feature-item">
+                            <div class="feature-item__icon">🤖</div>
+                            <div class="feature-item__content">
+                                <h3 class="feature-item__title">AI-репетитор 24/7</h3>
+                                <p class="feature-item__desc">Персональные уроки и рекомендации</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-item">
+                            <div class="feature-item__icon">📊</div>
+                            <div class="feature-item__content">
+                                <h3 class="feature-item__title">Умная аналитика</h3>
+                                <p class="feature-item__desc">Отслеживание прогресса и адаптация программы</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-item">
+                            <div class="feature-item__icon">🎮</div>
+                            <div class="feature-item__content">
+                                <h3 class="feature-item__title">Геймификация</h3>
+                                <p class="feature-item__desc">Бейджи, достижения и система мотивации</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Правая колонка - Форма регистрации -->
+            <div class="auth__form-section">
+                <div class="auth-form card">
+                    <div class="auth-form__header">
+                        <h2 class="auth-form__title">Создать аккаунт</h2>
+                        <p class="auth-form__subtitle">
+                            Заполните данные для регистрации
+                        </p>
+                    </div>
+
+                    <!-- Сообщения об ошибках формы -->
+                    {% if form.errors %}
+                    <div class="auth-form__errors">
+                        <div class="alert alert--error">
+                            <div class="alert__icon">⚠️</div>
+                            <div class="alert__content">
+                                <h4 class="alert__title">Ошибка регистрации</h4>
+                                <p class="alert__message">
+                                    Пожалуйста, исправьте ошибки в форме
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if messages %}
+                    <div class="auth-form__messages">
+                        {% for message in messages %}
+                        <div class="alert alert--{{ message.tags }}">
+                            <div class="alert__icon">
+                                {% if message.tags == 'success' %}✅
+                                {% elif message.tags == 'error' %}⚠️
+                                {% elif message.tags == 'warning' %}⚠️
+                                {% else %}ℹ️{% endif %}
+                            </div>
+                            <div class="alert__content">
+                                <p class="alert__message">{{ message }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <form class="auth-form__form form" method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="form-fields">
+                            <!-- Поле email с AJAX проверкой -->
+                            <div class="form-field">
+                                <label for="{{ form.email.id_for_label }}" class="form-field__label">
+                                    Электронная почта
+                                </label>
+                                <div class="input-wrapper">
+                                    <div class="input-icon">📧</div>
+                                    <input type="email" 
+                                           name="{{ form.email.name }}" 
+                                           id="{{ form.email.id_for_label }}" 
+                                           class="{% if form.email.errors %}input-error{% endif %}"
+                                           value="{{ form.email.value|default:'' }}"
+                                           placeholder="your@email.com"
+                                           required>
+                                </div>
+                                <div class="form-field__hint">
+                                    На этот email придет подтверждение регистрации
+                                </div>
+                                {% if form.email.errors %}
+                                <div class="form-field__errors">
+                                    {{ form.email.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Поле пароля 1 -->
+                            <div class="form-field">
+                                <label for="{{ form.password1.id_for_label }}" class="form-field__label">
+                                    Пароль
+                                </label>
+                                <div class="input-wrapper">
+                                    <div class="input-icon">🔒</div>
+                                    <input type="password" 
+                                           name="{{ form.password1.name }}" 
+                                           id="{{ form.password1.id_for_label }}" 
+                                           class="{% if form.password1.errors %}input-error{% endif %}"
+                                           placeholder="Создайте надежный пароль"
+                                           required>
+                                    <button type="button" class="password-toggle" data-target="{{ form.password1.id_for_label }}">
+                                        <span class="password-toggle__icon">👁️</span>
+                                    </button>
+                                </div>
+                                {% if form.password1.errors %}
+                                <div class="form-field__errors">
+                                    {{ form.password1.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Поле подтверждения пароля -->
+                            <div class="form-field">
+                                <label for="{{ form.password2.id_for_label }}" class="form-field__label">
+                                    Подтверждение пароля
+                                </label>
+                                <div class="input-wrapper">
+                                    <div class="input-icon">🔒</div>
+                                    <input type="password" 
+                                           name="{{ form.password2.name }}" 
+                                           id="{{ form.password2.id_for_label }}" 
+                                           class="{% if form.password2.errors %}input-error{% endif %}"
+                                           placeholder="Повторите ваш пароль"
+                                           required>
+                                    <button type="button" class="password-toggle" data-target="{{ form.password2.id_for_label }}">
+                                        <span class="password-toggle__icon">👁️</span>
+                                    </button>
+                                </div>
+                                {% if form.password2.errors %}
+                                <div class="form-field__errors">
+                                    {{ form.password2.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Дополнительные поля профиля, если есть -->
+                            {% for field in form %}
+                                {% if field.name not in 'username,email,password1,password2' %}
+                                <div class="form-field">
+                                    <label for="{{ field.id_for_label }}" class="form-field__label">
+                                        {{ field.label }}
+                                    </label>
+                                    <div class="input-wrapper">
+                                        {{ field }}
+                                    </div>
+                                    {% if field.errors %}
+                                    <div class="form-field__errors">
+                                        {{ field.errors }}
+                                    </div>
+                                    {% endif %}
+                                    {% if field.help_text %}
+                                    <div class="form-field__hint">
+                                        {{ field.help_text }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+
+                        <!-- Соглашение с условиями -->
+                        <div class="form-option">
+                            <label class="checkbox">
+                                <input type="checkbox" name="terms" id="terms-checkbox" required>
+                                <span class="checkbox__custom"></span>
+                                <span class="checkbox__label">
+                                    Я соглашаюсь с 
+                                    <a href="/terms" target="_blank" class="checkbox__link">условиями использования</a> 
+                                    и 
+                                    <a href="/privacy" target="_blank" class="checkbox__link">политикой конфиденциальности</a>
+                                </span>
+                            </label>
+                            <div class="form-field__errors" id="terms-error" style="display: none;">
+                                Необходимо принять условия использования
+                            </div>
+                        </div>
+
+                        <!-- Кнопка регистрации -->
+                        <div class="auth-form__actions">
+                            <button type="submit" class="btn btn_primary btn_lg auth-form__submit">
+                                <span class="btn__icon">🚀</span>
+                                Создать аккаунт
+                            </button>
+                        </div>
+
+                        <!-- Разделитель -->
+                        <div class="auth-form__divider">
+                            <span class="auth-form__divider-text">или</span>
+                        </div>
+
+                        <!-- Социальные сети -->
+                        <div class="auth-form__social">
+                            <p class="auth-form__social-text">Зарегистрироваться с помощью</p>
+                            <div class="social-buttons">
+                                <button type="button" class="social-btn social-btn--google">
+                                    <span class="social-btn__icon">🔍</span>
+                                    Google
+                                </button>
+                                <button type="button" class="social-btn social-btn--github">
+                                    <span class="social-btn__icon">💻</span>
+                                    GitHub
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Ссылка на вход -->
+                        <div class="auth-form__footer">
+                            <p class="auth-form__footer-text">
+                                Уже есть аккаунт?
+                                <a href="{% url 'users:login' %}" class="auth-form__footer-link">
+                                    Войти
+                                </a>
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}
+
+{% block script %}
+<script src="{% static 'libs/jquery/jquery-3.6.0.min.js' %}"></script>
+<script>
+    $(document).ready(function () {
+        // Переключение видимости пароля
+        $('.password-toggle').on('click', function() {
+            const targetId = $(this).data('target');
+            const passwordInput = $('#' + targetId);
+            const type = passwordInput.attr('type') === 'password' ? 'text' : 'password';
+            passwordInput.attr('type', type);
+            
+            // Меняем иконку
+            const icon = $(this).find('.password-toggle__icon');
+            icon.text(type === 'password' ? '👁️' : '🔒');
+        });
+        
+        // Добавляем фокус-стили к полям ввода
+        $('.input-wrapper input').on('focus', function() {
+            $(this).parent().addClass('input-wrapper--focused');
+        }).on('blur', function() {
+            $(this).parent().removeClass('input-wrapper--focused');
+        });
+
+        // AJAX проверка email (сохранен ваш оригинальный код)
+        $("#id_email").on("blur", function () {
+            let email = $(this).val().trim();
+            if (!email) return;
+
+            if (!validateEmail(email)) {
+                showMessage("Введите корректный email");
+                return;
+            } else {
+                $("#id_email").parent().find(".custom-field__error-message").remove();
+            }
+
+            $.ajax({
+                url: "{% url 'users:check-email' %}",
+                type: "GET",
+                data: { email: email },
+                success: function (response) {
+                    console.log(response)
+                    if (response.available) {
+                        $("#id_email").parent().find(".custom-field__error-message").remove();
+                        // Показываем сообщение об успехе
+                        showSuccessMessage("Email доступен для регистрации");
+                    } else {
+                        showMessage("Этот email уже занят");
+                    }
+                },
+                error: function () {
+                    showMessage("Ошибка проверки email");
+                }
+            });
+        });
+
+        function validateEmail(email) {
+            let re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            return re.test(email);
+        }
+
+        function showMessage(message) {
+            // Удаляем предыдущие сообщения
+            $("#id_email").parent().find(".custom-field__error-message").remove();
+            $("#id_email").parent().find(".custom-field__success-message").remove();
+            
+            let msg = `<span class="custom-field__error-message" aria-live="polite">${message}</span>`;
+            $("#id_email").parent().append(msg);
+
+            setTimeout(function () {
+                $("#id_email").parent().find(".custom-field__error-message").fadeOut();
+            }, 5000);
+        }
+
+        function showSuccessMessage(message) {
+            // Удаляем предыдущие сообщения
+            $("#id_email").parent().find(".custom-field__error-message").remove();
+            $("#id_email").parent().find(".custom-field__success-message").remove();
+            
+            let msg = `<span class="custom-field__success-message" aria-live="polite">${message}</span>`;
+            $("#id_email").parent().append(msg);
+
+            setTimeout(function () {
+                $("#id_email").parent().find(".custom-field__success-message").fadeOut();
+            }, 3000);
+        }
+
+        // Валидация паролей в реальном времени
+        $("#id_password2").on("input", function() {
+            const password1 = $("#id_password1").val();
+            const password2 = $(this).val();
+            
+            if (password2 && password1 !== password2) {
+                $(this).addClass("input-error");
+                showPasswordMessage("Пароли не совпадают");
+            } else {
+                $(this).removeClass("input-error");
+                $("#id_password2").parent().find(".custom-field__error-message").remove();
+            }
+        });
+
+        function showPasswordMessage(message) {
+            $("#id_password2").parent().find(".custom-field__error-message").remove();
+            
+            let msg = `<span class="custom-field__error-message" aria-live="polite">${message}</span>`;
+            $("#id_password2").parent().append(msg);
+        }
+
+        // Временное решение - обработчик на кнопку
+        $('.auth-form__submit').on('click', function(e) {
+            console.log("button click check");
+            const termsCheckbox = $('#terms-checkbox');
+            const termsError = $('#terms-error');
+            
+            if (!termsCheckbox.is(':checked')) {
+                console.log("terms not accepted - preventing submit");
+                e.preventDefault();
+                termsError.show();
+                termsCheckbox.addClass('input-error');
+                return false;
+            } else {
+                console.log("terms accepted - allowing submit");
+                termsError.hide();
+                termsCheckbox.removeClass('input-error');
+            }
+        });
+
+        // Скрываем ошибку при клике на чекбокс
+        $('#terms-checkbox').on('change', function() {
+            if ($(this).is(':checked')) {
+                $('#terms-error').hide();
+                $(this).removeClass('input-error');
+            }
+        });
+    });
+</script>
+{% endblock script %}

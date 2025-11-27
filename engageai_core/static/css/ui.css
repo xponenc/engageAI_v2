@@ -1,0 +1,2000 @@
+/* ui.css — кнопки, формы, карточки, поля, утилиты (BEM-friendly) */
+
+/*************************************
+ *   BUTTONS — Unified Modern System
+ *************************************/
+
+/* Core BTN */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    padding: var(--btn-padding, 12px 28px);
+    border-radius: var(--btn-radius, var(--radius-md));
+    min-width: 250px;
+
+    font-weight: 600;
+    font-size: 0.95rem;
+    font-family: inherit;
+
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--color-text);
+
+    transition:
+        background-color .18s ease,
+        box-shadow .18s ease,
+        transform .12s ease;
+}
+
+/* Reset — keep */
+.btn_reset {
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    outline: none;
+}
+
+/* -------------------------------------
+   Primary Button (Accent)
+   ------------------------------------- */
+.btn_primary {
+    background: linear-gradient(180deg,
+            var(--color-accent),
+            var(--color-accent-dark));
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(59, 130, 246, 0.15);
+    border-color: transparent;
+}
+
+.btn_primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(59, 130, 246, 0.22);
+}
+
+.btn_primary:active {
+    transform: scale(0.97);
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.18);
+}
+
+.btn_primary:disabled {
+    opacity: 0.45;
+    cursor: default;
+    transform: none;
+    box-shadow: none;
+}
+
+/* -------------------------------------
+   Outline (secondary)
+   ------------------------------------- */
+.btn_outline {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+}
+
+.btn_outline:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent-dark);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+    transform: translateY(-2px);
+}
+
+.btn_outline:active {
+    transform: scale(0.97);
+}
+
+/* -------------------------------------
+   Ghost (link-like subtle)
+   ------------------------------------- */
+.btn_ghost {
+    background: transparent;
+    border: none;
+    color: var(--color-accent-dark);
+}
+
+.btn_ghost:hover {
+    color: var(--color-accent);
+    transform: translateY(-1px);
+}
+
+/* -------------------------------------
+   Link-pill — keep .link class
+   ------------------------------------- */
+.link {
+    padding: 6px 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    font-weight: 600;
+    font-size: 0.9rem;
+
+    background: var(--color-accent-soft);
+    color: var(--color-accent-dark);
+
+    border-radius: 999px;
+    transition: 0.2s ease;
+}
+
+.link:hover {
+    background: var(--color-accent);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+/* -------------------------------------
+   Sizes (optional)
+   ------------------------------------- */
+.btn_sm {
+    padding: 8px 18px;
+    font-size: 0.82rem;
+}
+
+.btn_lg {
+    padding: 16px 32px;
+    font-size: 1.05rem;
+}
+
+
+
+
+/* -------------------------
+   Form fields (custom-field family)
+   ------------------------- */
+.custom-field {
+    position: relative;
+    margin-bottom: 16px;
+    width: 100%;
+}
+
+.custom-field__label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    font-weight: 600;
+}
+
+.custom-field__input {
+    display: block;
+    width: 100%;
+    padding: var(--field-padding);
+    font-size: 1rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--form-input-border-color);
+    background: var(--color-surface);
+    color: var(--input-text-color);
+    transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+    min-height: 44px;
+}
+
+.custom-field__input::placeholder {
+    color: var(--placeholder-color);
+    opacity: 1;
+}
+
+.custom-field__input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 6px 16px var(--color-accent-soft);
+    background: #fff;
+}
+
+.custom-field__input_textarea {
+    min-height: 120px;
+    resize: vertical;
+    padding-top: 14px;
+    line-height: 1.4;
+}
+
+.custom-field__error-message {
+    margin-top: 8px;
+    font-size: 0.9rem;
+    color: var(--color-error);
+    background: transparent;
+}
+
+/* disabled state */
+.custom-field__input_disabled {
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+/* Field container behavior when invalid */
+.field-container:has(.custom-field__input:invalid) .custom-field__label::after {
+    content: " *";
+    color: var(--color-warning);
+    font-weight: 700;
+    margin-left: 4px;
+}
+
+/* -------------------------
+   Cards and layout components
+   ------------------------- */
+.card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+}
+
+/* compact row item */
+.item-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* form button block */
+.form__btn-block {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    margin-top: 10px;
+}
+
+/* -------------------------
+   User profile specific (keeps BEM classes in user.css)
+   ------------------------- */
+.user__avatar {
+    width: 100%;
+    max-width: 120px;
+    aspect-ratio: 1/1;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 3px solid var(--color-surface);
+    box-shadow: var(--shadow-sm);
+}
+
+/* -------------------------
+   Messages & icons (keeps message classes)
+   ------------------------- */
+.message__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    display: block;
+    align-self: center;
+}
+
+/* message specific icon colors */
+.message_success .message__icon {
+    background: linear-gradient(180deg, var(--color-success), color-mix(in oklch, var(--color-success), black 10%));
+}
+
+.message_danger .message__icon {
+    background: linear-gradient(180deg, var(--color-error), color-mix(in oklch, var(--color-error), black 6%));
+}
+
+.message_warning .message__icon {
+    background: linear-gradient(180deg, var(--color-warning), color-mix(in oklch, var(--color-warning), black 6%));
+}
+
+/* -------------------------
+   Small utilities
+   ------------------------- */
+.center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mt-1 {
+    margin-top: 8px;
+}
+
+.mt-2 {
+    margin-top: 16px;
+}
+
+.mb-1 {
+    margin-bottom: 8px;
+}
+.mb-2 {
+    margin-bottom: 16px;
+}
+.mb-3 {
+    margin-bottom: 24px;
+}
+
+.w-100 {
+    width: 100%;
+}
+
+/* -------------------------
+   Accessibility focus ring for interactive controls
+   ------------------------- */
+:focus-visible {
+    outline: 3px solid var(--color-accent-soft);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
+/***************
+   RESULT PAGE
+****************/
+
+.result {
+    padding: 40px 0;
+    background: var(--color-bg);
+}
+
+.result__container {
+    max-width: 960px;
+    /* выбираю гармоничную ширину */
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.result__hero {
+    text-align: center;
+    padding: 32px;
+}
+
+.result__title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--color-text);
+}
+
+.result__level-block {
+    margin: 20px 0;
+}
+
+.result__level {
+    font-size: 3.4rem;
+    font-weight: 800;
+    color: var(--color-accent-dark);
+}
+
+.result__level-label {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+}
+
+.result__subtitle {
+    font-size: 1rem;
+    margin-top: 10px;
+    color: var(--color-text-muted);
+}
+
+.result__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px;
+}
+
+.result-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    text-align: center;
+
+    box-shadow: var(--shadow-sm);
+    transition: 0.25s ease;
+}
+
+.result-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-3px);
+}
+
+.result-card__value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.result-card__label {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+}
+
+.result-card_highlight {
+    background: var(--color-accent-soft);
+    border-color: var(--color-accent);
+}
+
+/* AI summary */
+.result__ai-message {
+    background: var(--color-surface-alt);
+    padding: 18px;
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    line-height: 1.4;
+    color: var(--color-text);
+}
+
+/* Progress */
+.result__progress-text {
+    color: var(--color-text-muted);
+    margin-bottom: 12px;
+}
+
+.result__progress-bar {
+    width: 100%;
+    height: 12px;
+    background: var(--color-border);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.result__progress-filled {
+    height: 100%;
+    background: var(--color-accent);
+    transition: width 0.6s ease;
+}
+
+/* CTA */
+.result__actions {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+@media (max-width: 560px) {
+    .result-card__value {
+        font-size: 1.4rem;
+    }
+
+    .result__title {
+        font-size: 1.6rem;
+    }
+}
+
+/* ДОПОЛНИТЕЛЬНЫЕ СТИЛИ ДЛЯ ПЕРЕРАБОТАННОГО AI SUMMARY */
+
+.result__ai-header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.result__ai-title-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+.result__ai-confidence {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.result__confidence-label {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+}
+
+.result__confidence-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-accent);
+}
+
+.result__ai-content {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.result__ai-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.result__subsection-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0;
+}
+
+.result__subsection-title--success {
+    color: var(--color-success);
+}
+
+.result__subsection-title--warning {
+    color: var(--color-warning);
+}
+
+.result__ai-text {
+    color: var(--color-text);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.result__highlight {
+    color: var(--color-accent-dark);
+}
+
+/* Навыки - улучшенная сетка */
+.result__skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.skill-card {
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    border: 1px solid var(--color-border);
+}
+
+.skill-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.skill-card__name {
+    font-size: 0.9rem;
+    color: var(--color-text);
+    font-weight: 500;
+}
+
+.skill-card__score {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-accent-dark);
+}
+
+.skill-card__progress {
+    height: 6px;
+    background: var(--color-border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.skill-card__progress-bar {
+    height: 100%;
+    background: var(--color-accent);
+    border-radius: 3px;
+    transition: width 0.8s ease;
+}
+
+/* Колонки */
+.result__ai-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+/* Списки */
+.result__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+}
+
+.result__list-item {
+    padding: 12px;
+    background: var(--color-surface);
+    border-radius: var(--radius-sm);
+    border-left: 4px solid transparent;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.result__list--success .result__list-item {
+    border-left-color: var(--color-success);
+    background: var(--color-success-bg);
+}
+
+.result__list--warning .result__list-item {
+    border-left-color: var(--color-warning);
+    background: var(--color-warning-bg);
+}
+
+/* Рекомендации */
+.result__recommendations {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.recommendation-card {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.recommendation-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.recommendation-card__number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--color-accent);
+    color: white;
+    border-radius: 50%;
+    font-size: 0.8rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.recommendation-card__content {
+    flex: 1;
+}
+
+.recommendation-card__text {
+    margin: 0;
+    color: var(--color-text);
+    line-height: 1.5;
+}
+
+/* Учебный план */
+.result__study-plan {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.study-day {
+    padding: 16px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.study-day__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.study-day__number {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.study-day__status {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--color-border);
+    border: 2px solid var(--color-surface);
+}
+
+.study-day__task {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--color-text);
+    line-height: 1.5;
+}
+
+/* Заметки */
+.result__notes {
+    padding: 20px;
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-md);
+}
+
+.result__notes-text {
+    margin: 0 0 16px 0;
+    color: var(--color-text);
+    line-height: 1.6;
+}
+
+.result__debug {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.result__debug-summary {
+    padding: 12px 16px;
+    background: var(--color-surface);
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    list-style: none;
+}
+
+.result__debug-summary::-webkit-details-marker {
+    display: none;
+}
+
+.result__debug-summary::before {
+    content: '▶';
+    display: inline-block;
+    margin-right: 8px;
+    transition: transform 0.2s ease;
+}
+
+.result__debug[open] .result__debug-summary::before {
+    transform: rotate(90deg);
+}
+
+.result__debug-content {
+    padding: 16px;
+    background: var(--color-surface);
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    white-space: pre-wrap;
+    max-height: 200px;
+    overflow: auto;
+}
+
+/* Пустое состояние */
+.result__ai-empty {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.result__ai-empty-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 16px;
+    background: var(--color-surface-alt);
+    border-radius: 50%;
+    position: relative;
+}
+
+.result__ai-empty-icon::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 32px;
+    background: var(--color-border);
+    border-radius: 50%;
+}
+
+.result__ai-empty-text {
+    color: var(--color-text-muted);
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+.result__ai-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+}
+
+/* ==================== */
+/* АДАПТИВНОСТЬ */
+/* ==================== */
+
+/* Планшеты и маленькие ноутбуки (768px - 1024px) */
+@media (max-width: 1024px) {
+    .result__skills-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+    }
+    
+    .result__study-plan {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+}
+
+/* Большие мобильные (576px - 768px) */
+@media (max-width: 768px) {
+    .result__ai-title-wrapper {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .result__ai-confidence {
+        align-items: flex-start;
+    }
+    
+    .result__skills-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .result__ai-columns {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .result__study-plan {
+        grid-template-columns: 1fr;
+    }
+    
+    .recommendation-card {
+        flex-direction: column;
+        gap: 12px;
+        padding: 14px;
+    }
+    
+    .recommendation-card__number {
+        align-self: flex-start;
+    }
+    
+    .result__ai-content {
+        gap: 24px;
+    }
+    
+    .result__ai-section {
+        gap: 14px;
+    }
+}
+
+/* Средние мобильные (425px - 576px) */
+@media (max-width: 576px) {
+    .result__ai-header {
+        margin-bottom: 20px;
+        padding-bottom: 14px;
+    }
+    
+    .result__section-title {
+        font-size: 1.3rem;
+    }
+    
+    .result__subsection-title {
+        font-size: 1rem;
+    }
+    
+    .skill-card {
+        padding: 14px;
+    }
+    
+    .study-day {
+        padding: 14px;
+    }
+    
+    .result__notes {
+        padding: 16px;
+    }
+    
+    .result__list-item {
+        padding: 10px;
+        font-size: 0.9rem;
+    }
+    
+    /* Адаптивные кнопки */
+    .result__actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .result__actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .result__ai-actions .btn {
+        width: 100%;
+    }
+}
+
+/* Маленькие мобильные (до 425px) */
+@media (max-width: 425px) {
+    .result__ai {
+        padding: 14px;
+    }
+    
+    .result__ai-content {
+        gap: 20px;
+    }
+    
+    .result__ai-section {
+        gap: 12px;
+    }
+    
+    .skill-card__header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .skill-card__score {
+        align-self: flex-end;
+    }
+    
+    .study-day__header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .study-day__status {
+        align-self: flex-end;
+    }
+    
+    .result__debug-summary {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+    }
+    
+    .result__debug-content {
+        padding: 12px;
+        font-size: 0.75rem;
+    }
+    
+    /* Уменьшаем отступы для очень маленьких экранов */
+    .container {
+        padding: 8px 12px;
+    }
+}
+
+/* Очень маленькие экраны (до 320px) */
+@media (max-width: 320px) {
+    .result__ai {
+        padding: 12px;
+    }
+    
+    .skill-card,
+    .study-day,
+    .recommendation-card {
+        padding: 12px;
+    }
+    
+    .result__section-title {
+        font-size: 1.2rem;
+    }
+    
+    .result__subsection-title {
+        font-size: 0.95rem;
+    }
+    
+    .result__ai-text,
+    .study-day__task,
+    .recommendation-card__text {
+        font-size: 0.85rem;
+    }
+}
+
+/* Поддержка landscape ориентации на мобильных */
+@media (max-height: 500px) and (orientation: landscape) {
+    .result__skills-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    
+    .result__ai-section {
+        gap: 10px;
+    }
+    
+    .skill-card {
+        padding: 12px;
+    }
+}
+
+/* Поддержка темной темы, если понадобится в будущем */
+@media (prefers-color-scheme: dark) {
+    .result__ai-empty-icon::before {
+        background: var(--color-text-muted);
+    }
+}
+
+/* Улучшения для доступности и касаний на мобильных */
+@media (hover: none) and (pointer: coarse) {
+    .recommendation-card:hover {
+        transform: none;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .skill-card__progress-bar {
+        transition: width 1.2s ease;
+    }
+    
+    /* Увеличиваем области касания для мобильных */
+    .result__debug-summary {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .btn {
+        min-height: 44px;
+    }
+}
+
+
+/* Дополнительные стили для страницы регистрации */
+
+/* Стили для сообщений валидации */
+.custom-field__error-message {
+    position: absolute;
+    top: 50px;
+    left: 0;
+    right: 0;
+    display: block;
+    margin-top: 6px;
+    padding: 6px 10px;
+    background: var(--color-error-bg);
+    color: var(--color-error);
+    border: 1px solid var(--color-error);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.custom-field__success-message {
+    position: absolute;
+    top: 50px;
+    left: 0;
+    right: 0;
+    display: block;
+    margin-top: 6px;
+    padding: 6px 10px;
+    background: var(--color-success-bg);
+    color: var(--color-success);
+    border: 1px solid var(--color-success);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* Стили для полей с ошибками */
+.input-error {
+    border-color: var(--color-error) !important;
+}
+
+.input-error:focus {
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-error), transparent 70%) !important;
+}
+
+/* Ссылки в чекбоксе */
+.checkbox__link {
+    color: var(--color-accent);
+    text-decoration: none;
+}
+
+.checkbox__link:hover {
+    color: var(--color-accent-dark);
+    text-decoration: underline;
+}
+
+/* Стиль для ошибки чекбокса */
+.checkbox input.input-error + .checkbox__custom {
+    border-color: var(--color-error);
+}
+
+.checkbox input.input-error:focus + .checkbox__custom {
+    box-shadow: 0 0 0 3px var(--color-error-bg);
+}
+
+/* Адаптивность для страницы регистрации */
+@media (max-width: 768px) {
+    .auth-form {
+        padding: 30px 20px;
+    }
+    
+    .form-fields {
+        gap: 16px;
+    }
+    
+    .auth-form__actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 425px) {
+    .auth-form {
+        padding: 20px 15px;
+    }
+    
+    .checkbox__label {
+        font-size: 0.8rem;
+        line-height: 1.4;
+    }
+}
+
+/* Анимации для улучшения UX */
+.input-wrapper input {
+    transition: all 0.3s ease;
+}
+
+.input-wrapper--focused {
+    transform: translateY(-1px);
+}
+
+/* Улучшения для доступности */
+@media (prefers-reduced-motion: reduce) {
+    .input-wrapper input,
+    .custom-field__error-message,
+    .custom-field__success-message {
+        transition: none;
+    }
+}
+
+/* Подсветка для невалидных полей */
+input:invalid:not(:focus):not(:placeholder-shown) {
+    border-color: var(--color-warning);
+}
+
+input:valid:not(:focus):not(:placeholder-shown) {
+    border-color: var(--color-success);
+}
+
+/* Стили для текста для чтения */
+.reading-passage {
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 24px;
+    border-left: 4px solid var(--color-accent);
+}
+
+.reading-passage__header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.reading-passage__icon {
+    font-size: 1.2rem;
+}
+
+.reading-passage__title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0;
+}
+
+.reading-passage__content {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--color-text);
+    background: var(--color-surface);
+    padding: 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+}
+
+/* Стили для блока вопроса */
+.reading-question {
+    margin-top: 24px;
+}
+
+.reading-question__header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.reading-question__title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .reading-passage {
+        padding: 16px;
+    }
+    
+    .reading-passage__content {
+        padding: 12px;
+    }
+}
+
+
+/* Тестовый вариант 2 */
+
+/* ====================================
+   AI REPORT BLOCK — Modern Dashboard UI
+   ==================================== */
+
+.result-ai {
+    padding: 28px;
+}
+
+.result-ai__header {
+    text-align: center;
+    margin-bottom: 36px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.result-ai__title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: 8px;
+}
+
+.result-ai__subtitle {
+    font-size: 0.95rem;
+    color: var(--color-text-muted);
+}
+
+/* Intro Section */
+.result-ai__intro {
+    display: grid;
+    grid-template-columns: 160px 1fr 200px;
+    gap: 24px;
+    align-items: center;
+    margin-bottom: 40px;
+    padding: 24px;
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+}
+
+.result-ai__score,
+.result-ai__level {
+    text-align: center;
+}
+
+.result-ai__score-value {
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: var(--color-accent-dark);
+    line-height: 1;
+}
+
+.result-ai__score-label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-top: 4px;
+}
+
+.result-ai__level-badge {
+    display: inline-block;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-dark));
+    color: #fff;
+    border-radius: var(--radius-md);
+    font-size: 1.6rem;
+    font-weight: 700;
+    box-shadow: var(--shadow-sm);
+}
+
+.result-ai__confidence {
+    grid-column: 1 / -1;
+    margin-top: 20px;
+}
+
+.result-ai__confidence-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-bottom: 8px;
+}
+
+.result-ai__confidence-value {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.result-ai__confidence-bar {
+    width: 100%;
+    height: 10px;
+    background: var(--color-border);
+    border-radius: 5px;
+    overflow: hidden;
+    position: relative;
+}
+
+.result-ai__confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-accent), var(--color-success));
+    transition: width 0.8s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* Skills Grid */
+.result-ai__skills {
+    margin-bottom: 40px;
+}
+
+.result-ai__section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.result-ai__section-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.result-ai__section-icon--success {
+    background: var(--color-success);
+}
+
+.result-ai__section-icon--growth {
+    background: var(--color-warning);
+}
+
+.result-ai__section-icon--rec {
+    background: var(--color-accent);
+}
+
+.result-ai__section-icon--plan {
+    background: var(--color-text-muted);
+}
+
+.result-ai__skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.result-ai__skill {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 18px;
+    transition: all 0.25s ease;
+}
+
+.result-ai__skill:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-accent);
+}
+
+.result-ai__skill-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.result-ai__skill-name {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+.result-ai__skill-score {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.result-ai__skill-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--color-border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.result-ai__skill-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-accent), var(--color-success));
+    transition: width 1s ease 0.2s;
+}
+
+/* Sections */
+.result-ai__section {
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.result-ai__section:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.result-ai__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.result-ai__list-item {
+    padding: 14px 16px;
+    background: var(--color-surface);
+    border-radius: var(--radius-sm);
+    border-left: 4px solid var(--color-border);
+    transition: all 0.2s ease;
+}
+
+.result-ai__list-item--success {
+    border-left-color: var(--color-success);
+    background: var(--color-success-bg);
+}
+
+.result-ai__list-item--growth {
+    border-left-color: var(--color-warning);
+    background: var(--color-warning-bg);
+}
+
+.result-ai__list-item--rec {
+    border-left-color: var(--color-accent);
+    background: var(--color-accent-soft);
+}
+
+.result-ai__list-item--empty {
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+.result-ai__list-item:hover {
+    transform: translateX(4px);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Study Plan */
+.result-ai__plan {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.result-ai__plan-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 18px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transition: all 0.25s ease;
+}
+
+.result-ai__plan-item:hover {
+    transform: translateX(6px);
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-sm);
+}
+
+.result-ai__plan-day {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-dark));
+    color: #fff;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 1rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.result-ai__plan-content {
+    flex: 1;
+}
+
+.result-ai__plan-text {
+    color: var(--color-text);
+    margin-bottom: 8px;
+}
+
+.result-ai__plan-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.result-ai__plan-progress-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--color-border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.result-ai__plan-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-accent), var(--color-success));
+    transition: width 0.5s ease;
+}
+
+.result-ai__plan-progress-label {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    font-weight: 600;
+}
+
+/* CTA Button */
+.result-ai__cta {
+    margin-top: 40px;
+    text-align: center;
+}
+
+.result-ai__btn {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 18px 36px;
+}
+
+.result-ai__btn-main {
+    font-size: 1.1rem;
+}
+
+.result-ai__btn-sub {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 400;
+}
+
+/* Loading state */
+.result-ai__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 40px;
+}
+
+.result-ai__empty-text {
+    color: var(--color-text-muted);
+    font-size: 1rem;
+}
+
+.result-ai__empty-loader {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ====================
+   Responsive
+   ==================== */
+
+@media (max-width: 768px) {
+    .result-ai {
+        padding: 20px;
+    }
+
+    .result-ai__intro {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        text-align: center;
+    }
+
+    .result-ai__confidence {
+        grid-column: 1;
+    }
+
+    .result-ai__skills-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .result-ai__plan-item {
+        padding: 14px;
+    }
+}
+
+/* Стили для технической информации и отладки */
+
+.debug-content {
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    padding: 0;
+    margin-top: 12px;
+}
+
+.debug-json {
+    background: var(--color-surface-alt);
+    padding: 16px;
+    border-radius: var(--radius-md);
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--color-text);
+    overflow-x: auto;
+    margin: 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+/* Стили для вопросов сессии */
+.session-questions {
+    padding: 20px;
+}
+
+.session-questions__title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.question-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 20px;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+}
+
+.question-card:hover {
+    box-shadow: var(--shadow-sm);
+}
+
+.question-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: var(--color-surface-alt);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.question-card__number {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.question-card__type {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    background: var(--color-accent-soft);
+    color: var(--color-accent-dark);
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.question-card__content {
+    padding: 20px;
+}
+
+/* Текст вопроса */
+.question-text {
+    margin-bottom: 20px;
+}
+
+.question-text__title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin-bottom: 8px;
+}
+
+.question-text__content {
+    background: var(--color-surface-alt);
+    padding: 16px;
+    border-radius: var(--radius-md);
+    border-left: 4px solid var(--color-accent);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--color-text);
+}
+
+.question-json {
+    background: var(--color-surface);
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    line-height: 1.3;
+    overflow-x: auto;
+    margin: 0;
+}
+
+/* Варианты ответов */
+.question-options {
+    margin-bottom: 20px;
+}
+
+.question-options__title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin-bottom: 8px;
+}
+
+.options-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 8px;
+}
+
+.options-list__item {
+    padding: 12px 16px;
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: var(--color-text);
+    position: relative;
+}
+
+.options-list__item::before {
+    content: '•';
+    color: var(--color-accent);
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+/* Ответы пользователя */
+.question-answers {
+    margin-top: 24px;
+}
+
+.question-answers__title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin-bottom: 12px;
+}
+
+.answer-item {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.answer-item--even {
+    background: var(--color-surface-alt);
+}
+
+.answer-item--odd {
+    background: var(--color-surface);
+}
+
+.answer-item__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.answer-item__number {
+    font-weight: 600;
+    color: var(--color-text);
+    font-size: 0.9rem;
+}
+
+.answer-item__score {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 12px;
+}
+
+.score-high {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.score-medium {
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
+}
+
+.score-low {
+    background: var(--color-error-bg);
+    color: var(--color-error);
+}
+
+.answer-item__content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.answer-text,
+.answer-recognized {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--color-text);
+}
+
+.answer-text strong,
+.answer-recognized strong {
+    color: var(--color-text-muted);
+}
+
+.answer-feedback {
+    font-size: 0.9rem;
+}
+
+.answer-feedback strong {
+    color: var(--color-text-muted);
+    display: block;
+    margin-bottom: 8px;
+}
+
+.feedback-json {
+    background: var(--color-surface);
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    line-height: 1.3;
+    overflow-x: auto;
+    margin: 0;
+    border: 1px solid var(--color-border);
+}
+
+.answer-item__meta {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-border);
+}
+
+.answer-time {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+/* Нет ответов */
+.no-answers {
+    text-align: center;
+    padding: 40px 20px;
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-md);
+    border: 2px dashed var(--color-border);
+}
+
+.no-answers__text {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+/* Улучшения для отладки */
+.result__debug {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-top: 16px;
+}
+
+.result__debug-summary {
+    padding: 16px 20px;
+    background: var(--color-surface-alt);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text);
+    list-style: none;
+    transition: background-color 0.2s ease;
+}
+
+.result__debug-summary:hover {
+    background: var(--color-surface);
+}
+
+.result__debug-summary::-webkit-details-marker {
+    display: none;
+}
+
+.result__debug-summary::before {
+    content: '▶';
+    display: inline-block;
+    margin-right: 8px;
+    transition: transform 0.2s ease;
+    font-size: 0.8rem;
+}
+
+.result__debug[open] .result__debug-summary::before {
+    transform: rotate(90deg);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .session-questions {
+        padding: 16px;
+    }
+    
+    .question-card__header {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+    
+    .question-card__content {
+        padding: 16px;
+    }
+    
+    .answer-item__header {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+    
+    .options-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .debug-content {
+        padding: 0;
+    }
+    
+    .session-questions {
+        padding: 12px;
+    }
+    
+    .question-text__content {
+        padding: 12px;
+    }
+    
+    .answer-item {
+        padding: 12px;
+    }
+}
+
+/* Анимации */
+.question-card {
+    animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Улучшения для JSON отображения */
+.debug-json,
+.question-json,
+.feedback-json {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    tab-size: 2;
+}
+
+/* Подсветка синтаксиса для JSON (базовая) */
+.debug-json .string { color: var(--color-success); }
+.debug-json .number { color: var(--color-accent); }
+.debug-json .boolean { color: var(--color-warning); }
+.debug-json .null { color: var(--color-error); }
+.debug-json .key { color: var(--color-text); }

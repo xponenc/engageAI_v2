@@ -1,0 +1,376 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}EngageAI - AI-репетитор английского языка{% endblock title %}
+
+{% block css %}
+<link href="{% static 'css/index.css' %}" rel="stylesheet">
+{% endblock css %}
+
+{% block content %}
+<!-- Герой секция -->
+<section class="hero">
+    <div class="hero__container container">
+        <div class="hero__content">
+            <div class="hero__badge">
+                🚀 Инновационная платформа
+            </div>
+            <h1 class="hero__title">
+                Английский язык с 
+                <span class="hero__title-accent">AI-репетитором</span>
+            </h1>
+            <p class="hero__subtitle">
+                Персонализированное обучение с адаптивной программой, геймификацией 
+                и мгновенной обратной связью. Начните с точного определения вашего уровня CEFR.
+            </p>
+            
+            <div class="hero__stats">
+                <div class="stat">
+                    <div class="stat__number">94%</div>
+                    <div class="stat__label">учеников улучшают уровень за 3 месяца</div>
+                </div>
+                <div class="stat">
+                    <div class="stat__number">2.5x</div>
+                    <div class="stat__label">быстрее прогресс с AI-репетитором</div>
+                </div>
+                <div class="stat">
+                    <div class="stat__number">15мин</div>
+                    <div class="stat__label">достаточно для точного тестирования</div>
+                </div>
+            </div>
+
+            <div class="hero__actions">
+                <a href="{% url 'assessment:start_test' %}" class="btn btn_primary btn_lg hero__cta">
+                    🎯 Пройти бесплатный тест CEFR
+                </a>
+                <a href="#features" class="btn btn_outline btn_lg">
+                    📚 Узнать больше
+                </a>
+            </div>
+        </div>
+        
+        <div class="hero__visual">
+            <div class="hero__card hero__card--main">
+                <div class="hero-card">
+                    <div class="hero-card__header">
+                        <div class="hero-card__level">B2</div>
+                        <div class="hero-card__status">Ваш текущий уровень</div>
+                    </div>
+                    <div class="hero-card__progress">
+                        <div class="hero-card__progress-bar">
+                            <div class="hero-card__progress-fill" style="width: 65%"></div>
+                        </div>
+                        <div class="hero-card__progress-text">65% до C1</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="hero__card hero__card--floating hero__card--1">
+                <div class="floating-card">
+                    <div class="floating-card__icon">📊</div>
+                    <div class="floating-card__text">AI-анализ прогресса</div>
+                </div>
+            </div>
+            
+            <div class="hero__card hero__card--floating hero__card--2">
+                <div class="floating-card">
+                    <div class="floating-card__icon">🎮</div>
+                    <div class="floating-card__text">Геймификация</div>
+                </div>
+            </div>
+            
+            <div class="hero__card hero__card--floating hero__card--3">
+                <div class="floating-card">
+                    <div class="floating-card__icon">🤖</div>
+                    <div class="floating-card__text">Персональный репетитор</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Секция CEFR тестирования -->
+<section class="cefr-test" id="cefr-test">
+    <div class="cefr-test__container container">
+        <div class="cefr-test__header">
+            <h2 class="cefr-test__title">
+                Точное определение уровня CEFR за 15 минут
+            </h2>
+            <p class="cefr-test__subtitle">
+                Наш адаптивный тест оценивает все аспекты языка: грамматику, словарный запас, 
+                аудирование и письмо для точного определения вашего уровня по международной шкале
+            </p>
+        </div>
+
+        <div class="cefr-test__content">
+            <div class="cefr-test__info">
+                <div class="cefr-features">
+                    <div class="cefr-feature">
+                        <div class="cefr-feature__icon">🎯</div>
+                        <div class="cefr-feature__content">
+                            <h3 class="cefr-feature__title">Адаптивное тестирование</h3>
+                            <p class="cefr-feature__desc">
+                                Сложность вопросов меняется в зависимости от ваших ответов
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="cefr-feature">
+                        <div class="cefr-feature__icon">📊</div>
+                        <div class="cefr-feature__content">
+                            <h3 class="cefr-feature__title">Детальная аналитика</h3>
+                            <p class="cefr-feature__desc">
+                                Полный отчет по навыкам и персональные рекомендации
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="cefr-feature">
+                        <div class="cefr-feature__icon">🚀</div>
+                        <div class="cefr-feature__content">
+                            <h3 class="cefr-feature__title">Индивидуальный план</h3>
+                            <p class="cefr-feature__desc">
+                                Готовый учебный план на основе результатов теста
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cefr-levels">
+                    <h4 class="cefr-levels__title">Уровни CEFR</h4>
+                    <div class="cefr-levels__grid">
+                        <div class="cefr-level">
+                            <div class="cefr-level__name">A1-A2</div>
+                            <div class="cefr-level__desc">Начальный</div>
+                        </div>
+                        <div class="cefr-level">
+                            <div class="cefr-level__name">B1-B2</div>
+                            <div class="cefr-level__desc">Средний</div>
+                        </div>
+                        <div class="cefr-level">
+                            <div class="cefr-level__name">C1-C2</div>
+                            <div class="cefr-level__desc">Продвинутый</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cefr-test__cta">
+                <div class="test-cta-card">
+                    <h3 class="test-cta-card__title">Готовы узнать свой уровень?</h3>
+                    <p class="test-cta-card__desc">
+                        Пройдите тестирование и получите персональную программу обучения
+                    </p>
+                    
+                    <ul class="test-cta-card__features">
+                        <li class="test-cta-card__feature">✅ Бесплатно и без регистрации</li>
+                        <li class="test-cta-card__feature">✅ 15-20 минут времени</li>
+                        <li class="test-cta-card__feature">✅ Мгновенные результаты</li>
+                        <li class="test-cta-card__feature">✅ Рекомендации от AI</li>
+                    </ul>
+                    
+                    <a href="{% url 'assessment:start_test' %}" class="btn btn_primary btn_lg test-cta-card__button">
+                        Начать тестирование
+                    </a>
+                    
+                    <div class="test-cta-card__footer">
+                        <span class="test-cta-card__users">🎯 2,847+ учеников уже прошли тест</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Секция преимуществ -->
+<section class="features" id="features">
+    <div class="features__container container">
+        <div class="features__header">
+            <h2 class="features__title">Почему EngageAI работает</h2>
+            <p class="features__subtitle">
+                Инновационный подход к изучению английского с искусственным интеллектом
+            </p>
+        </div>
+
+        <div class="features__grid">
+            <div class="feature-card">
+                <div class="feature-card__icon">🤖</div>
+                <h3 class="feature-card__title">AI-репетитор 24/7</h3>
+                <p class="feature-card__desc">
+                    Персональный искусственный интеллект адаптирует программу под ваш темп обучения 
+                    и дает мгновенную обратную связь
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-card__icon">📊</div>
+                <h3 class="feature-card__title">Умная аналитика</h3>
+                <p class="feature-card__desc">
+                    Детальный отслеживание прогресса, выявление слабых мест и автоматическая 
+                    корректировка учебного плана
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-card__icon">🎮</div>
+                <h3 class="feature-card__title">Геймификация</h3>
+                <p class="feature-card__desc">
+                    Бейджи, достижения, рейтинги и игровые механики делают обучение 
+                    увлекательным и мотивирующим
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-card__icon">⚡</div>
+                <h3 class="feature-card__title">Адаптивное обучение</h3>
+                <p class="feature-card__desc">
+                    Система автоматически подбирает сложность заданий и фокусируется 
+                    на областях, требующих улучшения
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-card__icon">🌍</div>
+                <h3 class="feature-card__title">Международные стандарты</h3>
+                <p class="feature-card__desc">
+                    Обучение по системе CEFR с подготовкой к реальным жизненным 
+                    и профессиональным ситуациям
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-card__icon">💬</div>
+                <h3 class="feature-card__title">Разговорная практика</h3>
+                <p class="feature-card__desc">
+                    Тренировка произношения и разговорных навыков с AI-собеседником 
+                    в реальном времени
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Секция как это работает -->
+<section class="how-it-works">
+    <div class="how-it-works__container container">
+        <div class="how-it-works__header">
+            <h2 class="how-it-works__title">Как это работает</h2>
+            <p class="how-it-works__subtitle">
+                4 простых шага к свободному английскому
+            </p>
+        </div>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step__number">1</div>
+                <div class="step__content">
+                    <h3 class="step__title">Тестирование уровня</h3>
+                    <p class="step__desc">
+                        Пройдите адаптивный тест для точного определения 
+                        вашего уровня по шкале CEFR
+                    </p>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step__number">2</div>
+                <div class="step__content">
+                    <h3 class="step__title">Персональный план</h3>
+                    <p class="step__desc">
+                        Получите учебный план, созданный AI specifically 
+                        под ваши цели и слабые места
+                    </p>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step__number">3</div>
+                <div class="step__content">
+                    <h3 class="step__title">Интерактивное обучение</h3>
+                    <p class="step__desc">
+                        Занимайтесь с AI-репетитором, отслеживайте прогресс 
+                        и зарабатывайте достижения
+                    </p>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step__number">4</div>
+                <div class="step__content">
+                    <h3 class="step__title">Достижение целей</h3>
+                    <p class="step__desc">
+                        Достигайте новых уровней и применяйте знания 
+                        в реальных жизненных ситуациях
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Секция CTA -->
+<section class="final-cta">
+    <div class="final-cta__container container">
+        <div class="final-cta__content">
+            <h2 class="final-cta__title">
+                Начните свой путь к свободному английскому
+            </h2>
+            <p class="final-cta__subtitle">
+                Присоединяйтесь к 10,000+ учеников, которые уже улучшили свой английский с EngageAI
+            </p>
+            
+            <div class="final-cta__actions">
+                <a href="{% url 'assessment:start_test' %}" class="btn btn_primary btn_lg">
+                    🎯 Бесплатный тест CEFR
+                </a>
+                <a href="{% url 'users:sign-up' %}" class="btn btn_outline btn_lg">
+                    📚 Начать обучение
+                </a>
+            </div>
+            
+            <div class="final-cta__guarantee">
+                <span class="guarantee-badge">✅ Первые 7 дней бесплатно</span>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Анимация появления элементов при скролле
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('animate-in');
+            }
+        });
+    }, observerOptions);
+
+    // Наблюдаем за элементами для анимации
+    document.querySelectorAll('.feature-card, .step, .cefr-feature').forEach(el => {
+        observer.observe(el);
+    });
+
+    // Плавная прокрутка к якорям
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock script %}

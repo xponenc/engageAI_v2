@@ -40,6 +40,7 @@ async def lifespan(app: FastAPI):
 
         webhook_url = f"{GATEWAY_SETTINGS.webhook_host}/webhook/{bot_name}"
         try:
+            await bot.delete_webhook()
             result = await bot.set_webhook(webhook_url, secret_token=GATEWAY_SETTINGS.webhook_secret)
             logger.info(f"Main FastApi Gateway - Webhook автоматически установлен для"
                         f" {bot_name}: {webhook_url} - {result}")

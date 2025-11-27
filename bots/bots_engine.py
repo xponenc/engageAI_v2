@@ -225,4 +225,4 @@ async def on_shutdown():
 
 # --- Запуск ---
 if __name__ == "__main__":
-    uvicorn.run("bots_engine:app", host=INTERNAL_BOT_API_IP, port=INTERNAL_BOT_API_PORT, reload=True)
+    uvicorn.run("bots_engine:app", host=INTERNAL_BOT_API_IP, port=INTERNAL_BOT_API_PORT, reload=False)

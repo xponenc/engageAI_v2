@@ -4,5 +4,5 @@ threads = 2              # Добавляем 2–4 потока для I/O-boun
 user = 'bo'              # Без изменений
 timeout = 120            # Без изменений или уменьшить до 90, если запросы быстрые
 loglevel = 'info'        # Добавляем для логирования
-accesslog = "/home/bo/projects/knowledge_base/knowledge_base/logs/gunicorn_access.log"
-errorlog = "/home/bo/projects/knowledge_base/knowledge_base/logs/gunicorn_error.log"
+accesslog = "/home/bo/projects/engageAI_v2/logs/gunicorn_access.log"
+errorlog = "/home/bo/projects/engageAI_v2/logs/gunicorn_error.log"

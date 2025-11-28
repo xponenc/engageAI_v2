@@ -72,7 +72,6 @@ async def start(message: Message, state: FSMContext):
 
         await state.update_data(user_data=profile)
 
-        await message.answer(f"")
         # await message.bot.set_my_commands([])
         await message.bot.set_my_commands(MAIN_MENU + CUSTOMER_MENU, scope=BotCommandScopeChat(chat_id=message.chat.id))
 

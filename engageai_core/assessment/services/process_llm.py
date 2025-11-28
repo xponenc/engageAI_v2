@@ -292,12 +292,23 @@ def task_generate_final_report(self, session_id: str):
         session.protocol_json["analysis_generated_at"] = timezone.now().isoformat()
         session.save(update_fields=["protocol_json"])
         estimated_level = llm_result.get("estimated_level")
+        assessment_logger.info(
+            f"[LLM] llm set level={estimated_level}"
+        )
+        assessment_logger.info(
+            f"[LLM] CEFRLevel={CEFRLevel.values}"
+        )
 
         if estimated_level in CEFRLevel.values:
+            assessment_logger.info(
+                f"[LLM] change level={estimated_level}"
+            )
             StudyProfile.objects.update_or_create(
                 user=session.user,
                 defaults={"english_level": estimated_level}
             )
+            session.protocol_json["english_level"] = estimated_level
+            session.save()
 
     assessment_logger.info(
         f"[LLM] final report generated for session={session_id}"

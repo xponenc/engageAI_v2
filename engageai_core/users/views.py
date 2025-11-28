@@ -175,7 +175,7 @@ def avatar_resize(image):
     return File(content_file)
 
 
-class UserProfileView(generic.DetailView):
+class UserProfileView(LoginRequiredMixin, generic.DetailView):
     """Просмотр профиля пользователя"""
     model = User
     template_name = "users/profile.html"
@@ -273,7 +273,7 @@ class UserProfileUpdateView(LoginRequiredMixin, View):
         return render(request, 'users/profile_update.html', {'form': form})
 
 
-class UserListView(generic.ListView):
+class UserListView(LoginRequiredMixin, generic.ListView):
     """Списковый просмотр пользователей"""
     model = User
     template_name = "users/user_list.html"

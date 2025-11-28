@@ -31,6 +31,7 @@
                         <div class="profile-hero__meta">
                             <span class="profile-hero__level">Уровень: {{ user.study_profile.get_english_level_display|default:"-" }}</span>
                             <span class="profile-hero__streak">🔥 Серия: {{ user.profile.streak_days|default:"0" }} дней</span>
+                            <span class="profile-hero__streak"> ID: {{ user.study_profile.id }}</span>
                         </div>
                         {% if not user.profile.is_verified %}
                             <div class="profile-hero__verification">

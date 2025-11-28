@@ -179,7 +179,7 @@ class UserProfileView(generic.DetailView):
     """Просмотр профиля пользователя"""
     model = User
     template_name = "users/profile.html"
-    queryset = User.objects.select_related("profile")
+    queryset = User.objects.select_related("profile", "study_profile")
 
     def dispatch(self, request, *args, **kwargs):
         user = self.get_object()

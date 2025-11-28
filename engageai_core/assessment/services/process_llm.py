@@ -295,13 +295,16 @@ def task_generate_final_report(self, session_id: str):
                 user=session.user,
                 defaults={"english_level": estimated_level}
             )
+            print("sp =", sp)
+            print("sp.id =", sp.id)
             print("created =", created)
+            print("level =", sp.english_level)
+
+            sp.refresh_from_db()
             print("level =", sp.english_level)
 
             session.estimated_level = estimated_level
             session.save(update_fields=["estimated_level"])
-            session.refresh_from_db()
-
 
     assessment_logger.info(
         f"[LLM] final report generated for session={session_id}"

@@ -32,7 +32,8 @@
     <!-- CARDS -->
     <div class="result__stats">
         <div class="result-card">
-            <div class="result-card__value">{{ protocol.total_score }}</div>
+            <div class="result-card__value">{{ protocol.total_score|floatformat:2 }}
+</div>
             <div class="result-card__label">Количество правильных</div>
         </div>
 

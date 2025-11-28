@@ -41,8 +41,9 @@ async def set_menu_button(bot: Bot):
 @start_router.message(Command('start'))
 async def start(message: Message, state: FSMContext):
     """start"""
-    await state.set_state(None)
     # await state.update_data(user_data={})
+    await state.set_state(None)
+    await state.clear()
 
     data = await state.get_data()
     print(f"start data= {data}")

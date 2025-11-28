@@ -314,7 +314,7 @@ def task_generate_final_report(self, session_id: str):
             session.save(update_fields=["protocol_json"])
             session.refresh_from_db()
             print(f"{session.protocol_json}")
-            print(f"[LLM] change protocol_json={protocol_json}")
+            print(f"[LLM] change protocol_json={session.protocol_json}")
 
 
     assessment_logger.info(

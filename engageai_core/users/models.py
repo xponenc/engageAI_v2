@@ -30,11 +30,17 @@ class Profile(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     birthdate = models.DateField(verbose_name="Дата рождения", validators=[validate_date_in_past])
+    # phone_regex = RegexValidator(
+    #     regex=r'^7\d{10}$',
+    #     message="Телефонный номер должен быть введен в формате: '79991234567'."
+    # )
+    # Валидатор для международных номеров
     phone_regex = RegexValidator(
-        regex=r'^7\d{10}$',
-        message="Телефонный номер должен быть введен в формате: '79991234567'."
+        regex=r'^\+?[1-9]\d{1,14}$',
+        message="Телефонный номер должен быть в международном формате (например, +79991234567). "
+                "Допустимы цифры, начинается с + и кода страны, длина 1–15 цифр после +."
     )
-    phone = models.CharField(verbose_name="Телефон", validators=[phone_regex, ], max_length=12, unique=True)
+    phone = models.CharField(verbose_name="Телефон", validators=[phone_regex, ], max_length=17, unique=True)
     location = models.CharField(verbose_name="Город проживания", max_length=60)
     bio = models.TextField(verbose_name="О себе", max_length=1000, blank=True, null=True)
     avatar = models.ImageField(verbose_name="Аватар пользователя", upload_to=create_path, blank=True)

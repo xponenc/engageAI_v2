@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.core.validators import EmailValidator
 from django.forms import model_to_dict, fields_for_model
 from django.http import QueryDict
@@ -17,6 +18,19 @@ class UserRegistrationForm(UserCreationForm):
     class Meta:
         model = User
         fields = ('email', )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        email = cleaned_data.get('email')
+
+        if email:
+            # Проверяем, существует ли пользователь с таким email (который станет username)
+            if User.objects.filter(username=email).exists():
+                raise ValidationError({
+                    'email': "Пользователь с таким email уже зарегистрирован."
+                })
+
+        return cleaned_data
 
     def save(self, commit=True):
         user = super().save(commit=False)

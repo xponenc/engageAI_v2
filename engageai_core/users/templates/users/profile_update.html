@@ -118,11 +118,13 @@ avatar.url: {% if form.instance.avatar %}{{ form.instance.avatar.url }}{% else %
                         <div class="form-field">
                             <label for="{{ form.phone.id_for_label }}" class="form-field__label">
                                 Телефон
-                                <span class="form-field__hint">Формат: 79991234567 (7 + 10 цифр)</span>
+                                <span class="form-field__hint">
+                                    Формат: +79991234567 (код страны + номер)
+                                </span>
                             </label>
                             {{ form.phone }}
                             <div class="form-field__hint" id="phone-hint">
-                                Введите номер в формате 7XXXXXXXXXX
+                                Введите номер с кодом страны (например, +14155552671)
                             </div>
                             {% if form.phone.errors %}
                                 <div class="form-field__errors">
@@ -130,6 +132,7 @@ avatar.url: {% if form.instance.avatar %}{{ form.instance.avatar.url }}{% else %
                                 </div>
                             {% endif %}
                         </div>
+
 
                         <div class="form-field">
                             <label for="{{ form.location.id_for_label }}" class="form-field__label">
@@ -335,27 +338,34 @@ document.addEventListener('DOMContentLoaded', function() {
     const phoneHint = document.getElementById('phone-hint');
     
     if (phoneInput) {
-        // Добавляем маску для телефона
+        // Маска и предварительная обработка
         phoneInput.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '');
-            
-            // Ограничиваем длину 11 цифрами
-            if (value.length > 11) {
-                value = value.substring(0, 11);
+            let value = e.target.value.trim();
+
+            // Удаляем всё, кроме цифр и +
+            value = value.replace(/[^\d+]/g, '');
+
+            // Если + есть, оставляем его в начале; иначе добавляем
+            if (value.startsWith('+')) {
+                // Оставляем + и цифры
+                value = '+' + value.slice(1).replace(/\D/g, '');
+            } else {
+                // Если нет +, добавляем
+                value = '+' + value.replace(/\D/g, '');
             }
-            
-            // Если номер начинается не с 7, добавляем 7
-            if (value.length > 0 && value[0] !== '7') {
-                value = '7' + value;
+
+            // Ограничиваем длину (максимум 17 символов: + + до 15 цифр)
+            if (value.length > 17) {
+                value = value.substring(0, 17);
             }
-            
+
             e.target.value = value;
         });
-        
-        phoneInput.addEventListener('blur', function() {
-            validatePhone();
-        });
-        
+
+        // Валидация при потере фокуса
+        phoneInput.addEventListener('blur', validatePhone);
+
+        // Сброс стилей при вводе
         phoneInput.addEventListener('input', function() {
             clearValidationStyle(this);
             if (phoneHint) {
@@ -397,28 +407,35 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Функции валидации
     function validatePhone() {
-        if (!phoneInput) return true;
-        
         const value = phoneInput.value.trim();
-        const phoneRegex = /^7\d{10}$/;
-        
-        if (value && !phoneRegex.test(value)) {
-            phoneInput.classList.add('input-error');
+        let isValid = true;
+
+        // Проверяем формат: +[1-9][цифры], длина 2–17 символов
+        const phoneRegex = /^\+[1-9]\d{1,14}$/;
+
+        if (!phoneRegex.test(value)) {
+            isValid = false;
+        }
+
+        // Визуальная обратная связь
+        if (isValid) {
+            phoneInput.classList.add('valid');
+            phoneInput.classList.remove('invalid');
             if (phoneHint) {
-                phoneHint.style.color = 'var(--color-error)';
-                phoneHint.textContent = 'Неверный формат телефона. Должно быть 11 цифр, начинающихся с 7';
+                phoneHint.textContent = 'Номер корректен';
+                phoneHint.style.color = 'var(--color-success)';
             }
-            return false;
+        } else {
+            phoneInput.classList.add('invalid');
+            phoneInput.classList.remove('valid');
+            if (phoneHint) {
+                phoneHint.textContent = 'Введите номер в формате +79991234567';
+                phoneHint.style.color = 'var(--color-error)';
+            }
         }
-        
-        phoneInput.classList.remove('input-error');
-        if (phoneHint) {
-            phoneHint.style.color = 'var(--color-success)';
-            phoneHint.textContent = '✓ Формат телефона корректен';
-        }
-        return true;
+        return isValid
     }
-    
+
     function validateBirthdate() {
         if (!birthdateInput) return true;
         

@@ -80,7 +80,8 @@ def load_bots():
             key_builder=DefaultKeyBuilder(with_bot_id=True)  # чтобы разные боты не пересекались
         )
 
-        dp = Dispatcher(storage=storage)
+        # dp = Dispatcher(storage=storage)
+        dp = Dispatcher()
         bot.dispatcher = dp
 
         # --- Подключение хендлеров ---

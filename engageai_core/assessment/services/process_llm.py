@@ -224,15 +224,12 @@ def generate_final_recommendations(test_session_id: str) -> Dict[str, Any]:
 
     try:
         response = model.invoke([system_msg, user_msg])  # возвращает AIMessage или подобный объект
-        print(f"{response=}")
         model_output = getattr(response, "content", None) or getattr(response, "text", None) or str(response)
-        print(f"{model_output=}")
     except Exception as ex:
         return {"error": "llm_call_failed", "exception": str(ex)}
 
     # 6) Парсинг JSON (сначала пробуем json.loads по всей строке, затем _extract_json_from_text)
     parsed = extract_json_from_llm_response(response.content)
-    print(f"{parsed=}")
 
     if parsed:
         return parsed
@@ -286,31 +283,24 @@ def task_generate_final_report(self, session_id: str):
         session.protocol_json["analysis_generated_at"] = timezone.now().isoformat()
         session.save(update_fields=["protocol_json"])
         estimated_level = llm_result.get("estimated_level")
-        assessment_logger.info(
-            f"[LLM] llm set level={estimated_level}"
-        )
-        print(f"[LLM] llm set level={estimated_level}")
-        assessment_logger.info(
-            f"[LLM] CEFRLevel={CEFRLevel.values}"
-        )
-        print(f"[LLM] CEFRLevel={CEFRLevel.values}")
 
         if estimated_level in CEFRLevel.values:
             assessment_logger.info(
                 f"[LLM] change level={estimated_level}"
             )
-            print(f"[LLM] change level={estimated_level}")
+            print(session.user.id, session.user.username)
+            print(StudyProfile.objects.filter(user=session.user).exists())
 
-            StudyProfile.objects.update_or_create(
+            sp, created = StudyProfile.objects.update_or_create(
                 user=session.user,
                 defaults={"english_level": estimated_level}
             )
+            print("created =", created)
+            print("level =", sp.english_level)
 
             session.estimated_level = estimated_level
             session.save(update_fields=["estimated_level"])
             session.refresh_from_db()
-            print(f"{session.estimated_level}")
-            print(f"[LLM] change protocol_json={session.estimated_level}")
 
 
     assessment_logger.info(

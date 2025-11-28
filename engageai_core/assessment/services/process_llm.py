@@ -306,15 +306,11 @@ def task_generate_final_report(self, session_id: str):
                 defaults={"english_level": estimated_level}
             )
 
-            data = dict(session.protocol_json or {})
-            print(f"{data=}")
-            print(f"[LLM] change data={data}")
-            data["english_level"] = estimated_level
-            session.protocol_json = data
-            session.save(update_fields=["protocol_json"])
+            session.estimated_level = estimated_level
+            session.save(update_fields=["estimated_level"])
             session.refresh_from_db()
-            print(f"{session.protocol_json}")
-            print(f"[LLM] change protocol_json={session.protocol_json}")
+            print(f"{session.estimated_level}")
+            print(f"[LLM] change protocol_json={session.estimated_level}")
 
 
     assessment_logger.info(

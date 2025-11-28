@@ -6,7 +6,7 @@
 
 from django.utils import timezone
 
-from users.models import StudyProfile
+from users.models import StudyProfile, CEFRLevel
 from utils.setup_logger import setup_logger
 from ..models import TestSession, QuestionInstance, TestAnswer, SessionSourceType
 from .test_flow import (
@@ -19,7 +19,6 @@ from .test_flow import (
 )
 from .process_llm import evaluate_open_answer, generate_final_recommendations, task_evaluate_open_answer, \
     task_generate_final_report
-from ...users.models import CEFRLevel
 
 assessment_logger = setup_logger(name=__file__, log_dir="logs/core/assessment", log_file="assessment.log")
 

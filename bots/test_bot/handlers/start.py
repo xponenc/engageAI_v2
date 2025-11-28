@@ -46,7 +46,6 @@ async def start(message: Message, state: FSMContext):
     await state.set_state(None)
 
     data = await state.get_data()
-    await message.answer(json.dumps(data))
 
     last_message = data.get("last_message")
     if last_message:  # Сброс клавиатуры последнего сообщения и отметка о выбранном варианте

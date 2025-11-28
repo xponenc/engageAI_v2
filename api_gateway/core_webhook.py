@@ -38,7 +38,10 @@ async def lifespan(app: FastAPI):
         bot_token = bot_config.token
         bot = Bot(bot_token)
 
-        webhook_url = f"{GATEWAY_SETTINGS.webhook_host}/webhook/{bot_name}"
+        webhook_host = GATEWAY_SETTINGS.webhook_host.strip().rstrip("/")
+        bot_name_clean = bot_name.strip()
+
+        webhook_url = f"{webhook_host}/webhook/{bot_name_clean}/"
         try:
             await bot.delete_webhook()
             result = await bot.set_webhook(webhook_url, secret_token=GATEWAY_SETTINGS.webhook_secret)

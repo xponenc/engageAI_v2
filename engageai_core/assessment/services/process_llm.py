@@ -295,14 +295,18 @@ def task_generate_final_report(self, session_id: str):
         assessment_logger.info(
             f"[LLM] llm set level={estimated_level}"
         )
+        print(f"[LLM] llm set level={estimated_level}")
         assessment_logger.info(
             f"[LLM] CEFRLevel={CEFRLevel.values}"
         )
+        print(f"[LLM] CEFRLevel={CEFRLevel.values}")
 
         if estimated_level in CEFRLevel.values:
             assessment_logger.info(
                 f"[LLM] change level={estimated_level}"
             )
+            print(f"[LLM] change level={estimated_level}")
+
             StudyProfile.objects.update_or_create(
                 user=session.user,
                 defaults={"english_level": estimated_level}

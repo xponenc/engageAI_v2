@@ -166,6 +166,7 @@ async def process_start_assessment_test(event: Union[Message, CallbackQuery], st
         reply_target = event
 
     data = await state.get_data()
+    print(f"start_assessment  data= {data}")
     last_message = data.get("last_message")
 
     if last_message:  # Сброс клавиатуры последнего сообщения и отметка о выбранном варианте

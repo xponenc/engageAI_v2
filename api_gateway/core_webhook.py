@@ -74,4 +74,4 @@ async def root():
 # ---------------------------------------
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("core_webhook:app", host=GATEWAY_SETTINGS.fastapi_ip, port=GATEWAY_SETTINGS.fastapi_port, reload=False)
+    uvicorn.run("core_webhook:app", host=GATEWAY_SETTINGS.fastapi_ip, port=GATEWAY_SETTINGS.fastapi_port, reload=True)

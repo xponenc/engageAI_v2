@@ -61,8 +61,8 @@ async def start(message: Message, state: FSMContext):
             )
         except TelegramBadRequest:
             pass
-
-    user_id = data.get("user_id")
+    telegram_auth_cache = data.get("telegram_auth_cache", {})
+    user_id = telegram_auth_cache.get("user_id")
     if user_id:
         profile = data.get("profile")
         bot_logger.info(

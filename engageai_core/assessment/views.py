@@ -264,11 +264,5 @@ class FinishView(LoginRequiredMixin, View):
         session = get_object_or_404(test_session_qs, id=session_id, user_id=request.user.id)
         protocol = finish_assessment(session)
 
-        estimated_level = protocol.get("estimated_level")
 
-        if estimated_level in CEFRLevel.values:
-            StudyProfile.objects.update_or_create(
-                user=session.user,
-                defaults={"english_level": estimated_level}
-            )
         return render(request, "assessment/finish.html", {"protocol": protocol, "session": session})

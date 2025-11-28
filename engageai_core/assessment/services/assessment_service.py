@@ -19,6 +19,7 @@ from .test_flow import (
 )
 from .process_llm import evaluate_open_answer, generate_final_recommendations, task_evaluate_open_answer, \
     task_generate_final_report
+from ...users.models import CEFRLevel
 
 assessment_logger = setup_logger(name=__file__, log_dir="logs/core/assessment", log_file="assessment.log")
 
@@ -123,6 +124,14 @@ def finish_assessment(session):
         session.protocol_json = protocol
         session.finished_at = timezone.now()
         session.save(update_fields=["protocol_json", "finished_at"])
+
+        estimated_level = protocol.get("estimated_level")
+
+        if estimated_level in CEFRLevel.values:
+            StudyProfile.objects.update_or_create(
+                user=session.user,
+                defaults={"english_level": estimated_level}
+            )
 
         task_generate_final_report.delay(str(session.id))
 

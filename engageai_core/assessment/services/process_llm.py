@@ -255,25 +255,19 @@ def task_generate_final_report(self, session_id: str):
     """
     Celery-задача для финального отчёта LLM.
     """
-    try:
-        report = generate_final_recommendations(session_id)
-    except Exception as exc:
-        assessment_logger.exception(
-            f"[LLM] final report failed for session={session_id}: {exc}"
-        )
-        raise self.retry(exc=exc, countdown=10)
 
-    # сохраняем в модель TestSession
     try:
         session = TestSession.objects.get(id=session_id)
     except TestSession.DoesNotExist:
         return {"error": "not_found"}
 
-    # session.final_report_json = report
-    # session.save(update_fields=["final_report_json"])
-
-    llm_result = generate_final_recommendations(test_session_id=session.id)
-    # session.protocol_json = protocol
+    try:
+        llm_result = generate_final_recommendations(session.id)
+    except Exception as exc:
+        assessment_logger.exception(
+            f"[LLM] final report failed for session={session_id}: {exc}"
+        )
+        raise self.retry(exc=exc, countdown=10)
 
     if llm_result and "error" not in llm_result:
         try:
@@ -311,14 +305,17 @@ def task_generate_final_report(self, session_id: str):
                 user=session.user,
                 defaults={"english_level": estimated_level}
             )
-            session.protocol_json["english_level"] = estimated_level
-            session.save()
+
+            data = dict(session.protocol_json or {})
+            data["english_level"] = estimated_level
+            session.protocol_json = data
+            session.save(update_fields=["protocol_json"])
 
     assessment_logger.info(
         f"[LLM] final report generated for session={session_id}"
     )
 
-    return report
+    return llm_result
 
 
 def _compact_protocol_for_prompt(session: TestSession) -> Dict[str, Any]:

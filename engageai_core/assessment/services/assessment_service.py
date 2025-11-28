@@ -121,7 +121,8 @@ def finish_assessment(session):
     if not session.finished_at:
         protocol = finalize_session(session)
         session.protocol_json = protocol
-        session.save(update_fields=["protocol_json"])
+        session.finished_at = timezone.now()
+        session.save(update_fields=["protocol_json", "finished_at"])
 
         task_generate_final_report.delay(str(session.id))
 

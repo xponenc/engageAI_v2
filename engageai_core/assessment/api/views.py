@@ -184,8 +184,8 @@ class AnswerAPI(
             level = protocol.get("estimated_level")
 
             view_url = (
-                # f"{settings.SITE_URL}/assessment/result/{session.id}/"
-                f"http://127.0.0.1:8000/assessment/result/{session.id}/"
+                f"{settings.SITE_URL}/assessment/result/{session.id}/"
+                # f"http://127.0.0.1:8000/assessment/result/{session.id}/"
             )
 
             core_api_logger.info(

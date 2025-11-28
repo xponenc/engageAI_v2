@@ -1,3 +1,4 @@
+import json
 
 from aiogram import Router, F, Bot
 from aiogram.enums import ParseMode
@@ -43,9 +44,9 @@ async def start(message: Message, state: FSMContext):
     """start"""
     # await state.update_data(user_data={})
     await state.set_state(None)
-    await state.clear()
 
     data = await state.get_data()
+    await message.answer(json.dumps(data))
     print(f"start data= {data}")
     bot_logger.info(
         f"[{BOT_NAME}] start data= {data}")

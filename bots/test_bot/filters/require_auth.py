@@ -76,7 +76,7 @@ class AuthFilter(BaseFilter):
             )
             if ok and resp.get("user_id"):
                 profile = resp.get("profile")
-                await state.update_data(user_data=profile)
+                await state.update_data(profile=profile)
                 user_id = resp["user_id"]
                 await state.update_data(telegram_auth_cache={
                     "telegram_id": telegram_id,

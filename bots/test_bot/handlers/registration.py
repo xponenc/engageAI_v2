@@ -1,3 +1,4 @@
+import inspect
 from typing import Union
 
 from aiogram import Router, F, Dispatcher
@@ -137,6 +138,35 @@ async def process_start_registration(message: Message, state: FSMContext):
 @registration_router.message(StateFilter(MenuStates.registration))
 async def receive_registration_code(message: Message, state: FSMContext):
     """Получаем invite код пользователя и отправляем на backend."""
+    update_id = getattr(message, "update_id", None)
+    tg_user_id = message.from_user.id
+
+    chat_id = message.chat.id
+    event_message_id = message.message_id
+    command = message.text
+    event_type = "message"
+
+    # Автоопределение вызывающей функции
+    try:
+        caller_frame = inspect.currentframe().f_back
+        caller_name = caller_frame.f_code.co_name if caller_frame else "unknown"
+        caller_module = inspect.getmodule(caller_frame).__name__ if caller_frame else "unknown"
+    except Exception:
+        caller_name = "unknown"
+        caller_module = "unknown"
+
+    context = {
+        "update_id": update_id,
+        "user_id": tg_user_id,
+        "chat_id": chat_id,
+        "message_id": event_message_id,
+        "event_type": event_type,
+        "handler": f"{caller_name} ({caller_module})",
+        "command": command[:100] if command else None,
+        "function": "process_start_assessment_test",
+        "action": "assessment_start"
+    }
+
     data = await state.get_data()
     last_message = data.get("last_message")
 
@@ -153,15 +183,17 @@ async def receive_registration_code(message: Message, state: FSMContext):
         except TelegramBadRequest:
             pass
 
+    payload = {
+        "telegram_id": tg_user_id,
+        "telegram_username": message.from_user.username,
+        "registration_code": message.text.strip()
+    }
+
     tg_user_id = message.from_user.id
     ok, response = await core_post(
-        "/accounts/api/users/register_tg/",
-        {
-            "telegram_id": tg_user_id,
-            "telegram_username": message.from_user.username,
-            "registration_code": message.text.strip()
-
-        }
+        url="/accounts/api/v1/users/register_tg/",
+        payload=payload,
+        context=context
     )
 
     if not ok:

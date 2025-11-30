@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.postgres',
     'users.apps.AppUsersConfig',
     'assessment',
+    'chat',
 ]
 
 if DEBUG:
@@ -155,11 +156,12 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 
 # REDIS + CELERY
-REDIS_HOST = '127.0.0.1'
-REDIS_PORT = '6379'
+REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
+REDIS_PORT = os.getenv('REDIS_PORT', '6379')
+DJANGO_REDIS_DB_ID = os.getenv('DJANGO_REDIS_DB_ID', '0')
 
-CELERY_BROKER_URL = f'redis://{REDIS_HOST}:{REDIS_PORT}'
-CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}'
+CELERY_BROKER_URL = f'redis://{REDIS_HOST}:{REDIS_PORT}/{DJANGO_REDIS_DB_ID}'
+CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/{DJANGO_REDIS_DB_ID}'
 
 # КРИТИЧЕСКИ ВАЖНЫЕ НАСТРОЙКИ
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True

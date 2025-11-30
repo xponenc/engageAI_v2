@@ -5,6 +5,7 @@
 - Подключение роутеров: webhook_setup и assessment
 """
 import sys
+from pathlib import Path
 
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
@@ -74,4 +75,16 @@ async def root():
 # ---------------------------------------
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("core_webhook:app", host=GATEWAY_SETTINGS.fastapi_ip, port=GATEWAY_SETTINGS.fastapi_port, reload=True)
+    uvicorn.run(
+        "core_webhook:app",
+        host=GATEWAY_SETTINGS.fastapi_ip,
+        port=GATEWAY_SETTINGS.fastapi_port,
+        reload=True,
+        # reload_dirs=[  # Директории для наблюдения
+        #     str(Path(__file__).parent / "project"),
+        #     str(Path(__file__).parent / "chat"),
+        # ],
+        lifespan="on",  # Включить lifespan-события (startup/shutdown)
+        log_level="info",
+        use_colors=True,
+    )

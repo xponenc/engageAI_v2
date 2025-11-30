@@ -10,5 +10,5 @@ urlpatterns = [
     path("session/<uuid:session_id>/finish/", FinishView.as_view(), name="finish_view"),
 
     # DRF API приложения
-    path("api/assessment/", include("assessment.api.urls")),
+    path("api/v1/assessment/", include("assessment.api.urls")),
 ]

@@ -1,6 +1,5 @@
-# bots/test_bot/filters/auth_filter.py
+import inspect
 import time
-import logging
 from typing import Optional, Union
 
 from aiogram.filters import BaseFilter
@@ -9,7 +8,6 @@ from aiogram.fsm.context import FSMContext
 
 from bots.test_bot.services.api_process import core_post
 from bots.test_bot.config import bot_logger, BOT_NAME, AUTH_CACHE_TTL_SECONDS
-
 
 
 class AuthFilter(BaseFilter):
@@ -24,31 +22,36 @@ class AuthFilter(BaseFilter):
     """
 
     async def __call__(self, event: Union[Message, CallbackQuery], state: FSMContext) -> bool:
-
+        bot_tag = f"[{BOT_NAME}]"
         # Унификация для Message / CallbackQuery
         if isinstance(event, CallbackQuery):
             telegram_id = event.from_user.id
             reply_func = event.message.answer
             callback_answer = event.answer
+
+            chat_id = event.message.chat.id
+            message_id = event.message.message_id
+            command = event.data
         else:
             telegram_id = event.from_user.id
             reply_func = event.answer
             callback_answer = None
 
-        # ---------- Caller detection ----------
-        caller = "unknown"
-        try:
-            import inspect
-            frame = inspect.currentframe()
-            outer = inspect.getouterframes(frame)
-            if len(outer) > 2:
-                caller = f"{outer[2].frame.f_globals.get('__name__')}." \
-                         f"{outer[2].frame.f_code.co_name}"
-        except Exception:
-            pass
+            chat_id = event.chat.id
+            message_id = event.message_id
+            command = event.text
 
-        bot_tag = f"[{BOT_NAME}]"
-        bot_logger.debug(f"{bot_tag} Проверка авторизации для telegram_id={telegram_id}, from={caller}")
+        # Автоопределение вызывающей функции
+        try:
+            caller_frame = inspect.currentframe().f_back
+            caller_name = caller_frame.f_code.co_name if caller_frame else "unknown"
+            caller_module = inspect.getmodule(caller_frame).__name__ if caller_frame else "unknown"
+        except Exception:
+            caller_name = "unknown"
+            caller_module = "unknown"
+
+        bot_logger.debug(f"{bot_tag} Проверка авторизации для telegram_id={telegram_id},"
+                         f" Вызывающая функция: {caller_name} ({caller_module})")
 
         # ----- Кэш -----
         state_data = await state.get_data()
@@ -65,14 +68,28 @@ class AuthFilter(BaseFilter):
         if is_cached:
             user_id = cache.get("user_id")
             if user_id:
-                bot_logger.debug(f"{bot_tag} Авторизация найдена в кэше: user_id={user_id}, from={caller}")
+                bot_logger.debug(f"{bot_tag} Авторизация найдена в кэше: user_id={user_id},"
+                                 f" Вызывающая функция: {caller_name} ({caller_module})")
 
-        # ----- API -----
+        # Вызов API
         if not user_id:
-            bot_logger.debug(f"{bot_tag} Запрос к API /check_telegram/ для telegram_id={telegram_id}, from={caller}")
+            bot_logger.debug(f"{bot_tag} Запрос к API /check_telegram/ для telegram_id={telegram_id}, "
+                             f"Вызывающая функция: {caller_name} ({caller_module}")
+            context = {
+                "update_id": getattr(event, "update_id", None),
+                "user_id": telegram_id,
+                "chat_id": chat_id,
+                "message_id": message_id,
+                "event_type": "callback" if isinstance(event, CallbackQuery) else "message",
+                "filter_name": "AuthFilter",
+                "handler": f"{caller_name} ({caller_module})",
+                "command": command[:100] if command else None,
+            }
+
             ok, resp = await core_post(
-                "/accounts/api/users/profile/",
-                {"telegram_id": telegram_id}
+                url="/accounts/api/users/profile/",
+                payload={"telegram_id": telegram_id},
+                context=context
             )
             if ok and resp.get("user_id"):
                 profile = resp.get("profile")
@@ -83,11 +100,15 @@ class AuthFilter(BaseFilter):
                     "user_id": user_id,
                     "checked_at": now
                 })
-                bot_logger.info(f"{bot_tag} Авторизация подтверждена (API): telegram_id={telegram_id} → user_id={user_id}, from={caller}")
+                bot_logger.info(
+                    f"{bot_tag} Авторизация подтверждена (API): telegram_id={telegram_id} → user_id={user_id},"
+                    f" Вызывающая функция: {caller_name} ({caller_module}"
+                )
             else:
-                bot_logger.info(f"{bot_tag} Авторизация не найдена для telegram_id={telegram_id}, from={caller}")
+                bot_logger.info(f"{bot_tag} Авторизация не найдена для telegram_id={telegram_id}, "
+                                f"Вызывающая функция: {caller_name} ({caller_module})")
 
-        # ---------- NOT AUTHORIZED ----------
+        # NOT AUTHORIZED
         if not user_id:
             if callback_answer:
                 await callback_answer()
@@ -95,7 +116,8 @@ class AuthFilter(BaseFilter):
                 "🔒 Для работы с AI-репетитором нужно привязать Telegram.\n"
                 "Используйте /registration, чтобы ввести код из личного кабинета."
             )
-            bot_logger.info(f"{bot_tag} Пользователь {telegram_id} перенаправлен на регистрацию, from={caller}")
+            bot_logger.info(f"{bot_tag} Пользователь {telegram_id} перенаправлен на регистрацию, "
+                            f"Вызывающая функция: {caller_name} ({caller_module})")
             return False
-        # ---------- AUTHORIZED ----------
+        # AUTHORIZED
         return True

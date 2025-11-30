@@ -13,15 +13,16 @@ import importlib.util
 import uvicorn
 from redis.asyncio import Redis
 
+
 from utils.setup_logger import setup_logger
 
 logger = setup_logger(
     __name__,
     log_dir="logs/bots",
     log_file="bots.log",
-    logger_level=10,   # DEBUG
+    logger_level=10,  # DEBUG
     file_level=10,
-    console_level=20   # INFO
+    console_level=20  # INFO
 )
 
 load_dotenv()
@@ -30,18 +31,25 @@ BOTS_ROOT = Path(__file__).parent
 INTERNAL_BOT_API_IP = os.getenv("INTERNAL_BOT_API_IP")
 INTERNAL_BOT_API_PORT = int(os.getenv("INTERNAL_BOT_API_PORT"))
 
-MAX_RETRIES = 3        # количество попыток feed_update
-RETRY_DELAY = 1.5      # задержка между попытками (сек)
-FEED_TIMEOUT = 5.0     # таймаут на feed_update (сек)
+MAX_RETRIES = 3  # количество попыток feed_update
+RETRY_DELAY = 1.5  # задержка между попытками (сек)
+FEED_TIMEOUT = 5.0  # таймаут на feed_update (сек)
+
+REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
+REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
+BOTS_REDIS_DB_ID = int(os.getenv('BOTS_REDIS_DB_ID', '1'))
 
 app = FastAPI(title="Clustered Bots Service", description="Internal API для кластера ботов")
 
-# --- Словарь всех ботов ---
+# Словарь всех ботов
 # bot_name -> {"bot": Bot, "dp": Dispatcher, "internal_key": str}
 BOTS: Dict[str, Dict] = {}
 
+# Глобальный Redis клиент
+redis_client = None
 
-# --- Динамическая загрузка ботов ---
+
+# Динамическая загрузка ботов
 def load_bots():
     bot_folders = [p for p in BOTS_ROOT.iterdir() if p.is_dir()]
     for folder in bot_folders:
@@ -144,6 +152,7 @@ def load_bots():
 
         logger.info(f"Бот {bot_name} успешно загружен. Всего роутеров: {len(normal_handlers) + len(fallback_handlers)}")
 
+
 # --- Feed update с Retry ---
 
 async def feed_update_with_retry(bot: Bot, dp: Dispatcher, update: types.Update, bot_name: str):
@@ -175,6 +184,7 @@ async def internal_update(request: Request, background_tasks: BackgroundTasks):
 
     bot_name = data.get("bot_name")
     update_data = data.get("update")
+    update_id = update_data.get("update_id") if update_data else None
 
     if not bot_name or not update_data:
         logger.warning("400 Bad Request: Отсутствует bot_name или update")
@@ -197,14 +207,27 @@ async def internal_update(request: Request, background_tasks: BackgroundTasks):
         logger.error(f"Ошибка парсинга update: {e}")
         raise HTTPException(status_code=400, detail="Invalid update format")
 
-    background_tasks.add_task(
-        feed_update_with_retry,
-        bot_conf["bot"],
-        bot_conf["dp"],
-        update,
-        bot_name
-    )
-    # process_update_task.delay(bot_name, update_data)  # TODO отправка задачи в Celery
+    # ПРОВЕРКА НА ДУБЛИКАТЫ
+    if update_id:
+        try:
+            duplicate_key = f"telegram:processed:{update_id}"
+            exists = await redis_client.exists(duplicate_key)
+            if exists:
+                logger.info(f"Дубликат update_id={update_id}, отклоняем обработку")
+                return {"accepted": True, "duplicate": True}
+        except Exception as e:
+            logger.error(f"Ошибка при проверке дубликата в Redis: {e}")
+            # При ошибке продолжаем обработку (лучше обработать лишний раз, чем потерять апдейт)
+
+    # background_tasks.add_task(
+    #     feed_update_with_retry,
+    #     bot_conf["bot"],
+    #     bot_conf["dp"],
+    #     update,
+    #     bot_name
+    # )
+    from bots.tasks import process_update_task
+    process_update_task.delay(bot_name, update)
 
     return {"accepted": True}
 
@@ -212,6 +235,17 @@ async def internal_update(request: Request, background_tasks: BackgroundTasks):
 # --- Startup / Shutdown ---
 @app.on_event("startup")
 async def on_startup():
+    global redis_client
+
+    # Инициализируем асинхронный Redis-клиент
+    redis_client = Redis(
+        host=REDIS_HOST,
+        port=REDIS_PORT,
+        db=BOTS_REDIS_DB_ID,
+        decode_responses=False  # Для эффективной работы с байтами
+    )
+    logger.info(f"Redis client initialized: {REDIS_HOST}:{REDIS_PORT}/{BOTS_REDIS_DB_ID}")
+
     logger.info("Clustered Bots Service starting up...")
     load_bots()
     logger.info(f"Боты зарегистрированы: {list(BOTS.keys())}")
@@ -221,6 +255,12 @@ async def on_startup():
 async def on_shutdown():
     for bot_conf in BOTS.values():
         await bot_conf["bot"].session.close()
+
+    # Закрываем Redis-клиент
+    if redis_client:
+        await redis_client.close()
+        logger.info("Redis client closed")
+
     logger.info("Clustered Bots Service stopped")
 
 

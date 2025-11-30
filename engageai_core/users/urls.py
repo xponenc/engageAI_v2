@@ -27,6 +27,6 @@ urlpatterns = [
     path('check_email/', CheckEmailExistView.as_view(), name='check-email'),
 
     # DRF API приложения
-    path("api/users/", include("users.api.urls")),
+    path("api/v1/users/", include("users.api.urls")),
 
 ]

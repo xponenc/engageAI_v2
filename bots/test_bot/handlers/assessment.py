@@ -1,4 +1,5 @@
 import html
+import inspect
 import json
 from typing import Union
 
@@ -159,12 +160,44 @@ async def process_start_assessment_test(event: Union[Message, CallbackQuery], st
     - For Message: reply to message
     - For CallbackQuery: reply to callback.message (and answer the callback to remove spinner)
     """
+    update_id = getattr(event, "update_id", None)
     if isinstance(event, CallbackQuery):
         tg_user_id = event.from_user.id
         reply_target = event.message
+
+        chat_id = event.message.chat.id
+        event_message_id = event.message.message_id
+        command = event.data
+        event_type = "callback"
     else:  # Message
         tg_user_id = event.from_user.id
         reply_target = event
+
+        chat_id = event.chat.id
+        event_message_id = event.message_id
+        command = event.text
+        event_type = "message"
+
+    # Автоопределение вызывающей функции
+    try:
+        caller_frame = inspect.currentframe().f_back
+        caller_name = caller_frame.f_code.co_name if caller_frame else "unknown"
+        caller_module = inspect.getmodule(caller_frame).__name__ if caller_frame else "unknown"
+    except Exception:
+        caller_name = "unknown"
+        caller_module = "unknown"
+
+    context = {
+        "update_id": update_id,
+        "user_id": tg_user_id,
+        "chat_id": chat_id,
+        "message_id": event_message_id,
+        "event_type": event_type,
+        "handler": f"{caller_name} ({caller_module})",
+        "command": command[:100] if command else None,
+        "function": "process_start_assessment_test",
+        "action": "assessment_start"
+    }
 
     data = await state.get_data()
 
@@ -184,8 +217,9 @@ async def process_start_assessment_test(event: Union[Message, CallbackQuery], st
             pass
 
     ok, response = await core_post(
-        "/assessment/api/assessment/start/",
-        {"telegram_id": tg_user_id}
+        url="/assessment/api/v1/assessment/start/",
+        payload={"telegram_id": tg_user_id},
+        context=context
     )
 
     if not ok:
@@ -236,6 +270,35 @@ async def process_start_assessment_test(event: Union[Message, CallbackQuery], st
 async def mcq_answer(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
+    update_id = getattr(callback, "update_id", None)
+    tg_user_id = callback.from_user.id
+
+    chat_id = callback.message.chat.id
+    event_message_id = callback.message.message_id
+    command = callback.data
+    event_type = "callback"
+
+    # Автоопределение вызывающей функции
+    try:
+        caller_frame = inspect.currentframe().f_back
+        caller_name = caller_frame.f_code.co_name if caller_frame else "unknown"
+        caller_module = inspect.getmodule(caller_frame).__name__ if caller_frame else "unknown"
+    except Exception:
+        caller_name = "unknown"
+        caller_module = "unknown"
+
+    context = {
+        "update_id": update_id,
+        "user_id": tg_user_id,
+        "chat_id": chat_id,
+        "message_id": event_message_id,
+        "event_type": event_type,
+        "handler": f"{caller_name} ({caller_module})",
+        "command": command[:100] if command else None,
+        "function": "process_start_assessment_test",
+        "action": "assessment_start"
+    }
+
     # Извлекаем ответ без префикса
     answer_index = callback.data.lstrip("mcq_")
 
@@ -268,7 +331,9 @@ async def mcq_answer(callback: CallbackQuery, state: FSMContext):
     }
 
     ok, response = await core_post(
-        f"/assessment/api/assessment/session/{session_id}/{question.get('id', ' ')}/answer/", payload
+        url=f"/assessment/api/v1/assessment/session/{session_id}/{question.get('id', ' ')}/answer/",
+        payload=payload,
+        context=context
     )
     if not ok:
         answer_text = (
@@ -446,6 +511,35 @@ async def handle_callback_during_text_answer(callback: CallbackQuery, state: FSM
 # --- Текстовый ответ ---
 @assessment_router.message(AssessmentState.waiting_text_answer, AuthFilter())
 async def process_text_answer(message: Message, state: FSMContext):
+    update_id = getattr(message, "update_id", None)
+    tg_user_id = message.from_user.id
+
+    chat_id = message.chat.id
+    event_message_id = message.message_id
+    command = message.text
+    event_type = "message"
+
+    # Автоопределение вызывающей функции
+    try:
+        caller_frame = inspect.currentframe().f_back
+        caller_name = caller_frame.f_code.co_name if caller_frame else "unknown"
+        caller_module = inspect.getmodule(caller_frame).__name__ if caller_frame else "unknown"
+    except Exception:
+        caller_name = "unknown"
+        caller_module = "unknown"
+
+    context = {
+        "update_id": update_id,
+        "user_id": tg_user_id,
+        "chat_id": chat_id,
+        "message_id": event_message_id,
+        "event_type": event_type,
+        "handler": f"{caller_name} ({caller_module})",
+        "command": command[:100] if command else None,
+        "function": "process_start_assessment_test",
+        "action": "assessment_start"
+    }
+
     data = await state.get_data()
     session_id = data["session_id"]
     question = data["question"]
@@ -473,8 +567,10 @@ async def process_text_answer(message: Message, state: FSMContext):
     }
 
     ok, response = await core_post(
-        url=f"/assessment/api/assessment/session/{session_id}/{question['id']}/answer/",
-        payload=payload)
+        url=f"/assessment/api/v1/assessment/session/{session_id}/{question['id']}/answer/",
+        payload=payload,
+        context=context
+    )
 
     if not ok:
         answer_text = (

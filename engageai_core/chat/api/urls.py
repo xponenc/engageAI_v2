@@ -1,7 +1,7 @@
 from django.urls import path
 
-from engageai_core.chat.api.views import TelegramUpdateView
+from .views import TelegramUpdateSaveView
 
 urlpatterns = [
-    path("telegram/updates/", TelegramUpdateView.as_view(), name="api_save_tg_update"),
+    path("telegram/updates/", TelegramUpdateSaveView.as_view(), name="api_save_tg_update"),
 ]

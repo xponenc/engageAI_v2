@@ -53,7 +53,7 @@ async def forward_update(bot_name: str, bot_conf, update_data: dict):
     )
 
 
-@router.post("/{bot_name}")
+@router.post("/{bot_name}/")
 async def telegram_webhook(bot_name: str, request: Request, background_tasks: BackgroundTasks):
     token = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
     if token != GATEWAY_SETTINGS.webhook_secret:

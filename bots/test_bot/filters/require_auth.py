@@ -87,7 +87,7 @@ class AuthFilter(BaseFilter):
             }
 
             ok, resp = await core_post(
-                url="/accounts/api/users/profile/",
+                url="/accounts/api/v1/users/profile/",
                 payload={"telegram_id": telegram_id},
                 context=context
             )

@@ -1,18 +1,17 @@
 import inspect
 from typing import Union
 
-from aiogram import Router, F, Dispatcher
+from aiogram import Router, F
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, StateFilter
 from aiogram.types import Message, BotCommandScopeChat, CallbackQuery, Update
 from aiogram.fsm.context import FSMContext
 
-from bots.bots_engine import BOTS
 from bots.test_bot.config import bot_logger, BOT_NAME, MAIN_MENU, GUEST_MENU, CUSTOMER_MENU, \
     CUSTOMER_COMMANDS, MAIN_COMMANDS, START_EMOJI, GUEST_COMMANDS, YES_EMOJI, NO_EMOJI
 from bots.test_bot.filters.require_auth import AuthFilter
-from bots.test_bot.handlers.start import MenuStates, AuthStates
+from bots.test_bot.handlers.start import MenuStates
 from bots.test_bot.services.api_process import core_post
 from bots.test_bot.services.keyboards import reply_start_keyboard
 

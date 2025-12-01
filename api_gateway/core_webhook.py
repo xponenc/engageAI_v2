@@ -88,3 +88,11 @@ if __name__ == "__main__":
         log_level="info",
         use_colors=True,
     )
+
+# --- Startup / Shutdown ---
+@app.on_event("startup")
+async def on_startup():
+
+    logger.info(f"BOTS FAST API initialized: {GATEWAY_SETTINGS.fastapi_ip}:{GATEWAY_SETTINGS.fastapi_port}")
+
+

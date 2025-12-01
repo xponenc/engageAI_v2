@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.enums import ParseMode
 
 from bots.test_bot.services.api_process import core_post
-from bots.test_bot.config import bot_logger, BOT_NAME, CORE_API
+from bots.test_bot.config import bot_logger, BOT_NAME
 
 fallback_router = Router()
 

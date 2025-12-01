@@ -1,8 +1,8 @@
-import asyncio
+import functools
 import inspect
 import traceback
+from typing import Callable, Any
 
-import aiohttp
 import httpx
 
 from bots.test_bot.config import CORE_API, BOT_INTERNAL_KEY, bot_logger, BOT_NAME
@@ -49,7 +49,7 @@ from bots.test_bot.config import CORE_API, BOT_INTERNAL_KEY, bot_logger, BOT_NAM
 #         return False, "Неизвестная ошибка. Попробуйте позже."
 
 
-async def core_post(url: str, payload: dict, context: dict = None):
+async def core_post(url: str, payload: dict, context: dict = None, **kwargs):
     """
     Унифицированный запрос к DRF API с расширенным логгированием и обработкой ошибок
 
@@ -69,10 +69,15 @@ async def core_post(url: str, payload: dict, context: dict = None):
     """
     bot_tag = f"[{BOT_NAME}]"
 
-    # Автоопределение вызывающей функции
-    caller_frame = inspect.currentframe().f_back
-    caller_name = caller_frame.f_code.co_name if caller_frame else "unknown"
-    caller_module = inspect.getmodule(caller_frame).__name__ if caller_frame else "unknown"
+    if context is None:
+        context = kwargs.get("context", {})
+
+    # Если context всё ещё пустой — минимальный fallback
+    if not context:
+        context = {"handler": "direct_call", "function": "core_post"}
+
+    caller_name = context.get("function", "unknown")
+    caller_module = context.get("caller_module", "unknown")
 
     full_context = {
         "caller_function": caller_name,
@@ -183,3 +188,66 @@ async def core_post(url: str, payload: dict, context: dict = None):
         )
         bot_logger.exception(exception_log)
         return False, "Неизвестная ошибка. Попробуйте позже."
+
+
+def auto_context(explicit_caller: str = None):
+    """
+    Универсальный декоратор: автоматически добавляет в kwargs["context"] информацию о вызове.
+    - Работает в sync и async функциях.
+    - Автоматически определяет имя функции и модуля (без inspect.currentframe()).
+    - Если есть event (Message/CallbackQuery) в args — добавляет user_id, chat_id и т.д.
+    - Можно указать explicit_caller для переопределения имени.
+
+    Пример использования:
+    @auto_context()
+    async def my_handler(event, state):
+        await core_post(url="...", payload=...)  # context добавится автоматически!
+    """
+
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        async def async_wrapper(*args, **kwargs) -> Any:
+            return await _add_context(func, explicit_caller, *args, **kwargs)
+
+        @functools.wraps(func)
+        def sync_wrapper(*args, **kwargs) -> Any:
+            return _add_context(func, explicit_caller, *args, **kwargs)
+
+        # Возвращаем async или sync версию в зависимости от оригинальной функции
+        return async_wrapper if inspect.iscoroutinefunction(func) else sync_wrapper
+
+    return decorator
+
+
+def _add_context(func, explicit_caller: str, *args, **kwargs) -> Any:
+    # Определяем имя функции и модуля (надёжно, без currentframe)
+    func_name = explicit_caller or func.__name__
+    module_name = func.__module__
+
+    # Базовый контекст
+    context = {
+        "handler": f"{func_name} ({module_name})",
+        "function": func_name,
+        "caller_module": module_name,
+    }
+
+    # Если передан event (Message или CallbackQuery) — добавляем данные из него
+    for arg in args:
+        if hasattr(arg, "from_user") and hasattr(arg.from_user, "id"):
+            context.update({
+                "user_id": arg.from_user.id,
+                "chat_id": getattr(getattr(arg, "chat", None), "id", None),
+                "update_id": getattr(arg, "update_id", None),
+                "message_id": getattr(arg, "message_id", None),
+                "event_type": "callback_query" if hasattr(arg, "callback_query") else "message",
+            })
+            break
+
+    # Если в kwargs уже есть context — дополняем его нашим
+    if "context" in kwargs:
+        kwargs["context"].update(context)
+    else:
+        kwargs["context"] = context
+
+    # Вызываем оригинальную функцию с обновлёнными kwargs
+    return func(*args, **kwargs)

@@ -1,6 +1,5 @@
 import html
 import inspect
-import json
 from typing import Union
 
 from aiogram import Router, F
@@ -11,9 +10,9 @@ from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, StateFilter
 
-from bots.test_bot.config import MESSAGE_EFFECT_CONFETTI, YES_EMOJI, CUSTOMER_COMMANDS, BOT_NAME, NO_EMOJI
+from bots.test_bot.config import MESSAGE_EFFECT_CONFETTI, YES_EMOJI, CUSTOMER_COMMANDS, NO_EMOJI, bot_logger
 from bots.test_bot.filters.require_auth import AuthFilter
-from bots.test_bot.services.api_process import core_post
+from bots.test_bot.services.api_process import core_post, auto_context
 
 assessment_router = Router()
 
@@ -154,7 +153,8 @@ async def start_assessment_test_callback(callback: CallbackQuery, state: FSMCont
     await process_start_assessment_test(callback, state)
 
 
-async def process_start_assessment_test(event: Union[Message, CallbackQuery], state: FSMContext):
+@auto_context()
+async def process_start_assessment_test(event: Union[Message, CallbackQuery], state: FSMContext, **kwargs):
     """
     Запрашиваем backend → стартуем тест → получаем первый вопрос
     - For Message: reply to message
@@ -177,27 +177,20 @@ async def process_start_assessment_test(event: Union[Message, CallbackQuery], st
         event_message_id = event.message_id
         command = event.text
         event_type = "message"
-
-    # Автоопределение вызывающей функции
-    try:
-        caller_frame = inspect.currentframe().f_back
-        caller_name = caller_frame.f_code.co_name if caller_frame else "unknown"
-        caller_module = inspect.getmodule(caller_frame).__name__ if caller_frame else "unknown"
-    except Exception:
-        caller_name = "unknown"
-        caller_module = "unknown"
-
-    context = {
+    context = kwargs.get("context", {})
+    bot_logger.info(f"КОНТЕКСТ \n\n{context}")
+    context.update({
         "update_id": update_id,
         "user_id": tg_user_id,
         "chat_id": chat_id,
         "message_id": event_message_id,
         "event_type": event_type,
-        "handler": f"{caller_name} ({caller_module})",
         "command": command[:100] if command else None,
         "function": "process_start_assessment_test",
         "action": "assessment_start"
-    }
+    })
+    bot_logger.info(f"НОВЫЙ КОНТЕКСТ \n\n{context}")
+
 
     data = await state.get_data()
 

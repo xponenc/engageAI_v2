@@ -1,5 +1,6 @@
 import os
 import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict
 
@@ -7,13 +8,14 @@ from aiogram.filters import StateFilter
 from aiogram.fsm.storage.base import DefaultKeyBuilder
 from aiogram.fsm.storage.redis import RedisStorage
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Depends
 from aiogram import Bot, Dispatcher, types, Router
 import importlib.util
 import uvicorn
 from redis.asyncio import Redis
 
-
+from bots.services.startup_process import init_redis_clients, load_bots, close_bot_connections, close_redis_clients
+from bots.state_manager import BotStateManager
 from utils.setup_logger import setup_logger
 
 logger = setup_logger(
@@ -39,122 +41,110 @@ REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
 REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
 BOTS_REDIS_DB_ID = int(os.getenv('BOTS_REDIS_DB_ID', '1'))
 
-app = FastAPI(title="Clustered Bots Service", description="Internal API для кластера ботов")
-
-# Словарь всех ботов
-# bot_name -> {"bot": Bot, "dp": Dispatcher, "internal_key": str}
-BOTS: Dict[str, Dict] = {}
-
 # Глобальный Redis клиент
-redis_client = None
+# redis_client = None
 
 
-# Динамическая загрузка ботов
-def load_bots():
-    bot_folders = [p for p in BOTS_ROOT.iterdir() if p.is_dir()]
-    for folder in bot_folders:
-        config_path = folder / "config.py"
-        handlers_path = folder / "handlers"
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Управляет жизненным циклом приложения"""
 
-        if not config_path.exists():
-            continue
+    logger.info("Clustered Bots Service starting up...")
 
-        # Загрузка config.py бота
-        spec = importlib.util.spec_from_file_location("config", config_path)
-        config_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(config_module)
+    try:
+        # Инициализация Redis-клиентов
+        await init_redis_clients(app)
 
-        bot_name = getattr(config_module, "BOT_NAME", None)
-        bot_token = getattr(config_module, "BOT_TOKEN", None)
-        internal_key = getattr(config_module, "BOT_INTERNAL_KEY", None)
+        # Загрузка ботов
+        # Словарь всех ботов
+        # bot_name -> {"bot": Bot, "dp": Dispatcher, "internal_key": str}
+        app.state.bots = {}
+        load_bots(app.state.bots, bots_root=BOTS_ROOT)
+        BotStateManager.set_bots(app.state.bots)
 
-        if not all([bot_name, bot_token, internal_key]):
-            logger.error(f"Bot {folder.name} имеет неполную конфигурацию\n"
-                         f"bot_name={bot_name}\nbot_token={bot_token}\ninternal_key={internal_key}\n")
-            continue
+        logger.info(f"Боты успешно загружены: {list(app.state.bots.keys())}")
+        yield
 
-        # Создаём Bot и Dispatcher
-        bot = Bot(bot_token)
+        # Завершение при остановке
+        logger.info("Clustered Bots Service shutting down...")
 
-        redis_client = Redis(
-            host="localhost",
-            port=6379,
-            db=2,
-            decode_responses=True
-        )
+        BotStateManager.clear()
 
-        storage = RedisStorage(
-            redis=redis_client,
-            key_builder=DefaultKeyBuilder(with_bot_id=True)  # чтобы разные боты не пересекались
-        )
+        # Закрытие сессий ботов
+        for bot_name, bot_conf in app.state.bots.items():
+            try:
+                await bot_conf["bot"].session.close()
+                logger.info(f"Сессия бота {bot_name} закрыта")
+            except Exception as e:
+                logger.error(f"Ошибка закрытия сессии бота {bot_name}: {e}")
 
-        dp = Dispatcher(storage=storage)
-        # dp = Dispatcher()
-        bot.dispatcher = dp
+        # Закрытие Redis-клиентов
+        if hasattr(app.state, 'redis_client') and app.state.redis_client:
+            await app.state.redis_client.close()
+            logger.info("Redis client закрыт")
 
-        # --- Подключение хендлеров ---
-        normal_handlers = []
-        fallback_handlers = []
+        logger.info("✅ Все ресурсы успешно освобождены")
 
-        if handlers_path.exists() and handlers_path.is_dir():
-            # Собираем все файлы с хендлерами
-            handler_files = list(handlers_path.glob("*.py"))
+    finally:
+        logger.info("Clustered Bots Service shutting down...")
 
-            for py_file in handler_files:
-                # Определяем тип хендлера по имени файла
-                is_fallback = py_file.name.startswith('z_') or 'fallback' in py_file.name.lower()
+        try:
+            BotStateManager.clear()
 
-                spec = importlib.util.spec_from_file_location("handler", py_file)
-                module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(module)
+            # Закрытие соединений ботов
+            await close_bot_connections(app.state.bots)
 
-                # Подключаем все Router'ы из модуля
-                for attr_name in dir(module):
-                    attr = getattr(module, attr_name)
-                    if isinstance(attr, Router):
-                        if is_fallback:
-                            fallback_handlers.append((attr, py_file.name))
-                        else:
-                            normal_handlers.append((attr, py_file.name))
+            # Закрытие Redis-клиентов
+            await close_redis_clients(app)
 
-        # --- Подключаем обычные хендлеры ---
-        for router, filename in normal_handlers:
-            dp.include_router(router)
-            logger.info(f"Router из {filename} подключен для бота {bot_name}")
+            logger.info(" Все ресурсы успешно освобождены")
+        except Exception as e:
+            logger.error(f"Ошибка при завершении работы: {e}")
 
-        # --- Подключаем fallback хендлеры (всегда в конце) ---
-        for router, filename in fallback_handlers:
-            dp.include_router(router)
-            logger.info(f"Fallback router из {filename} подключен ПОСЛЕДНИМ для бота {bot_name}")
 
-        # --- Если нет fallback хендлеров, добавляем эхо как запасной вариант ---
-        if not fallback_handlers:
-            logger.debug(f"Для бота {bot_name} не найдено fallback-хендлеров, добавляется эхо")
-            echo_router = Router()
+app = FastAPI(
+    title="Clustered Bots Service",
+    description="Internal API для кластера ботов",
+    lifespan=lifespan
+)
 
-            @echo_router.message(StateFilter(None))
-            async def echo_message_handler(message: types.Message):
-                await message.answer(f"Эхо от {bot_name}: {message.text}")
+# # --- Startup / Shutdown ---
+# @app.on_event("startup")
+# async def on_startup():
+#     global redis_client
+#
+#     # Инициализируем асинхронный Redis-клиент
+#     redis_client = Redis(
+#         host=REDIS_HOST,
+#         port=REDIS_PORT,
+#         db=BOTS_REDIS_DB_ID,
+#         decode_responses=False  # Для эффективной работы с байтами
+#     )
+#     logger.info(f"Redis client initialized: {REDIS_HOST}:{REDIS_PORT}/{BOTS_REDIS_DB_ID}")
+#
+#     logger.info("Clustered Bots Service starting up...")
+#     load_bots()
+#     logger.info(f"Боты зарегистрированы: {list(BOTS.keys())}")
 
-            dp.include_router(echo_router)
-            logger.info(f"Echo router подключен для бота {bot_name}")
+#
+# @app.on_event("shutdown")
+# async def on_shutdown():
+#     for bot_conf in BOTS.values():
+#         await bot_conf["bot"].session.close()
+#
+#     # Закрываем Redis-клиент
+#     if redis_client:
+#         await redis_client.close()
+#         logger.info("Redis client closed")
+#
+#     logger.info("Clustered Bots Service stopped")
 
-        # --- Добавляем в глобальный словарь ---
-        if bot_name in BOTS:
-            logger.error(f"Конфликт имени бота: {bot_name}")
-            continue
 
-        BOTS[bot_name] = {
-            "bot": bot,
-            "dp": dp,
-            "internal_key": internal_key
-        }
-
-        logger.info(f"Бот {bot_name} успешно загружен. Всего роутеров: {len(normal_handlers) + len(fallback_handlers)}")
-
+async def get_redis_client(request: Request):
+    """Получает Redis-клиент из состояния приложения"""
+    return request.app.state.redis_client
 
 # --- Feed update с Retry ---
-
 async def feed_update_with_retry(bot: Bot, dp: Dispatcher, update: types.Update, bot_name: str):
     last_exception = None
     for attempt in range(1, MAX_RETRIES + 1):
@@ -173,7 +163,11 @@ async def feed_update_with_retry(bot: Bot, dp: Dispatcher, update: types.Update,
 
 
 @app.post("/internal/update")
-async def internal_update(request: Request, background_tasks: BackgroundTasks):
+async def internal_update(
+        request: Request,
+        background_tasks: BackgroundTasks,
+        redis_client = Depends(get_redis_client)
+):
     """
     Принимает апдейт от Gateway и проксирует в нужного бота.
     Мгновенно отвечает OK.
@@ -190,11 +184,12 @@ async def internal_update(request: Request, background_tasks: BackgroundTasks):
         logger.warning("400 Bad Request: Отсутствует bot_name или update")
         raise HTTPException(status_code=400, detail="Missing bot_name or update")
 
-    if bot_name not in BOTS:
+    bot_conf = BotStateManager.get_bot(bot_name=bot_name)
+    if bot_conf is None:
         logger.warning(f"404 Bot not found: {bot_name}")
         raise HTTPException(status_code=404, detail="Bot not found")
 
-    bot_conf = BOTS[bot_name]
+
 
     if key != bot_conf["internal_key"]:
         logger.warning(f"403 Forbidden: Invalid internal key for {bot_name}")
@@ -227,43 +222,11 @@ async def internal_update(request: Request, background_tasks: BackgroundTasks):
     #     bot_name
     # )
     from bots.tasks import process_update_task
-    process_update_task.delay(bot_name, update)
+    process_update_task.delay(bot_name, update_data)
 
     return {"accepted": True}
 
 
-# --- Startup / Shutdown ---
-@app.on_event("startup")
-async def on_startup():
-    global redis_client
-
-    # Инициализируем асинхронный Redis-клиент
-    redis_client = Redis(
-        host=REDIS_HOST,
-        port=REDIS_PORT,
-        db=BOTS_REDIS_DB_ID,
-        decode_responses=False  # Для эффективной работы с байтами
-    )
-    logger.info(f"Redis client initialized: {REDIS_HOST}:{REDIS_PORT}/{BOTS_REDIS_DB_ID}")
-
-    logger.info("Clustered Bots Service starting up...")
-    load_bots()
-    logger.info(f"Боты зарегистрированы: {list(BOTS.keys())}")
-
-
-@app.on_event("shutdown")
-async def on_shutdown():
-    for bot_conf in BOTS.values():
-        await bot_conf["bot"].session.close()
-
-    # Закрываем Redis-клиент
-    if redis_client:
-        await redis_client.close()
-        logger.info("Redis client closed")
-
-    logger.info("Clustered Bots Service stopped")
-
-
 # --- Запуск ---
 if __name__ == "__main__":
-    uvicorn.run("bots_engine:app", host=INTERNAL_BOT_API_IP, port=INTERNAL_BOT_API_PORT, reload=False)
+    uvicorn.run("bots_engine:app", host=INTERNAL_BOT_API_IP, port=INTERNAL_BOT_API_PORT, reload=True)

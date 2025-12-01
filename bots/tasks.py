@@ -1,17 +1,12 @@
-# bots/tasks.py
 import asyncio
 import logging
-
-import httpx
-from aiogram.types import CallbackQuery
+import sys
 
 from .celery_app import celery_app
-from .bots_engine import BOTS, feed_update_with_retry
-from aiogram import types
-from redis.asyncio import Redis
+from .bots_engine import feed_update_with_retry
+from aiogram import types, Bot, Dispatcher
 
-from .test_bot.config import CORE_API, BOT_INTERNAL_KEY
-from .test_bot.services.api_process import core_post
+from bots.test_bot.services.api_process import core_post, auto_context
 
 logger = logging.getLogger("bots_tasks")
 
@@ -25,24 +20,26 @@ def process_update_task(self, bot_name: str, update_data: dict):
     update_id = update_data.get('update_id')
     logger.info(f"{bot_tag} Запуск задачи Celery для апдейта {update_id}")
 
-    if bot_name not in BOTS:
-        logger.error(f"{bot_tag} Бот не найден в реестре при обработке апдейта {update_id}")
-        return False
-
     try:
-        # Проверяем наличие event loop
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
+        bots = self.app.conf.bots
 
-        if loop and loop.is_running():
-            # Используем существующий loop
-            future = asyncio.ensure_future(_async_process_update(bot_name, update_data))
-            return loop.run_until_complete(future)
+        if bot_name not in bots:
+            logger.error(f"{bot_tag} Update ID {update_id} Бот не найден в состоянии воркера")
+            # Попробуем перезагрузить ботов при следующей задаче
+            raise self.retry(countdown=5, max_retries=1)
+
+        bot_conf = bots[bot_name]
+        bot = bot_conf["bot"]
+        dp = bot_conf["dp"]
+        if sys.platform == "win32":
+            # Windows + solo → нужен nest_asyncio
+            import nest_asyncio
+            nest_asyncio.apply()
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(_async_process_update(bot_name, bot, dp, update_data))
         else:
-            # Создаем новый loop
-            return asyncio.run(_async_process_update(bot_name, update_data))
+            # Linux / любой нормальный пул → чистый asyncio.run
+            return asyncio.run(_async_process_update(bot_name, bot, dp, update_data))
 
     except Exception as e:
         logger.exception(f"{bot_tag} Update ID {update_id} Критическая ошибка в задаче Celery: {e}")
@@ -65,21 +62,21 @@ def process_update_task(self, bot_name: str, update_data: dict):
                 logger.error(f"{bot_tag} Update ID {update_id}Ошибка сохранения update_id в Redis: {e}")
 
 
-async def _async_process_update(bot_name: str, update_data: dict):
+async def _async_process_update(
+        bot_name: str,
+        bot: Bot,
+        dispatcher: Dispatcher,
+        update_data: dict):
     """Обработки апдейта"""
     bot_tag = f"[Bot:{bot_name}]"
     update_id = update_data.get('update_id')
-
-    bot_conf = BOTS[bot_name]
-    bot = bot_conf["bot"]
-    dp = bot_conf["dp"]
 
     try:
         logger.debug(f"{bot_tag} Создание объекта Update ID {update_id}")
         update = types.Update(**update_data)
 
         logger.info(f"{bot_tag} Запуск обработки Update ID {update_id}")
-        await feed_update_with_retry(bot, dp, update, bot_name)
+        await feed_update_with_retry(bot, dispatcher, update, bot_name)
 
         logger.info(f"{bot_tag} Сохранение Update ID {update_id} в DRF")
         await _save_update_to_drf(bot_name, update_data, status="success")
@@ -99,35 +96,31 @@ async def _async_process_update(bot_name: str, update_data: dict):
         raise
 
 
-async def _save_update_to_drf(bot_name: str, update_data: dict, status: str = "pending", error: str = None):
+@auto_context()
+async def _save_update_to_drf(bot_name: str, update_data: dict, status: str = "pending", error: str = None, **kwargs):
     """Асинхронное сохранение в DRF API"""
-    core_drf_url = f"{CORE_API}/api/v1/chat/telegram/updates/"
+    core_drf_url = f"/chat/api/v1/chat/telegram/updates/"
     bot_tag = f"[Bot:{bot_name}]"
     update_id = update_data.get('update_id')
 
-    context = {
+    context = kwargs.get("context", {})
+    context.update({
         "update_id": update_id,
         "bot_name": bot_name,
         "status": status,
-
-        # Данные о пользователе и чате
         "user_id": update_data.get('message', {}).get('from', {}).get('id') or
                    update_data.get('callback_query', {}).get('from', {}).get('id'),
         "chat_id": update_data.get('message', {}).get('chat', {}).get('id') or
                    update_data.get('callback_query', {}).get('message', {}).get('chat', {}).get('id'),
         "message_id": update_data.get('message', {}).get('message_id') or
                       update_data.get('callback_query', {}).get('message', {}).get('message_id'),
-
-        # Тип события и содержимое
         "event_type": "message" if update_data.get('message') else
         ("callback_query" if update_data.get('callback_query') else "unknown"),
         "text_preview": (update_data.get('message', {}).get('text', '')[:50] or
                          update_data.get('callback_query', {}).get('data', '')[:50]),
-
         "error": error[:200] if error and isinstance(error, str) else error,
-        "function": "_save_update_to_drf",
         "action": "save_telegram_update"
-    }
+    })
 
     payload = {
         "bot_name": bot_name,

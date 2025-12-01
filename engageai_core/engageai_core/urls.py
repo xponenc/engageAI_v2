@@ -26,7 +26,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('users.urls')),
 
-    path("assessment/", include("assessment.urls", namespace="assessment"))
+    path("assessment/", include("assessment.urls", namespace="assessment")),
+    path("chat/", include("chat.urls", namespace="chat"))
 ]
 
 if settings.DEBUG:

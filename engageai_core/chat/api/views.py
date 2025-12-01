@@ -6,9 +6,9 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from engageai_core.chat.models import Message, MessageSource, ChatType, Chat
-from engageai_core.engageai_core.mixins import InternalBotAuthMixin
-from engageai_core.users.models import TelegramProfile
+from ..models import Message, MessageSource, ChatType, Chat
+from engageai_core.mixins import InternalBotAuthMixin
+from users.models import TelegramProfile
 from utils.setup_logger import setup_logger
 
 core_api_logger = setup_logger(name=__file__, log_dir="logs/core_api", log_file="core_api.log")
@@ -16,9 +16,9 @@ core_api_logger = setup_logger(name=__file__, log_dir="logs/core_api", log_file=
 User = get_user_model()
 
 
-class TelegramUpdateView(InternalBotAuthMixin, APIView):
+class TelegramUpdateSaveView(InternalBotAuthMixin, APIView):
     """
-    Обрабатывает входящие апдейты от Telegram и сохраняет их в систему.
+    Сохраняет входящие апдейты от Telegram.
 
     Формат ответа совместим с core_post:
     {
@@ -33,7 +33,9 @@ class TelegramUpdateView(InternalBotAuthMixin, APIView):
     def post(self, request):
         bot = request.internal_bot
         bot_tag = f"[bot:{bot}]"
-        update_data = request.data
+        data = request.data
+
+        update_data = data.get("update")
 
         # ===== 1. Проверка на дубликаты =====
         update_id = update_data.get('update_id')
@@ -263,7 +265,7 @@ class TelegramUpdateView(InternalBotAuthMixin, APIView):
 
         try:
             # Ищем через Telegram профиль
-            user = User.objects.get(telegramprofile__telegram_id=telegram_id)
+            user = User.objects.get(telegram_profile__telegram_id=telegram_id)
             core_api_logger.debug(f"{bot_tag} Найден существующий пользователь ID {user.id} для telegram_id {telegram_id}")
             return user, False
         except User.DoesNotExist:

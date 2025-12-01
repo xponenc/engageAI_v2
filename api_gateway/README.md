@@ -96,7 +96,7 @@ uvicorn core_webhook:app --host $FAST_API_IP --port $FAST_API_PORT
 ### Telegram Webhook
 
 ```
-POST /webhook/{bot_name}
+POST /webhook/{bot_name}/
 ```
 
 **Headers:**
@@ -115,7 +115,14 @@ JSON update от Telegram.
 - Апдейт проксируется в кластер ботов с retry‑механизмом.
 - Telegram сразу получает `{ "ok": true }`.
 
+**Проверка регистрации вебхука:**
+
+```commandline
+https://api.telegram.org/bot<< ТОКЕН БОТА >>/getWebhookInfo
+```
+
 ---
+
 
 ### Внутренние сервисы (пример)
 

@@ -1,0 +1,457 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load chat_filters %}
+
+
+{% block title %}Чат с AI | NeuroTutor{% endblock %}
+
+{% block css %}
+<link href="{% static 'css/chat.css' %}" rel="stylesheet">
+{% endblock css %}
+
+{% block content %}
+<section class="ai-chat">
+    <div class="ai-chat__container container">
+        
+        <!-- Хлебные крошки -->
+        <nav class="breadcrumbs">
+            <a href="{{ kb.get_absolute_url }}" class="breadcrumbs__link">База знаний {{ kb.name }}</a>
+            <span class="breadcrumbs__separator">/</span>
+            <span class="breadcrumbs__current">AI-чат</span>
+        </nav>
+
+        <!-- Заголовок -->
+        <div class="ai-chat__header">
+            <h1 class="ai-chat__title">Чат с AI-репетитором</h1>
+            <p class="ai-chat__subtitle">Задавайте вопросы о материале курса и получайте объяснения от нейросети</p>
+        </div>
+
+        <!-- Основной контент -->
+        <div class="ai-chat__wrapper">
+            
+            <!-- Левая панель - информация о чате -->
+            <div class="ai-chat__sidebar">
+                <div class="chat-info card">
+                    <div class="chat-info__header">
+                        <div class="chat-info__icon">🤖</div>
+                        <h3 class="chat-info__title">{{ kb.engine.name }}</h3>
+                    </div>
+                    
+                    <div class="chat-info__content">
+                        <div class="info-item">
+                            <div class="info-item__icon">📚</div>
+                            <div class="info-item__content">
+                                <strong>База знаний</strong>
+                                <span>{{ kb.name }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-item__icon">⚡</div>
+                            <div class="info-item__content">
+                                <strong>Модель</strong>
+                                <span>{{ kb.engine.model }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <div class="info-item__icon">🎯</div>
+                            <div class="info-item__content">
+                                <strong>Режим</strong>
+                                <span>Образовательный</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Советы по использованию -->
+                <div class="chat-tips card">
+                    <h4 class="chat-tips__title">Советы для лучших ответов</h4>
+                    <ul class="chat-tips__list">
+                        <li class="chat-tips__item">✅ Задавайте конкретные вопросы</li>
+                        <li class="chat-tips__item">✅ Просите объяснить сложные темы</li>
+                        <li class="chat-tips__item">✅ Уточняйте, если ответ непонятен</li>
+                        <li class="chat-tips__item">✅ Используйте примеры из уроков</li>
+                    </ul>
+                </div>
+
+                <!-- Статистика чата -->
+                <div class="chat-stats card">
+                    <h4 class="chat-stats__title">Статистика чата</h4>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-item__value">{{ chat_history|length }}</div>
+                            <div class="stat-item__label">Сообщений</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-item__value">{{ kb.documents.count }}</div>
+                            <div class="stat-item__label">Документов</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Правая панель - сам чат -->
+            <div class="ai-chat__main">
+                <div class="chat-window card">
+                    
+                    <!-- Шапка чата -->
+                    <div class="chat-window__header">
+                        <div class="chat-window__title">
+                            <div class="chat-window__icon">💬</div>
+                            <h3>Диалог с AI</h3>
+                        </div>
+                        <div class="chat-window__actions">
+                            <button class="btn btn_ghost btn_sm" id="clear-chat" title="Очистить историю">
+                                <span class="btn__icon">🗑️</span>
+                                Очистить
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- История сообщений -->
+                    <div class="chat-window__messages" id="chat-history">
+                        {% if chat_history %}
+                            {% for message in chat_history %}
+                            <div class="chat-message {% if message.is_ai %}chat-message--ai{% else %}chat-message--user{% endif %}" 
+                                 data-message-id="{{ message.id }}" 
+                                 data-url="{% url 'chat:message_score' message.id %}">
+                                
+                                <div class="chat-message__avatar">
+                                    {% if message.is_ai %}
+                                        <div class="avatar avatar--ai">🤖</div>
+                                    {% else %}
+                                        <div class="avatar avatar--user">👤</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="chat-message__content">
+                                    <div class="chat-message__text">
+                                        {{ message.content|safe }}
+                                    </div>
+                                    
+                                    <div class="chat-message__meta">
+                                        <span class="chat-message__time">
+                                            {{ message.created_at|time:"H:i" }}
+                                        </span>
+                                        
+                                        {% if message.is_ai %}
+                                        <div class="chat-message__rating">
+                                            <div class="rating-stars" data-message-id="{{ message.id }}">
+                                                {% for i in "2 1 0 -1 -2"|split:" " %}
+                                                    {% with i_int=i|add:"0" %}
+                                                        <button class="star-btn {% if message.score >= i_int %}star-btn--active{% endif %}" 
+                                                                data-value="{{ i_int }}">
+                                                            ★
+                                                        </button>
+                                                    {% endwith %}
+                                                {% endfor %}
+                                            </div>
+                                            <span class="rating-hint">Оцените ответ</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <!-- Пустое состояние -->
+                            <div class="chat-empty">
+                                <div class="chat-empty__icon">🤔</div>
+                                <h4 class="chat-empty__title">Начните диалог</h4>
+                                <p class="chat-empty__text">
+                                    Задайте вопрос AI-репетитору о материале курса, 
+                                    и он поможет вам разобраться в сложных темах
+                                </p>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Поле ввода -->
+                    <div class="chat-window__input">
+                        <form id="chat-form" method="post" class="chat-form">
+                            {% csrf_token %}
+                            
+                            <div class="chat-input">
+                                <div class="chat-input__field">
+                                    <input type="text" 
+                                           name="message" 
+                                           id="message-input" 
+                                           class="chat-input__text" 
+                                           placeholder="Введите ваш вопрос..."
+                                           required
+                                           autocomplete="off">
+                                    
+                                    <div class="chat-input__actions">
+                                        <button type="button" class="chat-input__action" title="Отправить голосовое сообщение">
+                                            🎤
+                                        </button>
+                                        <button type="button" class="chat-input__action" title="Прикрепить файл">
+                                            📎
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn_primary chat-input__submit" id="submit-btn">
+                                    <span class="btn__icon">✈️</span>
+                                    Отправить
+                                </button>
+                            </div>
+                            
+                            <div class="chat-input__hint">
+                                Нажмите Enter для отправки, Shift+Enter для новой строки
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}
+
+{% block script %}
+<script>
+
+// Авто-скролл к последнему сообщению
+function scrollChatToBottom() {
+    const msgBox = document.querySelector('.chat-window__messages');
+    if (!msgBox) return;
+
+    // Мгновенный скролл вниз
+    msgBox.scrollTop = msgBox.scrollHeight;
+}
+
+
+document.addEventListener("DOMContentLoaded", function () {
+    const chatForm = document.getElementById("chat-form");
+    const chatHistory = document.getElementById("chat-history");
+    const messageInput = document.getElementById("message-input");
+    const submitBtn = document.getElementById("submit-btn");
+    const clearChatBtn = document.getElementById("clear-chat");
+
+    scrollChatToBottom();
+
+    // Отправка формы
+    chatForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const message = messageInput.value.trim();
+    if (!message) return;
+
+    // Блокируем кнопку
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="btn__icon">⏳</span>Отправка...';
+
+    // Создаем временное сообщение пользователя
+    const userMessageId = `temp-user-${Date.now()}`;
+    const botMessageId = `temp-bot-${Date.now()}`;
+    
+    const userMessageHTML = `
+        <div class="chat-message chat-message--user" id="${userMessageId}">
+            <div class="chat-message__avatar">
+                <div class="avatar avatar--user">👤</div>
+            </div>
+            <div class="chat-message__content">
+                <div class="chat-message__text">${escapeHtml(message)}</div>
+                <div class="chat-message__meta">
+                    <span class="chat-message__time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const botMessageHTML = `
+        <div class="chat-message chat-message--ai" id="${botMessageId}">
+            <div class="chat-message__avatar">
+                <div class="avatar avatar--ai">🤖</div>
+            </div>
+            <div class="chat-message__content">
+                <div class="chat-message__text">
+                    <div class="typing-indicator">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Убираем пустое состояние если есть
+    const emptyState = document.querySelector('.chat-empty');
+    if (emptyState) {
+        emptyState.remove();
+    }
+
+    // Добавляем сообщения
+    chatHistory.innerHTML += userMessageHTML + botMessageHTML;
+    scrollToBottom();
+    messageInput.value = '';
+
+    // Отправляем запрос
+    fetch("", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+            "X-Requested-With": "XMLHttpRequest"
+        },
+        body: new URLSearchParams({ message })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const botMessage = document.getElementById(botMessageId);
+        if (botMessage && data.ai_response) {
+            // Используем 0 как начальную оценку для нового сообщения
+            const score = 0; // новая оценка всегда начинается с 0
+            
+            botMessage.outerHTML = `
+                <div class="chat-message chat-message--ai" data-message-id="${data.ai_response.id}" data-url="${data.ai_response.request_url}">
+                    <div class="chat-message__avatar">
+                        <div class="avatar avatar--ai">🤖</div>
+                    </div>
+                    <div class="chat-message__content">
+                        <div class="chat-message__text">${data.ai_response.text}</div>
+                        <div class="chat-message__meta">
+                            <span class="chat-message__time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                            <div class="chat-message__rating">
+                                <div class="rating-stars" data-message-id="${data.ai_response.id}">
+                                    <!-- Исправленный порядок: -2, -1, 0, 1, 2 -->
+                                    <button class="star-btn" data-value="-2">★</button>
+                                    <button class="star-btn" data-value="-1">★</button>
+                                    <button class="star-btn star-btn--active" data-value="0">★</button>
+                                    <button class="star-btn" data-value="1">★</button>
+                                    <button class="star-btn" data-value="2">★</button>
+                                </div>
+                                <span class="rating-hint">Оцените ответ</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            initStarRating();
+        }
+        scrollToBottom();
+    })
+    .catch(error => {
+        console.error("Ошибка:", error);
+        showNotification("Ошибка при отправке сообщения", "error");
+        
+        // Удаляем временные сообщения при ошибке
+        const tempUser = document.getElementById(userMessageId);
+        const tempBot = document.getElementById(botMessageId);
+        if (tempUser) tempUser.remove();
+        if (tempBot) tempBot.remove();
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span class="btn__icon">✈️</span>Отправить';
+        messageInput.focus();
+    });
+});
+
+    // Очистка чата
+    clearChatBtn.addEventListener("click", function() {
+        if (confirm("Вы уверены, что хотите очистить историю чата?")) {
+            fetch("{% url 'chat:web-chat-clear' chat.pk %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(() => {
+                chatHistory.innerHTML = `
+                    <div class="chat-empty">
+                        <div class="chat-empty__icon">🤔</div>
+                        <h4 class="chat-empty__title">Начните диалог</h4>
+                        <p class="chat-empty__text">
+                            Задайте вопрос AI-репетитору о материале курса, 
+                            и он поможет вам разобраться в сложных темах
+                        </p>
+                    </div>
+                `;
+                showNotification("История чата очищена", "success");
+            });
+        }
+    });
+
+    // Управление вводом: Enter отправляет, Shift+Enter новая строка
+    messageInput.addEventListener("keydown", function(e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            chatForm.requestSubmit();
+        }
+    });
+
+    // Инициализация звезд рейтинга
+    function initStarRating() {
+        // Сначала снимаем предыдущие слушатели
+        document.querySelectorAll('.rating-stars').forEach(stars => {
+            const newStars = stars.cloneNode(true);
+            stars.replaceWith(newStars);
+        });
+
+        // Теперь добавляем новые
+        document.querySelectorAll('.rating-stars').forEach(stars => {
+            stars.addEventListener('click', function (e) {
+                if (!e.target.classList.contains('star-btn')) return;
+
+                const clickedValue = parseInt(e.target.dataset.value, 10);
+                const starsList = this.querySelectorAll('.star-btn');
+
+                // === КОРРЕКТНАЯ ЛОГИКА ПОДСВЕТКИ ===
+                starsList.forEach(btn => {
+                    const val = parseInt(btn.dataset.value, 10);
+
+                    // Если значение звезды <= выбранного — она активная
+                    if (val <= clickedValue) {
+                        btn.classList.add('star-btn--active');
+                    } else {
+                        btn.classList.remove('star-btn--active');
+                    }
+                });
+
+                // Отправляем оценку
+                fetch(this.closest('[data-url]').dataset.url, {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ score: clickedValue })
+                });
+            });
+        });
+    }
+
+    initStarRating();
+
+    // Утилитарные функции
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification notification--${type}`;
+        notification.innerHTML = `
+            <div class="notification__icon">${type === 'success' ? '✅' : '⚠️'}</div>
+            <div class="notification__text">${message}</div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.classList.add('notification--hide');
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+
+    // Фокус на поле ввода при загрузке
+    messageInput.focus();
+});
+</script>
+{% endblock script %}

@@ -12,7 +12,7 @@ from bots.test_bot.config import bot_logger, BOT_NAME, MAIN_MENU, GUEST_MENU, CU
     CUSTOMER_COMMANDS, MAIN_COMMANDS, START_EMOJI, GUEST_COMMANDS, YES_EMOJI, NO_EMOJI
 from bots.test_bot.filters.require_auth import AuthFilter
 from bots.test_bot.handlers.start import MenuStates
-from bots.test_bot.services.api_process import core_post
+from bots.test_bot.services.api_process import core_post, auto_context
 from bots.test_bot.services.keyboards import reply_start_keyboard
 
 registration_router = Router()
@@ -135,6 +135,7 @@ async def process_start_registration(message: Message, state: FSMContext):
 
 
 @registration_router.message(StateFilter(MenuStates.registration))
+@auto_context()
 async def receive_registration_code(message: Message, state: FSMContext):
     """Получаем invite код пользователя и отправляем на backend."""
     update_id = getattr(message, "update_id", None)

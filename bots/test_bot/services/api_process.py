@@ -4,6 +4,7 @@ import traceback
 from typing import Callable, Any
 
 import httpx
+from aiogram.types import Message, CallbackQuery
 
 from bots.test_bot.config import CORE_API, BOT_INTERNAL_KEY, bot_logger, BOT_NAME
 
@@ -87,6 +88,7 @@ async def core_post(url: str, payload: dict, context: dict = None, **kwargs):
         "user_id": context.get("user_id") if context else None,
         "session_id": context.get("session_id") if context else None,
         "chat_id": context.get("chat_id") if context else None,
+        "event_type": context.get("event_type") if context else None,
         "traceback": traceback.format_stack(limit=5)[-2].strip() if context else None
     }
 
@@ -96,6 +98,7 @@ async def core_post(url: str, payload: dict, context: dict = None, **kwargs):
         f"├── Вызывающая функция: {caller_name} ({caller_module})\n"
         f"├── Update ID: {full_context['update_id'] or 'N/A'}\n"
         f"├── User ID: {full_context['user_id'] or 'N/A'}\n"
+        f"├── Event type: {full_context['event_type'] or 'N/A'}\n"
         f"└── Payload: {payload}"
     )
     bot_logger.info(request_log)
@@ -233,15 +236,45 @@ def _add_context(func, explicit_caller: str, *args, **kwargs) -> Any:
 
     # Если передан event (Message или CallbackQuery) — добавляем данные из него
     for arg in args:
-        if hasattr(arg, "from_user") and hasattr(arg.from_user, "id"):
+        if isinstance(arg, Message):
+            update_id = arg.update_id
+            tg_user_id = arg.from_user.id
+
+            chat_id = arg.chat.id
+            event_message_id = arg.message_id
+            command = arg.text
+            event_type = "message"
             context.update({
-                "user_id": arg.from_user.id,
-                "chat_id": getattr(getattr(arg, "chat", None), "id", None),
-                "update_id": getattr(arg, "update_id", None),
-                "message_id": getattr(arg, "message_id", None),
-                "event_type": "callback_query" if hasattr(arg, "callback_query") else "message",
+                    "user_id": tg_user_id,
+                    "chat_id": chat_id,
+                    "update_id": update_id,
+                    "message_id": event_message_id,
+                    "event_type": event_type,
+                })
+            break
+        elif isinstance(arg, CallbackQuery):
+            update_id = arg.update_id
+            tg_user_id = arg.from_user.id
+            chat_id = arg.message.chat.id
+            event_message_id = arg.message.message_id
+            event_type = "callback"
+            context.update({
+                "user_id": tg_user_id,
+                "chat_id": chat_id,
+                "update_id": update_id,
+                "message_id": event_message_id,
+                "event_type": event_type,
             })
             break
+        # if hasattr(arg, "from_user") and hasattr(arg.from_user, "id"):
+        #     context.update({
+        #         "user_id": arg.from_user.id,
+        #         "chat_id": getattr(getattr(arg, "chat", None), "id", None),
+        #         "update_id": getattr(arg, "update_id", None),
+        #         "message_id": getattr(arg, "message_id", None),
+        #         "event_type": "callback_query" if hasattr(arg, "callback_query") else "message",
+        #     })
+        #     break
 
     # Если в kwargs уже есть context — дополняем его нашим
     if "context" in kwargs:

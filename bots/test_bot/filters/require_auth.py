@@ -6,7 +6,7 @@ from aiogram.filters import BaseFilter
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
-from bots.test_bot.services.api_process import core_post
+from bots.test_bot.services.api_process import core_post, auto_context
 from bots.test_bot.config import bot_logger, BOT_NAME, AUTH_CACHE_TTL_SECONDS
 
 
@@ -21,6 +21,7 @@ class AuthFilter(BaseFilter):
     async def start_test(msg: Message, state: FSMContext):
     """
 
+    @auto_context()
     async def __call__(self, event: Union[Message, CallbackQuery], state: FSMContext) -> bool:
         bot_tag = f"[{BOT_NAME}]"
         # Унификация для Message / CallbackQuery

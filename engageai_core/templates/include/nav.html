@@ -12,7 +12,8 @@
             <li class="nav__item"><a href="#" class="nav__link">Практика</a></li>
             <li class="nav__item"><a href="#" class="nav__link">Прогресс</a></li>
             <li class="nav__item"><a href="#" class="nav__link">Материалы</a></li>
-            <li class="nav__item"><a href="{% url 'chat:web-chat' %}" class="nav__link">Чат</a></li>
+            <li class="nav__item"><a href="{% url 'chat:ai-chat' 'main_orchestrator' %}" class="nav__link">Чат</a></li>
+            <li class="nav__item"><a href="{% url 'chat:ai-chat-conversation' 'main_orchestrator' %}" class="nav__link">История чата</a></li>
         </ul>
 
         <!-- Правая часть: тема + пользователь -->

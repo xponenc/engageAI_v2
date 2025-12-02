@@ -15,14 +15,15 @@
         
         <!-- Хлебные крошки -->
         <nav class="breadcrumbs">
-            <a href="{{ kb.get_absolute_url }}" class="breadcrumbs__link">База знаний {{ kb.name }}</a>
+            <a href="{% url 'chat:ai-chat' assistant.slug %}" class="breadcrumbs__link">AI-чат</a>
+
             <span class="breadcrumbs__separator">/</span>
-            <span class="breadcrumbs__current">AI-чат</span>
+            <span class="breadcrumbs__current">{{ chat.title }}</span>
         </nav>
 
         <!-- Заголовок -->
         <div class="ai-chat__header">
-            <h1 class="ai-chat__title">Чат с AI-репетитором</h1>
+            <h1 class="ai-chat__title">{{ chat.title }}</h1>
             <p class="ai-chat__subtitle">Задавайте вопросы о материале курса и получайте объяснения от нейросети</p>
         </div>
 
@@ -83,10 +84,6 @@
                             <div class="stat-item__value">{{ chat_history|length }}</div>
                             <div class="stat-item__label">Сообщений</div>
                         </div>
-                        <div class="stat-item">
-                            <div class="stat-item__value">{{ kb.documents.count }}</div>
-                            <div class="stat-item__label">Документов</div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -113,9 +110,9 @@
                     <div class="chat-window__messages" id="chat-history">
                         {% if chat_history %}
                             {% for message in chat_history %}
-                            <div class="chat-message {% if message.is_ai %}chat-message--ai{% else %}chat-message--user{% endif %}" 
-                                 data-message-id="{{ message.id }}" 
-                                 data-url="{% url 'chat:message_score' message.id %}">
+                            <div class="chat-message{% if message.is_ai %} chat-message--ai{% else %} chat-message--user{% endif %}" 
+                                data-message-id="{{ message.id }}" 
+                                {% if message.is_ai %} data-url="{% url 'chat:ai-message-score' message.id %}"{% endif %}>
                                 
                                 <div class="chat-message__avatar">
                                     {% if message.is_ai %}
@@ -286,7 +283,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Добавляем сообщения
     chatHistory.innerHTML += userMessageHTML + botMessageHTML;
-    scrollToBottom();
+    scrollChatToBottom();
     messageInput.value = '';
 
     // Отправляем запрос
@@ -318,11 +315,11 @@ document.addEventListener("DOMContentLoaded", function () {
                             <div class="chat-message__rating">
                                 <div class="rating-stars" data-message-id="${data.ai_response.id}">
                                     <!-- Исправленный порядок: -2, -1, 0, 1, 2 -->
-                                    <button class="star-btn" data-value="-2">★</button>
-                                    <button class="star-btn" data-value="-1">★</button>
-                                    <button class="star-btn star-btn--active" data-value="0">★</button>
-                                    <button class="star-btn" data-value="1">★</button>
                                     <button class="star-btn" data-value="2">★</button>
+                                    <button class="star-btn" data-value="1">★</button>
+                                    <button class="star-btn" data-value="0">★</button>
+                                    <button class="star-btn" data-value="-1">★</button>
+                                    <button class="star-btn" data-value="-2">★</button>
                                 </div>
                                 <span class="rating-hint">Оцените ответ</span>
                             </div>
@@ -332,7 +329,7 @@ document.addEventListener("DOMContentLoaded", function () {
             `;
             initStarRating();
         }
-        scrollToBottom();
+        scrollChatToBottom();
     })
     .catch(error => {
         console.error("Ошибка:", error);

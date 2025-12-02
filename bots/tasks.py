@@ -11,7 +11,8 @@ from bots.test_bot.services.api_process import core_post, auto_context
 logger = logging.getLogger("bots_tasks")
 
 
-@celery_app.task(bind=True, max_retries=3, default_retry_delay=3)
+# @celery_app.task(bind=True, max_retries=3, default_retry_delay=3)
+@celery_app.task(bind=True)
 def process_update_task(self, bot_name: str, update_data: dict):
     """
     Универсальная задача для обработки обновлений любого бота.
@@ -22,7 +23,7 @@ def process_update_task(self, bot_name: str, update_data: dict):
 
     try:
         bots = self.app.conf.bots
-
+        logger.error(f"\n\n{bots=}\n\n")
         if bot_name not in bots:
             logger.error(f"{bot_tag} Update ID {update_id} Бот не найден в состоянии воркера")
             # Попробуем перезагрузить ботов при следующей задаче
@@ -31,15 +32,29 @@ def process_update_task(self, bot_name: str, update_data: dict):
         bot_conf = bots[bot_name]
         bot = bot_conf["bot"]
         dp = bot_conf["dp"]
+        assistant_slug = bot_conf["assistant_slug"]
+
         if sys.platform == "win32":
             # Windows + solo → нужен nest_asyncio
             import nest_asyncio
             nest_asyncio.apply()
             loop = asyncio.get_event_loop()
-            return loop.run_until_complete(_async_process_update(bot_name, bot, dp, update_data))
+            return loop.run_until_complete(_async_process_update(
+                bot_name=bot_name,
+                bot=bot,
+                dispatcher=dp,
+                update_data=update_data,
+                assistant_slug=assistant_slug
+            ))
         else:
             # Linux / любой нормальный пул → чистый asyncio.run
-            return asyncio.run(_async_process_update(bot_name, bot, dp, update_data))
+            return asyncio.run(_async_process_update(
+                bot_name=bot_name,
+                bot=bot,
+                dispatcher=dp,
+                update_data=update_data,
+                assistant_slug=assistant_slug
+            ))
 
     except Exception as e:
         logger.exception(f"{bot_tag} Update ID {update_id} Критическая ошибка в задаче Celery: {e}")
@@ -66,7 +81,9 @@ async def _async_process_update(
         bot_name: str,
         bot: Bot,
         dispatcher: Dispatcher,
-        update_data: dict):
+        update_data: dict,
+        assistant_slug: str
+):
     """Обработки апдейта"""
     bot_tag = f"[Bot:{bot_name}]"
     update_id = update_data.get('update_id')
@@ -79,7 +96,11 @@ async def _async_process_update(
         await feed_update_with_retry(bot, dispatcher, update, bot_name)
 
         logger.info(f"{bot_tag} Сохранение Update ID {update_id} в DRF")
-        await _save_update_to_drf(bot_name, update_data, status="success")
+        await _save_update_to_drf(
+            bot_name=bot_name,
+            update_data=update_data,
+            assistant_slug=assistant_slug,
+            status="success")
 
         return True
 
@@ -97,7 +118,13 @@ async def _async_process_update(
 
 
 @auto_context()
-async def _save_update_to_drf(bot_name: str, update_data: dict, status: str = "pending", error: str = None, **kwargs):
+async def _save_update_to_drf(
+        bot_name: str,
+        update_data: dict,
+        status: str = "pending",
+        assistant_slug:str = "",
+        error: str = None,
+        **kwargs):
     """Асинхронное сохранение в DRF API"""
     core_drf_url = f"/chat/api/v1/chat/telegram/updates/"
     bot_tag = f"[Bot:{bot_name}]"
@@ -124,6 +151,7 @@ async def _save_update_to_drf(bot_name: str, update_data: dict, status: str = "p
 
     payload = {
         "bot_name": bot_name,
+        "assistant_slug": assistant_slug,
         "update": update_data,
         "processing_status": status,
         "error_message": error

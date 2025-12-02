@@ -237,7 +237,6 @@ def _add_context(func, explicit_caller: str, *args, **kwargs) -> Any:
     # Если передан event (Message или CallbackQuery) — добавляем данные из него
     for arg in args:
         if isinstance(arg, Message):
-            update_id = arg.update_id
             tg_user_id = arg.from_user.id
 
             chat_id = arg.chat.id
@@ -247,13 +246,11 @@ def _add_context(func, explicit_caller: str, *args, **kwargs) -> Any:
             context.update({
                     "user_id": tg_user_id,
                     "chat_id": chat_id,
-                    "update_id": update_id,
                     "message_id": event_message_id,
                     "event_type": event_type,
                 })
             break
         elif isinstance(arg, CallbackQuery):
-            update_id = arg.update_id
             tg_user_id = arg.from_user.id
             chat_id = arg.message.chat.id
             event_message_id = arg.message.message_id
@@ -261,7 +258,6 @@ def _add_context(func, explicit_caller: str, *args, **kwargs) -> Any:
             context.update({
                 "user_id": tg_user_id,
                 "chat_id": chat_id,
-                "update_id": update_id,
                 "message_id": event_message_id,
                 "event_type": event_type,
             })

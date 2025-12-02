@@ -201,7 +201,7 @@ async def internal_update(
     except Exception as e:
         logger.error(f"Ошибка парсинга update: {e}")
         raise HTTPException(status_code=400, detail="Invalid update format")
-
+    logger.error(f"\n\n\n{update_data=}\n\n\n")
     # ПРОВЕРКА НА ДУБЛИКАТЫ
     if update_id:
         try:

@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'users.apps.AppUsersConfig',
     'assessment',
     'chat',
+    'ai_assistant',
 ]
 
 if DEBUG:

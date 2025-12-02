@@ -7,6 +7,9 @@ from django.shortcuts import get_object_or_404
 from django.conf import settings
 
 from engageai_core.mixins import InternalBotAuthMixin, core_api_logger, TelegramUserMixin
+
+from ai_assistant.models import AIAssistant
+from chat.models import Chat, ChatPlatform, Message, MessageSource
 from ..mixins import AssessmentTestSessionMixin, QuestionInstanceMixin
 from ..models import TestSession, QuestionInstance, SessionSourceType
 from ..services.assessment_service import start_assessment_for_user, \
@@ -53,6 +56,29 @@ class StartAssessmentAPI(
                 {"success": False, "detail": "Failed to generate question"},
                 status=500
             )
+        # TODO нужно получать от бота assistant_slug
+        assistant_slug = "main_orchestrator"
+        try:
+            assistant = AIAssistant.objects.get(slug=assistant_slug, is_active=True)
+        except AIAssistant.DoesNotExist:
+            return Response(
+                {"success": False, "detail": f"Failed to find AIAssistant with slug={assistant_slug}"},
+                status=500
+            )
+
+        chat = Chat.get_or_create_ai_chat(
+            user=user,
+            ai_assistant=assistant,
+            platform=ChatPlatform.TELEGRAM,
+        )
+
+        ai_message = Message.objects.create(
+            chat=chat,
+            content=question.question_json["question_text"],
+            is_ai=True,
+            source_type=MessageSource.TELEGRAM,
+            sender=None
+        )
 
         question_number = QuestionInstance.objects.filter(session=session).exclude(answer__isnull=True).count() + 1
 
@@ -192,6 +218,35 @@ class AnswerAPI(
                 f"{bot_tag} Test finished | session={session_id} user={user.id}"
             )
 
+            # TODO нужно получать от бота assistant_slug
+            assistant_slug = "main_orchestrator"
+            try:
+                assistant = AIAssistant.objects.get(slug=assistant_slug, is_active=True)
+            except AIAssistant.DoesNotExist:
+                return Response(
+                    {"success": False, "detail": f"Failed to find AIAssistant with slug={assistant_slug}"},
+                    status=500
+                )
+
+            chat = Chat.get_or_create_ai_chat(
+                user=user,
+                ai_assistant=assistant,
+                platform=ChatPlatform.TELEGRAM,
+            )
+
+            msg = f"🎉 <b>Тест завершён!</b>\n\n"
+            f"Ваш уровень английского: <b>{level}</b> 🎯\n\n"
+            f"Сейчас AI выполнит анализ и даст полный разбор, рекомендации и ошибки доступны в личном кабинете.\n"
+            f"Загляните — это реально полезно 👇\n"
+
+            ai_message = Message.objects.create(
+                chat=chat,
+                content=msg,
+                is_ai=True,
+                source_type=MessageSource.TELEGRAM,
+                sender=None
+            )
+
             return Response(
                 {
                     "finished": True,
@@ -200,6 +255,30 @@ class AnswerAPI(
                     "view_url": view_url
                 }
             )
+
+        # TODO нужно получать от бота assistant_slug
+        assistant_slug = "main_orchestrator"
+        try:
+            assistant = AIAssistant.objects.get(slug=assistant_slug, is_active=True)
+        except AIAssistant.DoesNotExist:
+            return Response(
+                {"success": False, "detail": f"Failed to find AIAssistant with slug={assistant_slug}"},
+                status=500
+            )
+
+        chat = Chat.get_or_create_ai_chat(
+            user=user,
+            ai_assistant=assistant,
+            platform=ChatPlatform.TELEGRAM,
+        )
+
+        ai_message = Message.objects.create(
+            chat=chat,
+            content=next_q.question_json["question_text"],
+            is_ai=True,
+            source_type=MessageSource.TELEGRAM,
+            sender=None
+        )
 
         question_number = QuestionInstance.objects.filter(session=session).exclude(answer__isnull=True).count() + 1
 

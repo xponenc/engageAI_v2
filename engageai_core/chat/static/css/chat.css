@@ -696,3 +696,124 @@
         justify-content: space-between;
     }
 }
+
+/* Анимация появления сообщений */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.history-message {
+    animation: slideInUp 0.4s ease forwards;
+}
+
+.history-message:nth-child(even) {
+    animation-delay: 0.1s;
+}
+
+.history-message:nth-child(odd) {
+    animation-delay: 0.05s;
+}
+
+/* Стили для ссылок в сообщениях */
+.message-content a {
+    color: var(--color-accent);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--color-accent);
+    transition: all 0.2s ease;
+}
+
+.message-content a:hover {
+    color: var(--color-accent-dark);
+    border-bottom-style: solid;
+}
+
+/* Стили для кода в сообщениях */
+.message-content code {
+    background: var(--color-surface-alt);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.9em;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+}
+
+.message-content pre {
+    background: var(--color-surface-alt);
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 12px 0;
+    border: 1px solid var(--color-border);
+}
+
+.message-content pre code {
+    background: transparent;
+    padding: 0;
+    border: none;
+    color: inherit;
+}
+
+/* Стили для цитат */
+.message-content blockquote {
+    border-left: 4px solid var(--color-border);
+    margin: 12px 0;
+    padding-left: 16px;
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+/* Стили для таблиц */
+.message-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+}
+
+.message-content th,
+.message-content td {
+    border: 1px solid var(--color-border);
+    padding: 8px 12px;
+    text-align: left;
+}
+
+.message-content th {
+    background: var(--color-surface-alt);
+    font-weight: 600;
+}
+
+/* Стили для изображений */
+.message-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 8px 0;
+}
+
+/* Адаптивность для истории сообщений */
+@media (max-width: 640px) {
+    .message-content {
+        font-size: 0.9rem;
+    }
+    
+    .message-content pre {
+        font-size: 0.8rem;
+        padding: 12px;
+    }
+    
+    .message-content table {
+        font-size: 0.85rem;
+    }
+    
+    .message-content th,
+    .message-content td {
+        padding: 6px 8px;
+    }
+}

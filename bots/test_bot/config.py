@@ -14,6 +14,7 @@ bot_config = dotenv_values(BOT_ENV)
 
 BOT_NAME = bot_config.get("BOT_NAME")
 BOT_TOKEN = bot_config.get("BOT_TOKEN")
+BOT_ASSISTANT_SLUG=bot_config.get("BOT_ASSISTANT_SLUG")
 
 AUTH_CACHE_TTL_SECONDS = 1 * 86400
 

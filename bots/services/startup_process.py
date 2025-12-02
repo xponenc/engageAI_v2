@@ -89,6 +89,7 @@ def load_bots(bots_dict: dict, bots_root: Path):
         bot_name = getattr(config_module, "BOT_NAME", None)
         bot_token = getattr(config_module, "BOT_TOKEN", None)
         internal_key = getattr(config_module, "BOT_INTERNAL_KEY", None)
+        bot_assistant_slug = getattr(config_module, "BOT_ASSISTANT_SLUG", None)
 
         if not all([bot_name, bot_token, internal_key]):
             logger.error(f"Bot {folder.name} имеет неполную конфигурацию\n"
@@ -177,7 +178,8 @@ def load_bots(bots_dict: dict, bots_root: Path):
         bots_dict[bot_name] = {
             "bot": bot,
             "dp": dp,
-            "internal_key": internal_key
+            "internal_key": internal_key,
+            "assistant_slug": bot_assistant_slug,
         }
 
         logger.info(f"Бот {bot_name} успешно загружен. Всего роутеров: {len(normal_handlers) + len(fallback_handlers)}")

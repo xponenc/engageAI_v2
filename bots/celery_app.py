@@ -125,7 +125,7 @@ def shutdown_bots_on_worker_stop(sender, **kwargs):
     async def close_sessions():
         for bot_name, bot_conf in list(bots.items()):  # list() чтобы избежать изменений во время итерации
             bot = bot_conf.get("bot")
-            if bot and hasattr(bot, "session") and bot.session and not bot.session.closed:
+            if bot and hasattr(bot, "session") and bot.session:
                 try:
                     await bot.session.close()
                     logger.info(f"Сессия бота {bot_name} закрыта асинхронно")

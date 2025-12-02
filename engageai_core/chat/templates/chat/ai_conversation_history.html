@@ -1,0 +1,981 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}История переписки с {{ ai_assistant.name }} | NeuroTutor{% endblock %}
+
+{% block css %}
+<link href="{% static 'css/chat.css' %}" rel="stylesheet">
+<style>
+    /* Дополнительные стили для страницы истории */
+    .conversation-history {
+        padding: 40px 0;
+        background: var(--color-bg);
+    }
+
+    .conversation-history__container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+
+    /* Хлебные крошки */
+    .breadcrumbs {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 24px;
+        font-size: 0.9rem;
+        color: var(--color-text-muted);
+    }
+
+    .breadcrumbs__link {
+        color: var(--color-accent);
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+
+    .breadcrumbs__link:hover {
+        color: var(--color-accent-dark);
+        text-decoration: underline;
+    }
+
+    .breadcrumbs__separator {
+        color: var(--color-border);
+    }
+
+    .breadcrumbs__current {
+        color: var(--color-text);
+        font-weight: 500;
+    }
+
+    /* Заголовок */
+    .history-header {
+        margin-bottom: 32px;
+        padding: 24px;
+        background: var(--color-surface);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border);
+    }
+
+    .history-header__top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 20px;
+    }
+
+    .history-header__title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--color-text);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .history-header__title-icon {
+        font-size: 1.8rem;
+    }
+
+    .history-header__assistant-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 12px;
+    }
+
+    .assistant-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--color-success), #10b981);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        border: 3px solid var(--color-surface);
+    }
+
+    .assistant-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--color-text);
+    }
+
+    .history-header__actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn_new-chat {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 24px;
+        background: var(--color-accent);
+        color: white;
+        border: none;
+        border-radius: var(--radius-md);
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+
+    .btn_new-chat:hover {
+        background: var(--color-accent-dark);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    /* Статистика */
+    .history-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-top: 24px;
+    }
+
+    .stat-card {
+        background: var(--color-surface-alt);
+        border-radius: var(--radius-md);
+        padding: 20px;
+        text-align: center;
+        border: 1px solid var(--color-border);
+        transition: transform 0.2s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .stat-card__value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--color-accent);
+        margin-bottom: 4px;
+    }
+
+    .stat-card__value--user {
+        color: #f5576c;
+    }
+
+    .stat-card__value--ai {
+        color: #10b981;
+    }
+
+    .stat-card__value--date {
+        color: #667eea;
+        font-size: 1.5rem;
+    }
+
+    .stat-card__label {
+        font-size: 0.9rem;
+        color: var(--color-text-muted);
+    }
+
+    /* Панель фильтров */
+    .filters-panel {
+        background: var(--color-surface);
+        border-radius: var(--radius-lg);
+        padding: 20px 24px;
+        margin-bottom: 24px;
+        border: 1px solid var(--color-border);
+    }
+
+    .filters-panel__content {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+
+    .search-box {
+        flex: 1;
+        min-width: 300px;
+        position: relative;
+    }
+
+    .search-box__input {
+        width: 100%;
+        padding: 12px 40px 12px 16px;
+        border: 2px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-surface-alt);
+        color: var(--color-text);
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+
+    .search-box__input:focus {
+        outline: none;
+        border-color: var(--color-accent);
+        box-shadow: 0 0 0 3px var(--color-accent-soft);
+    }
+
+    .search-box__icon {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--color-text-muted);
+        font-size: 1.1rem;
+    }
+
+    .filter-buttons {
+        display: flex;
+        gap: 8px;
+    }
+
+    .filter-btn {
+        padding: 10px 20px;
+        background: var(--color-surface-alt);
+        border: 2px solid var(--color-border);
+        border-radius: var(--radius-md);
+        color: var(--color-text);
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .filter-btn:hover {
+        background: var(--color-surface);
+        border-color: var(--color-accent);
+    }
+
+    .filter-btn.active {
+        background: var(--color-accent);
+        border-color: var(--color-accent);
+        color: white;
+    }
+
+    /* История сообщений */
+    .messages-container {
+        background: var(--color-surface);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border);
+        overflow: hidden;
+        max-height: 600px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .messages-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--color-border);
+        background: var(--color-surface-alt);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .messages-header__title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--color-text);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .messages-count {
+        background: var(--color-surface);
+        color: var(--color-text-muted);
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .messages-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0;
+    }
+
+    .messages-list::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .messages-list::-webkit-scrollbar-track {
+        background: var(--color-surface-alt);
+    }
+
+    .messages-list::-webkit-scrollbar-thumb {
+        background: var(--color-border);
+        border-radius: 4px;
+    }
+
+    .messages-list::-webkit-scrollbar-thumb:hover {
+        background: var(--color-text-muted);
+    }
+
+    /* Элемент сообщения в истории */
+    .history-message {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--color-border);
+        transition: background-color 0.2s ease;
+    }
+
+    .history-message:hover {
+        background-color: var(--color-surface-alt);
+    }
+
+    .history-message:last-child {
+        border-bottom: none;
+    }
+
+    .history-message--user {
+        background-color: rgba(245, 87, 108, 0.05);
+    }
+
+    .history-message--ai {
+        background-color: rgba(16, 185, 129, 0.05);
+    }
+
+    .message-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .message-sender {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .message-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+        border: 2px solid var(--color-surface);
+    }
+
+    .message-avatar--user {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+    }
+
+    .message-avatar--ai {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .sender-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .sender-name {
+        font-weight: 600;
+        color: var(--color-text);
+        font-size: 0.95rem;
+    }
+
+    .message-time {
+        font-size: 0.85rem;
+        color: var(--color-text-muted);
+    }
+
+    .chat-badge {
+        background: var(--color-surface);
+        color: var(--color-text-muted);
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        border: 1px solid var(--color-border);
+    }
+
+    .message-content {
+        color: var(--color-text);
+        line-height: 1.6;
+        font-size: 0.95rem;
+        margin-bottom: 12px;
+    }
+
+    .message-content p {
+        margin: 0 0 8px 0;
+    }
+
+    .message-content p:last-child {
+        margin-bottom: 0;
+    }
+
+    .message-content ul,
+    .message-content ol {
+        margin: 8px 0 8px 20px;
+        padding: 0;
+    }
+
+    .message-actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .btn_continue {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: transparent;
+        border: 1px solid var(--color-accent);
+        color: var(--color-accent);
+        border-radius: var(--radius-md);
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+
+    .btn_continue:hover {
+        background: var(--color-accent);
+        color: white;
+    }
+
+    /* Пагинация */
+    .pagination-container {
+        padding: 20px 24px;
+        border-top: 1px solid var(--color-border);
+        background: var(--color-surface-alt);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .pagination-info {
+        font-size: 0.9rem;
+        color: var(--color-text-muted);
+    }
+
+    .pagination {
+        display: flex;
+        gap: 8px;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .pagination__item {
+        display: inline-flex;
+    }
+
+    .pagination__link {
+        padding: 8px 12px;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        color: var(--color-text);
+        text-decoration: none;
+        font-size: 0.9rem;
+        min-width: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+
+    .pagination__link:hover {
+        background: var(--color-surface);
+        border-color: var(--color-accent);
+    }
+
+    .pagination__link--current {
+        background: var(--color-accent);
+        border-color: var(--color-accent);
+        color: white;
+    }
+
+    .pagination__link--disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .pagination__link--disabled:hover {
+        background: transparent;
+        border-color: var(--color-border);
+    }
+
+    .pagination__icon {
+        font-size: 1rem;
+    }
+
+    /* Пустое состояние */
+    .empty-state {
+        padding: 60px 20px;
+        text-align: center;
+    }
+
+    .empty-state__icon {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        opacity: 0.3;
+    }
+
+    .empty-state__title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--color-text);
+        margin-bottom: 12px;
+    }
+
+    .empty-state__text {
+        font-size: 1rem;
+        color: var(--color-text-muted);
+        line-height: 1.5;
+        max-width: 400px;
+        margin: 0 auto 24px;
+    }
+
+    /* Адаптивность */
+    @media (max-width: 768px) {
+        .conversation-history__container {
+            padding: 0 16px;
+        }
+
+        .history-header__top {
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .history-header__actions {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .btn_new-chat {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .history-stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .stat-card {
+            padding: 16px;
+        }
+
+        .stat-card__value {
+            font-size: 1.5rem;
+        }
+
+        .filters-panel__content {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .search-box {
+            min-width: auto;
+        }
+
+        .filter-buttons {
+            width: 100%;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+
+        .filter-buttons::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .message-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .chat-badge {
+            align-self: flex-start;
+        }
+
+        .pagination-container {
+            flex-direction: column;
+            gap: 12px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .history-stats {
+            grid-template-columns: 1fr;
+        }
+
+        .history-header__title {
+            font-size: 1.5rem;
+        }
+
+        .history-header__assistant-info {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .message-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .message-sender {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .sender-info {
+            align-items: flex-start;
+        }
+    }
+</style>
+{% endblock css %}
+
+{% block content %}
+<section class="conversation-history">
+    <div class="conversation-history__container">
+        
+        <!-- Хлебные крошки -->
+        <nav class="breadcrumbs">
+            <a href="#" class="breadcrumbs__link">AI-ассистенты</a>
+            <span class="breadcrumbs__separator">/</span>
+            <span class="breadcrumbs__current">{{ ai_assistant.name }}</span>
+        </nav>
+
+        <!-- Заголовок и информация -->
+        <div class="history-header">
+            <div class="history-header__top">
+                <div>
+                    <h1 class="history-header__title">
+                        <span class="history-header__title-icon">📜</span>
+                        История переписки
+                    </h1>
+                    <div class="history-header__assistant-info">
+                        <div class="assistant-avatar">🤖</div>
+                        <div>
+                            <div class="assistant-name">{{ ai_assistant.name }}</div>
+                            <div class="text-muted">{{ ai_assistant.description|default:"AI-ассистент" }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="history-header__actions">
+                    <a href="{% url 'chat:ai-chat' ai_assistant.slug %}" class="btn_new-chat">
+                        <span>💬</span>
+                        Новый диалог
+                    </a>
+                </div>
+            </div>
+
+            <!-- Статистика -->
+            <div class="history-stats">
+                <div class="stat-card">
+                    <div class="stat-card__value">{{ total_messages }}</div>
+                    <div class="stat-card__label">Всего сообщений</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card__value stat-card__value--user">{{ user_messages }}</div>
+                    <div class="stat-card__label">Ваши сообщения</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card__value stat-card__value--ai">{{ ai_messages }}</div>
+                    <div class="stat-card__label">Ответов ИИ</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card__value stat-card__value--date">
+                        {% if first_interaction %}
+                            {{ first_interaction|date:"d.m" }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </div>
+                    <div class="stat-card__label">Первое обращение</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Панель фильтров -->
+        <div class="filters-panel">
+            <div class="filters-panel__content">
+                <div class="search-box">
+                    <input type="text" 
+                           class="search-box__input" 
+                           id="searchInput" 
+                           placeholder="Поиск по сообщениям...">
+                    <span class="search-box__icon">🔍</span>
+                </div>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-filter="all">Все</button>
+                    <button class="filter-btn" data-filter="user">Только мои</button>
+                    <button class="filter-btn" data-filter="ai">Только ИИ</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Контейнер сообщений -->
+        <div class="messages-container">
+            <div class="messages-header">
+                <h2 class="messages-header__title">
+                    Сообщения
+                    {% if messages %}
+                        <span class="messages-count">{{ messages.paginator.count }}</span>
+                    {% endif %}
+                </h2>
+            </div>
+
+            <div class="messages-list" id="messagesList">
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="history-message history-message--{% if message.is_ai %}ai{% else %}user{% endif %}" 
+                         data-message-type="{% if message.is_ai %}ai{% else %}user{% endif %}"
+                         data-message-id="{{ message.id }}">
+                        <div class="message-header">
+                            <div class="message-sender">
+                                <div class="message-avatar message-avatar--{% if message.is_ai %}ai{% else %}user{% endif %}">
+                                    {% if message.is_ai %}🤖{% else %}👤{% endif %}
+                                </div>
+                                <div class="sender-info">
+                                    <div class="sender-name">
+                                        {% if message.is_ai %}
+                                            {{ ai_assistant.name }}
+                                        {% else %}
+                                            {{ message.sender.username|default:"Вы" }}
+                                        {% endif %}
+                                    </div>
+                                    <div class="message-time">
+                                        {{ message.timestamp|date:"d.m.Y H:i" }}
+                                    </div>
+                                </div>
+                            </div>
+                            {% if message.chat %}
+                            <div class="chat-badge">Диалог #{{ message.chat.id }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="message-content">
+                            {{ message.content|linebreaks|urlize }}
+                        </div>
+
+                        {% if not message.is_ai and message.chat %}
+                        <div class="message-actions">
+                            <a href="{% url 'chat:ai-chat' ai_assistant.slug %}?continue={{ message.chat.id }}" 
+                               class="btn_continue">
+                                <span>↪️</span>
+                                Продолжить диалог
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <!-- Пустое состояние -->
+                    <div class="empty-state">
+                        <div class="empty-state__icon">📭</div>
+                        <h3 class="empty-state__title">История пуста</h3>
+                        <p class="empty-state__text">
+                            У вас еще нет переписки с этим ассистентом.<br>
+                            Начните диалог, чтобы здесь появились сообщения.
+                        </p>
+                        <a href="{% url 'chat_with_ai' ai_assistant.slug %}" class="btn_new-chat">
+                            <span>💬</span>
+                            Начать первый диалог
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+
+            {% if messages and messages.paginator.num_pages > 1 %}
+            <div class="pagination-container">
+                <div class="pagination-info">
+                    Сообщения {{ messages.start_index }}–{{ messages.end_index }} из {{ messages.paginator.count }}
+                </div>
+                
+                <nav>
+                    <ul class="pagination">
+                        {% if messages.has_previous %}
+                            <li class="pagination__item">
+                                <a href="?page={{ messages.previous_page_number }}" 
+                                   class="pagination__link"
+                                   title="Предыдущая">
+                                    <span class="pagination__icon">←</span>
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="pagination__item">
+                                <span class="pagination__link pagination__link--disabled">
+                                    <span class="pagination__icon">←</span>
+                                </span>
+                            </li>
+                        {% endif %}
+
+                        {% for num in messages.paginator.page_range %}
+                            {% if num == messages.number %}
+                                <li class="pagination__item">
+                                    <span class="pagination__link pagination__link--current">{{ num }}</span>
+                                </li>
+                            {% elif num > messages.number|add:'-3' and num < messages.number|add:'3' %}
+                                <li class="pagination__item">
+                                    <a href="?page={{ num }}" class="pagination__link">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if messages.has_next %}
+                            <li class="pagination__item">
+                                <a href="?page={{ messages.next_page_number }}" 
+                                   class="pagination__link"
+                                   title="Следующая">
+                                    <span class="pagination__icon">→</span>
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="pagination__item">
+                                <span class="pagination__link pagination__link--disabled">
+                                    <span class="pagination__icon">→</span>
+                                </span>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock content %}
+
+{% block script %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('searchInput');
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        const messageItems = document.querySelectorAll('.history-message');
+        const messagesList = document.getElementById('messagesList');
+        
+        // Функция для фильтрации сообщений
+        function filterMessages() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const activeFilter = document.querySelector('.filter-btn.active').dataset.filter;
+            
+            let visibleCount = 0;
+            
+            messageItems.forEach(item => {
+                const messageText = item.querySelector('.message-content').textContent.toLowerCase();
+                const messageType = item.dataset.messageType;
+                
+                // Проверяем соответствие фильтру
+                const matchesFilter = activeFilter === 'all' || messageType === activeFilter;
+                const matchesSearch = messageText.includes(searchTerm);
+                
+                if (matchesFilter && matchesSearch) {
+                    item.style.display = 'block';
+                    visibleCount++;
+                    
+                    // Плавное появление
+                    item.style.opacity = '1';
+                    item.style.transform = 'translateY(0)';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            
+            // Если нет видимых сообщений, показываем соответствующее состояние
+            if (visibleCount === 0 && messagesList.querySelector('.empty-state') === null) {
+                const emptyState = document.createElement('div');
+                emptyState.className = 'empty-state';
+                emptyState.innerHTML = `
+                    <div class="empty-state__icon">🔍</div>
+                    <h3 class="empty-state__title">Ничего не найдено</h3>
+                    <p class="empty-state__text">
+                        Попробуйте изменить поисковый запрос или выберите другой фильтр.
+                    </p>
+                `;
+                messagesList.appendChild(emptyState);
+            } else if (visibleCount > 0) {
+                const existingEmptyState = messagesList.querySelector('.empty-state');
+                if (existingEmptyState) {
+                    existingEmptyState.remove();
+                }
+            }
+        }
+        
+        // Обработчики для кнопок фильтрации
+        filterButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                filterMessages();
+            });
+        });
+        
+        // Обработчик для поиска
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(filterMessages, 300);
+        });
+        
+        // Обработчик для Enter в поиске
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                filterMessages();
+            }
+        });
+        
+        // Плавная анимация при загрузке
+        setTimeout(() => {
+            messageItems.forEach((item, index) => {
+                item.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                item.style.opacity = '0';
+                item.style.transform = 'translateY(10px)';
+                
+                setTimeout(() => {
+                    item.style.opacity = '1';
+                    item.style.transform = 'translateY(0)';
+                }, 50 * index);
+            });
+        }, 100);
+        
+        // Функция для подсветки сообщения при возврате из чата
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('highlight')) {
+            const messageId = urlParams.get('highlight');
+            const message = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (message) {
+                // Сохраняем оригинальный фон
+                const originalBg = message.style.backgroundColor;
+                
+                // Подсвечиваем
+                message.style.backgroundColor = 'var(--color-accent-soft)';
+                message.style.transition = 'background-color 0.3s ease';
+                
+                // Прокручиваем к сообщению
+                setTimeout(() => {
+                    message.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+                
+                // Убираем подсветку через 3 секунды
+                setTimeout(() => {
+                    message.style.backgroundColor = originalBg;
+                }, 3000);
+            }
+        }
+        
+        // Автофокус на поле поиска
+        searchInput.focus();
+    });
+</script>
+{% endblock script %}

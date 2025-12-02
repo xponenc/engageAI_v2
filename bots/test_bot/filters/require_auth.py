@@ -21,7 +21,6 @@ class AuthFilter(BaseFilter):
     async def start_test(msg: Message, state: FSMContext):
     """
 
-    @auto_context()
     async def __call__(self, event: Union[Message, CallbackQuery], state: FSMContext) -> bool:
         bot_tag = f"[{BOT_NAME}]"
         # Унификация для Message / CallbackQuery

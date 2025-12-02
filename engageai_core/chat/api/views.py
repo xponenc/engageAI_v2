@@ -6,7 +6,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ..models import Message, MessageSource, ChatType, Chat
+from ai_assistant.models import AIAssistant
+from ..models import Message, MessageSource, Chat, ChatScope, ChatPlatform
 from engageai_core.mixins import InternalBotAuthMixin
 from users.models import TelegramProfile
 from utils.setup_logger import setup_logger
@@ -36,8 +37,9 @@ class TelegramUpdateSaveView(InternalBotAuthMixin, APIView):
         data = request.data
 
         update_data = data.get("update")
+        assistant_slug = data.get('assistant_slug')
 
-        # ===== 1. Проверка на дубликаты =====
+        # Проверка на дубликаты =====
         update_id = update_data.get('update_id')
         if not update_id:
             core_api_logger.warning(f"{bot_tag} Отсутствует update_id в запросе")
@@ -61,11 +63,11 @@ class TelegramUpdateSaveView(InternalBotAuthMixin, APIView):
 
         try:
             if 'message' in update_data:
-                return self._process_message_update(update_data, bot_tag)
+                return self._process_message_update(update_data, bot_tag, assistant_slug)
             elif 'edited_message' in update_data:
-                return self._process_edited_message_update(update_data, bot_tag)
+                return self._process_edited_message_update(update_data, bot_tag, assistant_slug)
             elif 'callback_query' in update_data:
-                return self._process_callback_update(update_data, bot_tag)
+                return self._process_callback_update(update_data, bot_tag, assistant_slug)
             else:
                 core_api_logger.warning(f"{bot_tag} Неизвестный тип апдейта: {list(update_data.keys())}")
                 return Response({
@@ -80,8 +82,9 @@ class TelegramUpdateSaveView(InternalBotAuthMixin, APIView):
                 "detail": f"Internal server error: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def _process_message_update(self, update_data, bot_tag):
+    def _process_message_update(self, update_data, bot_tag, assistant_slug):
         """Обработка обычного сообщения"""
+
         message_data = update_data['message']
         chat_data = message_data['chat']
         from_user = message_data['from']
@@ -96,7 +99,7 @@ class TelegramUpdateSaveView(InternalBotAuthMixin, APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Поиск или создание чата
-        chat = self._get_or_create_chat(chat_data, user, bot_tag)
+        chat = self._get_or_create_chat(chat_data, user, bot_tag, assistant_slug)
         if not chat:
             return Response({
                 "success": False,
@@ -124,7 +127,7 @@ class TelegramUpdateSaveView(InternalBotAuthMixin, APIView):
             }
         )
 
-        core_api_logger.info(f"{bot_tag} Создано сообщение ID {message.id} в чате {chat.id} от пользователя {user.id}")
+        core_api_logger.info(f"{bot_tag} Создано сообщение ID {message.id} в чате {chat} от пользователя {user}")
 
         return Response({
             "success": True,
@@ -133,7 +136,7 @@ class TelegramUpdateSaveView(InternalBotAuthMixin, APIView):
             "detail": "Message processed successfully"
         }, status=status.HTTP_201_CREATED)
 
-    def _process_edited_message_update(self, update_data, bot_tag):
+    def _process_edited_message_update(self, update_data, bot_tag, assistant_slug):
         """Обработка отредактированного сообщения"""
         edited_data = update_data['edited_message']
         chat_data = edited_data['chat']
@@ -148,7 +151,7 @@ class TelegramUpdateSaveView(InternalBotAuthMixin, APIView):
                 "detail": "Failed to create or find user"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        chat = self._get_or_create_chat(chat_data, user, bot_tag)
+        chat = self._get_or_create_chat(chat_data, user, bot_tag, assistant_slug)
         if not chat:
             return Response({
                 "success": False,
@@ -195,7 +198,7 @@ class TelegramUpdateSaveView(InternalBotAuthMixin, APIView):
             "detail": "Message edited successfully"
         }, status=status.HTTP_200_OK)
 
-    def _process_callback_update(self, update_data, bot_tag):
+    def _process_callback_update(self, update_data, bot_tag, assistant_slug):
         """Обработка callback-запроса (нажатие на кнопку)"""
         callback_data = update_data['callback_query']
         message_data = callback_data['message']
@@ -212,7 +215,7 @@ class TelegramUpdateSaveView(InternalBotAuthMixin, APIView):
                 "detail": "Failed to create or find user"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        chat = self._get_or_create_chat(chat_data, user, bot_tag)
+        chat = self._get_or_create_chat(chat_data, user, bot_tag, assistant_slug)
         if not chat:
             return Response({
                 "success": False,
@@ -301,44 +304,30 @@ class TelegramUpdateSaveView(InternalBotAuthMixin, APIView):
                 return None, False
 
     @staticmethod
-    def _get_or_create_chat(chat_data, user, bot_tag):
+    def _get_or_create_chat(chat_data, user, bot_tag, assistant_slug:str):
         """Получение или создание чата по данным из Telegram"""
         telegram_chat_id = str(chat_data['id'])
         chat_type = chat_data['type']
 
-        # Определяем тип чата для нашей системы
+        # Определяем тип чата для нашей системы на TODO
         if chat_type in ['private', 'sender']:
-            chat_type_internal = ChatType.TELEGRAM
+            chat_type_internal = ChatScope.PRIVATE
         elif chat_type in ['group', 'supergroup', 'channel']:
-            chat_type_internal = ChatType.GROUP
+            chat_type_internal = ChatScope.GROUP
         else:
-            chat_type_internal = ChatType.TELEGRAM
+            chat_type_internal = ChatScope.PRIVATE
 
         try:
-            # Ищем существующий чат
-            chat = Chat.objects.get(telegram_chat_id=telegram_chat_id)
-            core_api_logger.debug(f"{bot_tag} Найден существующий чат ID {chat.id} для telegram_chat_id {telegram_chat_id}")
-
-            # Добавляем пользователя в участники, если его нет
-            if not chat.participants.filter(id=user.id).exists():
-                chat.participants.add(user)
-                core_api_logger.info(f"{bot_tag} Добавлен пользователь {user.id} в чат {chat.id}")
-
+            assistant = AIAssistant.objects.get(slug=assistant_slug, is_active=True)
+            chat = Chat.get_or_create_ai_chat(
+                user=user,
+                ai_assistant=assistant,
+                platform=ChatPlatform.TELEGRAM
+            )
+            core_api_logger.debug(
+                f"{bot_tag} Найден существующий {chat} c {assistant} для {user}")
             return chat
-        except Chat.DoesNotExist:
-            # Создаем новый чат
-            title = chat_data.get('title', chat_data.get('username', f"Chat {telegram_chat_id}"))
 
-            try:
-                chat = Chat.objects.create(
-                    type=chat_type_internal,
-                    title=title,
-                    telegram_chat_id=telegram_chat_id
-                )
-                chat.participants.add(user)
+        except AIAssistant.DoesNotExist:
+            return None
 
-                core_api_logger.info(f"{bot_tag} Создан новый чат ID {chat.id} для telegram_chat_id {telegram_chat_id}")
-                return chat
-            except Exception as e:
-                core_api_logger.error(f"{bot_tag} Ошибка создания чата для telegram_chat_id {telegram_chat_id}: {str(e)}")
-                return None

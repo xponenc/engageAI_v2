@@ -4,172 +4,143 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
+from ai_assistant.models import AIAssistant
+
 User = get_user_model()
 
 
-class ChatType(models.TextChoices):
-    """Типы чатов с поддержкой локализации"""
-    AI = 'ai', _('Чат с AI')
+class ChatPlatform(models.TextChoices):
+    """Платформы/источники чатов"""
+    WEB = 'web', _('Веб-интерфейс')
+    TELEGRAM = 'telegram', _('Telegram')
+    API = 'api', _('Внешний API')
+    WHATSAPP = 'whatsapp', _('WhatsApp')
+
+
+class ChatScope(models.TextChoices):
+    """Тип/область чата"""
+    PRIVATE = 'private', _('Персональный чат')
     GROUP = 'group', _('Групповой чат')
-    NOTIFICATION = 'notification', _('Уведомления')
-    TELEGRAM = 'telegram', _('Telegram чат')
+    SYSTEM = 'system', _('Системные уведомления')
 
 
 class Chat(models.Model):
-    """Модель чата, поддерживающая разные типы источников"""
+    """Модель чата с четким разделением понятий"""
     objects = models.Manager()
 
-    type = models.CharField(
-        max_length=20,
-        choices=ChatType.choices,
-        default=ChatType.AI,
-        verbose_name=_('Тип чата'),
-        help_text=_('Определяет логику работы чата и доступные функции')
-    )
+    # Основные характеристики
     title = models.CharField(
         max_length=255,
         blank=True,
-        verbose_name=_('Название чата'),
-        help_text=_('Отображается в интерфейсе пользователя')
-    )
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name=_('Дата создания')
-    )
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='ai_chats',
-        null=True,
-        blank=True,
-        verbose_name=_('Пользователь'),
-        help_text=_('Владелец персонального AI-чата')
-    )
-    participants = models.ManyToManyField(
-        User,
-        related_name='chats',
-        verbose_name=_('Участники'),
-        help_text=_('Пользователи, имеющие доступ к чату')
+        verbose_name=_('Название чата')
     )
 
-    notification_recipient = models.ForeignKey(
+    # 1. Платформа/источник
+    platform = models.CharField(
+        max_length=20,
+        choices=ChatPlatform.choices,
+        default=ChatPlatform.WEB,
+        verbose_name=_('Платформа')
+    )
+
+    # 2. Тип/область
+    scope = models.CharField(
+        max_length=20,
+        choices=ChatScope.choices,
+        default=ChatScope.PRIVATE,
+        verbose_name=_('Тип чата')
+    )
+
+    # Владелец для персональных чатов
+    owner = models.ForeignKey(
         User,
+        on_delete=models.CASCADE,
+        related_name='personal_chats',
+        null=True,
+        blank=True,
+        verbose_name=_('Владелец')
+    )
+
+    # Участники для групповых чатов
+    participants = models.ManyToManyField(
+        User,
+        related_name='group_chats',
+        verbose_name=_('Участники'),
+        blank=True
+    )
+
+    # 3. AI-ассистент
+    ai_assistant = models.ForeignKey(
+        AIAssistant,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='notification_chats',
-        verbose_name=_('Получатель уведомлений')
+        related_name='chats',
+        verbose_name=_('AI-ассистент')
     )
-    telegram_chat_id = models.CharField(
-        max_length=50,
+
+    # Флаги
+    is_ai_enabled = models.BooleanField(
+        default=True,
+        verbose_name=_('AI активен'),
+        help_text=_('Разрешить использование AI в чате')
+    )
+
+    # Синхронизация с внешними сервисами
+    external_chat_id = models.CharField(
+        max_length=100,
         blank=True,
         null=True,
-        verbose_name=_('ID чата в Telegram'),
-        help_text=_('Используется для синхронизации с Telegram API')
+        verbose_name=_('Внешний ID чата'),
+        help_text=_('Используется для синхронизации с внешними API')
     )
 
-    is_ai_enabled = models.BooleanField(
-        default=False,
-        verbose_name=_('AI активен'),
-        help_text=_('Разрешить использование AI в групповом чате')
-    )
-
-    is_primary_ai_chat = models.BooleanField(
-        default=False,
-        verbose_name=_('Основной AI-чат'),
-        help_text=_('Только один основной AI-чат на пользователя')
-    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = _('Чат')
         verbose_name_plural = _('Чаты')
         indexes = [
-            models.Index(fields=['type', '-created_at']),
-            models.Index(fields=['telegram_chat_id']),
-            models.Index(fields=['user', 'is_primary_ai_chat']),
+            models.Index(fields=['owner', '-created_at']),
+            models.Index(fields=['platform', 'scope']),
+            models.Index(fields=['external_chat_id']),
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=['user', 'is_primary_ai_chat'],
-                condition=models.Q(type=ChatType.AI, is_primary_ai_chat=True),
-                name='unique_primary_ai_chat_per_user'
+                fields=['owner', 'ai_assistant', 'platform', 'scope'],
+                name='unique_owner_ai_assistant_chat'
             )
         ]
 
-    def save(self, *args, **kwargs):
-        """Автогенерация названия и логика основного AI-чата"""
-        if self.type == ChatType.AI:
-            # Если это первый AI-чат для пользователя, делаем его основным
-            if self.user and not Chat.objects.filter(user=self.user, type=ChatType.AI).exists():
-                self.is_primary_ai_chat = True
-
-            # Автоназвание для основного AI-чата
-            if self.is_primary_ai_chat and not self.title:
-                self.title = "Ваш нейро-репетитор по английскому"
-
-            # Или обновляем название при смене статуса основного
-            if self.is_primary_ai_chat and self.title != "Ваш нейро-репетитор по английскому":
-                self.title = "Ваш нейро-репетитор по английскому"
-
-        # Гарантируем только один основной AI-чат
-        if self.is_primary_ai_chat and self.user and self.type == ChatType.AI:
-            Chat.objects.filter(
-                user=self.user,
-                type=ChatType.AI,
-                is_primary_ai_chat=True
-            ).exclude(id=self.id).update(is_primary_ai_chat=False)
-
-        super().save(*args, **kwargs)
-
     def __str__(self):
-        return self.title or f"Chat #{self.id} ({self.get_type_display()})"
+        return self.title or f"Chat #{self.id} ({self.get_platform_display()}/{self.get_scope_display()})"
+
+    def save(self, *args, **kwargs):
+        """Автоматическая логика при сохранении"""
+
+        # Для персональных чатов добавляем владельца в участники если еще не добавлен
+        super().save(*args, **kwargs)
+        if self.scope == ChatScope.PRIVATE and self.owner and not self.participants.filter(id=self.owner.id).exists():
+            self.participants.add(self.owner)
 
     @classmethod
-    def get_or_create_primary_ai_chat(cls, user):
+    def get_or_create_ai_chat(cls, user, ai_assistant, platform=ChatPlatform.WEB):
         """
-        Получает или создаёт основной AI-чат для пользователя
+        Получает или создаёт чат с конкретным AI-ассистентом
         """
-        # Пытаемся найти существующий основной AI-чат
-        chat = cls.objects.filter(
-            user=user,
-            type=ChatType.AI,
-            is_primary_ai_chat=True
-        ).first()
-
-        if chat:
-            return chat
-
-        # Создаём новый чат
-        chat = cls.objects.create(
-            type=ChatType.AI,
-            user=user,
-            is_primary_ai_chat=True,
-            is_ai_enabled=True
+        chat, created = cls.objects.get_or_create(
+            owner=user,
+            ai_assistant=ai_assistant,
+            platform=platform,
+            defaults={
+                'scope': ChatScope.PRIVATE,
+                'is_ai_enabled': True,
+                'title': f"Чат с {ai_assistant.name}"
+            }
         )
-
-        # Добавляем пользователя в участники
-        chat.participants.add(user)
-
         return chat
 
-    @classmethod
-    def create_secondary_ai_chat(cls, user, title=None, chat_type='specialized'):
-        """
-        Создаёт дополнительный AI-чат для специализированных целей
-        (бизнес-английский, разговорная практика и т.д.)
-        """
-        title = title or f"Дополнительный AI-чат ({chat_type})"
-
-        chat = cls.objects.create(
-            type=ChatType.AI,
-            user=user,
-            is_primary_ai_chat=False,
-            is_ai_enabled=True,
-            title=title
-        )
-
-        chat.participants.add(user)
-        return chat
 
 
 class MessageSource(models.TextChoices):

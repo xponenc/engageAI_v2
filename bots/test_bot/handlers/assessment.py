@@ -261,7 +261,7 @@ async def process_start_assessment_test(event: Union[Message, CallbackQuery], st
 # --- MCQ выбор ---
 @assessment_router.callback_query(AssessmentState.waiting_mcq_answer, F.data.startswith("mcq_"), AuthFilter())
 @auto_context()
-async def mcq_answer(callback: CallbackQuery, state: FSMContext):
+async def mcq_answer(callback: CallbackQuery, state: FSMContext, **kwargs):
     await callback.answer()
 
     update_id = getattr(callback, "update_id", None)
@@ -505,7 +505,7 @@ async def handle_callback_during_text_answer(callback: CallbackQuery, state: FSM
 # --- Текстовый ответ ---
 @assessment_router.message(AssessmentState.waiting_text_answer, AuthFilter())
 @auto_context()
-async def process_text_answer(message: Message, state: FSMContext):
+async def process_text_answer(message: Message, state: FSMContext, **kwargs):
     update_id = getattr(message, "update_id", None)
     tg_user_id = message.from_user.id
 

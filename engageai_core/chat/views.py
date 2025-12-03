@@ -195,8 +195,8 @@ class AIConversationHistoryView(LoginRequiredMixin, ListView):
             )
 
         qs = (
-            Message.objects.filter(chat_id__in=self._chat_ids)
-            .select_related("sender", "chat")
+            Message.objects.filter(chat_id__in=self._chat_ids, is_ai=False)
+            .select_related("sender", "chat", "reply_to")
             .order_by("-timestamp")
         )
         return qs

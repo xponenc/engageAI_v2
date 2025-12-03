@@ -74,61 +74,120 @@
                 </thead>
                 <tbody id="messagesTable">
                     {% for message in messages %}
-                    <tr data-message-id="{{ message.id }}">
-                        <td>
-                            <span class="message-type message-type--{% if message.is_ai %}ai{% else %}user{% endif %}">
-                                {% if message.is_ai %}AI{% else %}User{% endif %}
-                            </span>
-                        </td>
-                        <td>
-                            <div class="message-preview">
-                                <div class="message-preview__text">{{ message.content|truncatechars:200 }}</div>
-                            </div>
-                        </td>
-                        <td>
-                            <div>{{ message.timestamp|date:"d.m.Y" }}</div>
-                            <div style="font-size: 12px; color: #666;">{{ message.timestamp|date:"H:i:s" }}</div>
-                        </td>
-                        <td>
-                            <span class="message-source">
-                                {% if message.source_type == 'web' %}Веб
-                                {% elif message.source_type == 'telegram' %}Telegram
-                                {% elif message.source_type == 'api' %}API
-                                {% else %}{{ message.source_type|title }}{% endif %}
-                            </span>
-                        </td>
-                        <td>
-                            {% if message.score is not None %}
-                                <span class="message-score message-score--{% if message.score > 0 %}positive{% elif message.score < 0 %}negative{% else %}neutral{% endif %}">
-                                    {% if message.score > 0 %}+{% endif %}{{ message.score }}
+                        <tr data-message-id="{{ message.id }}">
+                            <td>
+                                <span class="message-type message-type--{% if message.is_ai %}ai{% else %}user{% endif %}">
+                                    {% if message.is_ai %}AI{% else %}User{% endif %}
                                 </span>
-                            {% else %}
-                                <span style="color: #999; font-size: 12px;">—</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <button class="message-toggle-btn" onclick="toggleDetails('{{ message.id }}')">
-                                Детали
-                            </button>
-                        </td>
-                    </tr>
-                    <tr id="details-{{ message.id }}" class="message-details-row" style="display: none;">
-                        <td colspan="6">
-                            <div class="message-details">
-                                <div class="message-details__section">
-                                    <div class="message-details__title">Полный текст сообщения</div>
-                                    <div class="message-details__text">{{ message.content }}</div>
+                            </td>
+                            <td>
+                                <div class="message-preview">
+                                    <div class="message-preview__text">{{ message.content|truncatechars:200 }}</div>
                                 </div>
+                            </td>
+                            <td>
+                                <div>{{ message.timestamp|date:"d.m.Y" }}</div>
+                                <div style="font-size: 12px; color: #666;">{{ message.timestamp|date:"H:i:s" }}</div>
+                            </td>
+                            <td>
+                                <span class="message-source">
+                                    {% if message.source_type == 'web' %}Веб
+                                    {% elif message.source_type == 'telegram' %}Telegram
+                                    {% elif message.source_type == 'api' %}API
+                                    {% else %}{{ message.source_type|title }}{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                {% if message.score is not None %}
+                                    <span class="message-score message-score--{% if message.score > 0 %}positive{% elif message.score < 0 %}negative{% else %}neutral{% endif %}">
+                                        {% if message.score > 0 %}+{% endif %}{{ message.score }}
+                                    </span>
+                                {% else %}
+                                    <span style="color: #999; font-size: 12px;">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="message-toggle-btn" onclick="toggleDetails('{{ message.id }}')">
+                                    Детали
+                                </button>
+                            </td>
+                        </tr>
+                        <tr id="details-{{ message.id }}" class="message-details-row" style="display: none;">
+                            <td colspan="6">
+                                <div class="message-details">
+                                    <div class="message-details__section">
+                                        <div class="message-details__title">Полный текст сообщения</div>
+                                        <div class="message-details__text">{{ message.content }}</div>
+                                    </div>
 
-                                <div class="message-details__section">
-                                    <div class="message-details__title">Метаданные</div>
-                                    <div class="message-metadata">
-                                        <pre>{{ message.metadata|json_prettify }}</pre>
+                                    <div class="message-details__section">
+                                        <div class="message-details__title">Метаданные</div>
+                                        <div class="message-metadata">
+                                            <pre>{{ message.metadata|json_prettify }}</pre>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </td>
-                    </tr>
+                            </td>
+                        </tr>
+                        {% if message.answer %}
+                        {% with message=message.answer %}
+                            <tr data-message-id="{{ message.id }}">
+                                <td>
+                                    <span class="message-type message-type--{% if message.is_ai %}ai{% else %}user{% endif %}">
+                                        {% if message.is_ai %}AI{% else %}User{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="message-preview">
+                                        <div class="message-preview__text">{{ message.content|truncatechars:200 }}</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>{{ message.timestamp|date:"d.m.Y" }}</div>
+                                    <div style="font-size: 12px; color: #666;">{{ message.timestamp|date:"H:i:s" }}</div>
+                                </td>
+                                <td>
+                                    <span class="message-source">
+                                        {% if message.source_type == 'web' %}Веб
+                                        {% elif message.source_type == 'telegram' %}Telegram
+                                        {% elif message.source_type == 'api' %}API
+                                        {% else %}{{ message.source_type|title }}{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if message.score is not None %}
+                                        <span class="message-score message-score--{% if message.score > 0 %}positive{% elif message.score < 0 %}negative{% else %}neutral{% endif %}">
+                                            {% if message.score > 0 %}+{% endif %}{{ message.score }}
+                                        </span>
+                                    {% else %}
+                                        <span style="color: #999; font-size: 12px;">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="message-toggle-btn" onclick="toggleDetails('{{ message.id }}')">
+                                        Детали
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr id="details-{{ message.id }}" class="message-details-row" style="display: none;">
+                                <td colspan="6">
+                                    <div class="message-details">
+                                        <div class="message-details__section">
+                                            <div class="message-details__title">Полный текст сообщения</div>
+                                            <div class="message-details__text">{{ message.content }}</div>
+                                        </div>
+    
+                                        <div class="message-details__section">
+                                            <div class="message-details__title">Метаданные</div>
+                                            <div class="message-metadata">
+                                                <pre>{{ message.metadata|json_prettify }}</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endwith %}
+                        {% endif %}
                     {% empty %}
                     <tr>
                         <td colspan="6" style="text-align: center; padding: 40px; color: #666;">

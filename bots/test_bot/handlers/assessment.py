@@ -14,6 +14,7 @@ from aiogram.filters import Command, StateFilter
 from bots.test_bot.config import MESSAGE_EFFECT_CONFETTI, YES_EMOJI, CUSTOMER_COMMANDS, NO_EMOJI, bot_logger
 from bots.test_bot.filters.require_auth import AuthFilter
 from bots.test_bot.services.api_process import core_post, auto_context
+from bots.test_bot.services.sender import reply_and_update_last_message
 
 assessment_router = Router()
 
@@ -106,35 +107,44 @@ async def process_cancel_test_by_command(event: Union[Message, CallbackQuery], s
 
     command = msg.text
 
-    data = await state.get_data()
-    last_message = data.get("last_message")
+    # data = await state.get_data()
+    # last_message = data.get("last_message")
+    #
+    # if last_message:  # Сброс клавиатуры последнего сообщения и отметка о выбранном варианте
+    #     message_id = last_message.get("id")
+    #     text = last_message.get("text")
+    #     text += f"\n\n{NO_EMOJI}\t Отменено"
+    #     try:
+    #         await msg.bot.edit_message_text(
+    #             text=text, chat_id=msg.chat.id,
+    #             message_id=message_id, reply_markup=None,
+    #             parse_mode=ParseMode.HTML
+    #         )
+    #     except TelegramBadRequest:
+    #         pass
+    #
+    # answer_text = (
+    #     f"Тест прерван командой {command}. Вы можете начать его снова позже."
+    # )
+    # answer_keyboard = None
+    # answer_message = await msg.answer(
+    #     text=answer_text, parse_mode=ParseMode.HTML, reply_markup=answer_keyboard
+    # )
+    #
+    # await state.update_data(last_message={
+    #     "id": answer_message.message_id,
+    #     "text": answer_text,
+    #     "keyboard": None
+    # })
 
-    if last_message:  # Сброс клавиатуры последнего сообщения и отметка о выбранном варианте
-        message_id = last_message.get("id")
-        text = last_message.get("text")
-        text += f"\n\n{NO_EMOJI}\t Отменено"
-        try:
-            await msg.bot.edit_message_text(
-                text=text, chat_id=msg.chat.id,
-                message_id=message_id, reply_markup=None,
-                parse_mode=ParseMode.HTML
-            )
-        except TelegramBadRequest:
-            pass
-
-    answer_text = (
-        f"Тест прерван командой {command}. Вы можете начать его снова позже."
+    last_message_update_text = f"\n\n{NO_EMOJI}\t Отменено"
+    answer_text = f"Тест прерван командой {command}. Вы можете начать его снова позже."
+    await reply_and_update_last_message(
+        message=msg,
+        state=state,
+        last_message_update_text=last_message_update_text,
+        answer_text=answer_text ,
     )
-    answer_keyboard = None
-    answer_message = await msg.answer(
-        text=answer_text, parse_mode=ParseMode.HTML, reply_markup=answer_keyboard
-    )
-
-    await state.update_data(last_message={
-        "id": answer_message.message_id,
-        "text": answer_text,
-        "keyboard": None
-    })
 
     # отправляем апдейт снова в общий роутинг aiogram
     await state.set_state(None)
@@ -178,6 +188,7 @@ async def process_start_assessment_test(event: Union[Message, CallbackQuery], st
         event_message_id = event.message_id
         command = event.text
         event_type = "message"
+
     context = kwargs.get("context", {})
     bot_logger.info(f"КОНТЕКСТ \n\n{context}")
     context.update({
@@ -185,7 +196,6 @@ async def process_start_assessment_test(event: Union[Message, CallbackQuery], st
         "user_id": tg_user_id,
         "chat_id": chat_id,
         "message_id": event_message_id,
-        "event_type": event_type,
         "command": command[:100] if command else None,
         "function": "process_start_assessment_test",
         "action": "assessment_start"
@@ -273,26 +283,26 @@ async def mcq_answer(callback: CallbackQuery, state: FSMContext, **kwargs):
     command = callback.data
     event_type = "callback"
 
-    # Автоопределение вызывающей функции
-    try:
-        caller_frame = inspect.currentframe().f_back
-        caller_name = caller_frame.f_code.co_name if caller_frame else "unknown"
-        caller_module = inspect.getmodule(caller_frame).__name__ if caller_frame else "unknown"
-    except Exception:
-        caller_name = "unknown"
-        caller_module = "unknown"
-
-    context = {
-        "update_id": update_id,
-        "user_id": tg_user_id,
-        "chat_id": chat_id,
-        "message_id": event_message_id,
-        "event_type": event_type,
-        "handler": f"{caller_name} ({caller_module})",
-        "command": command[:100] if command else None,
-        "function": "process_start_assessment_test",
-        "action": "assessment_start"
-    }
+    # # Автоопределение вызывающей функции
+    # try:
+    #     caller_frame = inspect.currentframe().f_back
+    #     caller_name = caller_frame.f_code.co_name if caller_frame else "unknown"
+    #     caller_module = inspect.getmodule(caller_frame).__name__ if caller_frame else "unknown"
+    # except Exception:
+    #     caller_name = "unknown"
+    #     caller_module = "unknown"
+    #
+    # context = {
+    #     "update_id": update_id,
+    #     "user_id": tg_user_id,
+    #     "chat_id": chat_id,
+    #     "message_id": event_message_id,
+    #     "event_type": event_type,
+    #     "handler": f"{caller_name} ({caller_module})",
+    #     "command": command[:100] if command else None,
+    #     "function": "process_start_assessment_test",
+    #     "action": "assessment_start"
+    # }
 
     # Извлекаем ответ без префикса
     answer_index = callback.data.lstrip("mcq_")
@@ -507,41 +517,17 @@ async def handle_callback_during_text_answer(callback: CallbackQuery, state: FSM
 @assessment_router.message(AssessmentState.waiting_text_answer, AuthFilter())
 @auto_context()
 async def process_text_answer(message: Message, state: FSMContext, **kwargs):
-    update_id = getattr(message, "update_id", None)
-    tg_user_id = message.from_user.id
-
-    chat_id = message.chat.id
-    event_message_id = message.message_id
-    command = message.text
-    event_type = "message"
-
-    # Автоопределение вызывающей функции
-    try:
-        caller_frame = inspect.currentframe().f_back
-        caller_name = caller_frame.f_code.co_name if caller_frame else "unknown"
-        caller_module = inspect.getmodule(caller_frame).__name__ if caller_frame else "unknown"
-    except Exception:
-        caller_name = "unknown"
-        caller_module = "unknown"
-
-    context = kwargs.get("context", {})
-    bot_logger.warning(f"process_text_answer context:\n"
-                     f"{yaml.dump(context, allow_unicode=True, default_flow_style=False)}")
-
-    context.update({
-        "update_id": update_id,
-        "user_id": tg_user_id,
-        "chat_id": chat_id,
-        "message_id": event_message_id,
-        "event_type": event_type,
-        "handler": f"{caller_name} ({caller_module})",
-        "command": command[:100] if command else None,
-        "function": "process_start_assessment_test",
-        "action": "assessment_start"
-    })
-
-    bot_logger.warning(f"process_text_answer updated context:\n"
-                     f"{yaml.dump(context, allow_unicode=True, default_flow_style=False)}")
+    # update_id = getattr(message, "update_id", None)
+    # tg_user_id = message.from_user.id
+    #
+    # chat_id = message.chat.id
+    # event_message_id = message.message_id
+    # command = message.text
+    # event_type = "message"
+    #
+    # # context = kwargs.get("context", {})
+    # # bot_logger.warning(f"process_text_answer context:\n"
+    # #                  f"{yaml.dump(context, allow_unicode=True, default_flow_style=False)}")
 
     data = await state.get_data()
     session_id = data["session_id"]
@@ -572,7 +558,7 @@ async def process_text_answer(message: Message, state: FSMContext, **kwargs):
     ok, response = await core_post(
         url=f"/assessment/api/v1/assessment/session/{session_id}/{question['id']}/answer/",
         payload=payload,
-        context=context
+        # context=context
     )
 
     if not ok:

@@ -21,7 +21,6 @@ def process_update_task(self, bot_name: str, update_data: dict):
     """
     bot_tag = f"[Task:{bot_name}]"
     update_id = update_data.get('update_id')
-    logger.info(f"{bot_tag} Запуск задачи Celery для апдейта {update_id}")
 
     try:
         bots = self.app.conf.bots
@@ -38,8 +37,6 @@ def process_update_task(self, bot_name: str, update_data: dict):
         bot = bot_conf["bot"]
         dp = bot_conf["dp"]
         assistant_slug = bot_conf["assistant_slug"]
-
-        logger.warning(f"process_update_task bot_conf:assistant_slug - {assistant_slug}")
 
         if sys.platform == "win32":
             # Windows + solo → нужен nest_asyncio
@@ -96,13 +93,14 @@ async def _async_process_update(
     update_id = update_data.get('update_id')
 
     try:
-        logger.debug(f"{bot_tag} Создание объекта Update ID {update_id}")
         update = types.Update(**update_data)
+        await feed_update_with_retry(
+            bot=bot,
+            dispatcher=dispatcher,
+            update=update,
+            bot_name=bot_name
+        )
 
-        logger.info(f"{bot_tag} Запуск обработки Update ID {update_id}")
-        await feed_update_with_retry(bot, dispatcher, update, bot_name)
-
-        logger.info(f"{bot_tag} Сохранение Update ID {update_id} в DRF")
         await _save_update_to_drf(
             bot_name=bot_name,
             update_data=update_data,
@@ -143,29 +141,17 @@ async def _save_update_to_drf(
     update_id = update_data.get('update_id')
 
     context = kwargs.get("context", {})
-    logger.warning(f"_save_update_to_drf context:\n"
-                   f"{yaml.dump(context, allow_unicode=True, default_flow_style=False)}")
-
     context.update({
         "update_id": update_id,
         "bot_name": bot_name,
         "status": status,
         "user_id": update_data.get('message', {}).get('from', {}).get('id') or
                    update_data.get('callback_query', {}).get('from', {}).get('id'),
-        "chat_id": update_data.get('message', {}).get('chat', {}).get('id') or
-                   update_data.get('callback_query', {}).get('message', {}).get('chat', {}).get('id'),
-        "message_id": update_data.get('message', {}).get('message_id') or
-                      update_data.get('callback_query', {}).get('message', {}).get('message_id'),
-        "event_type": "message" if update_data.get('message') else
-        ("callback_query" if update_data.get('callback_query') else "unknown"),
-        "text_preview": (update_data.get('message', {}).get('text', '')[:50] or
-                         update_data.get('callback_query', {}).get('data', '')[:50]),
         "error": error[:200] if error and isinstance(error, str) else error,
-        "action": "save_telegram_update"
     })
 
-    logger.warning(f"_save_update_to_drf updated context:\n"
-                   f"{yaml.dump(context, allow_unicode=True, default_flow_style=False)}")
+    # logger.warning(f"_save_update_to_drf updated context:\n"
+    #                f"{yaml.dump(context, allow_unicode=True, default_flow_style=False)}")
 
     payload = {
         "bot_name": bot_name,

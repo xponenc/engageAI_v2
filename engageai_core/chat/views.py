@@ -1,6 +1,7 @@
 import json
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count, Q, Min, Max
 from django.http import JsonResponse, Http404
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse_lazy
@@ -49,7 +50,7 @@ class AiChatView(LoginRequiredMixin, View):
 
     def _process_ai_response(self, chat, user_message_text):
         """Обрабатывает запрос к AI и возвращает ответ"""
-        return user_message_text
+        return f"Re: {user_message_text}"
         # try:
         #     # Инициализируем оркестратор с текущим чатом
         #     from engageai_core.ai.orchestrator import Orchestrator
@@ -123,6 +124,7 @@ class AiChatView(LoginRequiredMixin, View):
 
         ai_message = Message.objects.create(
             chat=chat,
+            reply_to=user_message,
             content=ai_message_text,
             is_ai=True,
             source_type=MessageSource.WEB,
@@ -163,95 +165,90 @@ class AIMessageScoreView(LoginRequiredMixin, View):
 
 
 class AIConversationHistoryView(LoginRequiredMixin, ListView):
-    """Просмотр всей истории переписки пользователя с заданным AI-ассистентом"""
+    """Просмотр всей истории переписки пользователя с заданным AI-ассистентом
+    JSON при ?export=json
+    """
+    model = Message
     template_name = "chat/ai_conversation_history.html"
     context_object_name = 'messages'
-    paginate_by = 5  # Количество сообщений на страницу
+    paginate_by = 10
 
     def get_ai_assistant(self):
-        """Получает AI-ассистента по slug из URL"""
-        slug = self.kwargs.get('slug')
-        return get_object_or_404(AIAssistant, slug=slug, is_active=True)
+        if not hasattr(self, "_ai_assistant"):
+            self._ai_assistant = get_object_or_404(
+                AIAssistant,
+                slug=self.kwargs.get("slug"),
+                is_active=True,
+            )
+        return self._ai_assistant
 
     def get_queryset(self):
-        """Получает все сообщения пользователя с заданным AI-ассистентом"""
+        """Возвращает queryset сообщений, уже с select_related для sender"""
         user = self.request.user
         ai_assistant = self.get_ai_assistant()
 
-        # Получаем все чаты пользователя с этим AI-ассистентом
-        chat_ids = Chat.objects.filter(
-            owner=user,
-            ai_assistant=ai_assistant
-        ).values_list('id', flat=True)
+        # Кэшируем chat_ids один раз
+        if not hasattr(self, "_chat_ids"):
+            self._chat_ids = list(
+                Chat.objects.filter(owner=user, ai_assistant=ai_assistant)
+                .values_list("id", flat=True)
+            )
 
-        # Получаем все сообщения из этих чатов
-        messages = Message.objects.filter(
-            chat_id__in=chat_ids
-        ).select_related('sender').order_by('-timestamp')
-
-        return messages
+        qs = (
+            Message.objects.filter(chat_id__in=self._chat_ids)
+            .select_related("sender", "chat")
+            .order_by("-timestamp")
+        )
+        return qs
 
     def get_context_data(self, **kwargs):
-        """Добавляет контекст для шаблона"""
         context = super().get_context_data(**kwargs)
+        qs = self.object_list  # queryset, который использует пагинатор
 
-        ai_assistant = self.get_ai_assistant()
-        context['ai_assistant'] = ai_assistant
-
-        # Общая статистика
-        total_messages = self.get_queryset().count()
-        ai_messages = self.get_queryset().filter(is_ai=True).count()
+        # Статистика
+        total_messages = qs.count()
+        ai_messages = qs.filter(is_ai=True).count()
         user_messages = total_messages - ai_messages
 
-        context.update({
-            'total_messages': total_messages,
-            'ai_messages': ai_messages,
-            'user_messages': user_messages,
-            'first_interaction': self.get_queryset().last().timestamp if total_messages > 0 else None,
-            'last_interaction': self.get_queryset().first().timestamp if total_messages > 0 else None,
-        })
+        # first/last message
+        first_msg = qs.earliest("timestamp")  # SELECT ... ORDER BY timestamp ASC LIMIT 1
+        last_msg = qs.latest("timestamp")  # SELECT ... ORDER BY timestamp DESC LIMIT 1
 
+        context.update({
+            "ai_assistant": self.get_ai_assistant(),
+            "total_messages": total_messages,
+            "ai_messages": ai_messages,
+            "user_messages": user_messages,
+            "first_interaction": first_msg.timestamp if first_msg else None,
+            "last_interaction": last_msg.timestamp if last_msg else None,
+        })
         return context
 
-
-class AIConversationHistoryExportView(LoginRequiredMixin, View):
-    """Экспорт истории переписки в JSON формате"""
-
-    def get(self, request, slug, *args, **kwargs):
-        user = request.user
-        ai_assistant = get_object_or_404(AIAssistant, slug=slug, is_active=True)
-
-        # Получаем чаты и сообщения как в основном представлении
-        chat_ids = Chat.objects.filter(
-            owner=user,
-            ai_assistant=ai_assistant
-        ).values_list('id', flat=True)
-
-        messages = Message.objects.filter(
-            chat_id__in=chat_ids
-        ).order_by('timestamp')
-
-        # Формируем данные для экспорта
-        export_data = {
-            'assistant_name': ai_assistant.name,
-            'assistant_type': ai_assistant.get_assistant_type_display(),
-            'user': user.username,
-            'total_messages': messages.count(),
-            'export_date': timezone.now().isoformat(),
-            'conversation': [
-                {
-                    'timestamp': msg.timestamp.isoformat(),
-                    'sender': 'AI' if msg.is_ai else user.username,
-                    'content': msg.content,
-                    'platform': msg.get_source_type_display(),
-                }
-                for msg in messages
-            ]
-        }
-
-        # Устанавливаем заголовки для скачивания файла
-        response = JsonResponse(export_data, json_dumps_params={'ensure_ascii': False, 'indent': 2})
-        response[
-            'Content-Disposition'] = f'attachment; filename="ai_conversation_{ai_assistant.slug}_{timezone.now().strftime("%Y%m%d_%H%M")}.json"'
-
-        return response
+    def render_to_response(self, context, **response_kwargs):
+        """Возвращаем JSON при ?export=json, иначе стандартный HTML"""
+        if self.request.GET.get("export") == "json":
+            messages = self.get_queryset().order_by("timestamp")  # по возрастанию для JSON
+            export_data = {
+                "assistant_name": self.get_ai_assistant().name,
+                "assistant_type": self.get_ai_assistant().get_assistant_type_display(),
+                "user": self.request.user.username,
+                "total_messages": messages.count(),
+                "export_date": timezone.now().isoformat(),
+                "conversation": [
+                    {
+                        "timestamp": msg.timestamp.isoformat(),
+                        "sender": "AI" if msg.is_ai else self.request.user.username,
+                        "content": msg.content,
+                        "platform": msg.get_source_type_display(),
+                        "metadata": msg.metadata,
+                    }
+                    for msg in messages.iterator()
+                ]
+            }
+            response = JsonResponse(export_data, json_dumps_params={'ensure_ascii': False, 'indent': 2})
+            response[
+                'Content-Disposition'] = (f'attachment; filename="ai_conversation_{self.get_ai_assistant().slug}'
+                                          f'_{timezone.now().strftime("%Y%m%d_%H%M")}.json"')
+            return response
+        else:
+            return super().render_to_response(context, **response_kwargs)

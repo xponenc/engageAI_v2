@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 from django import template
@@ -32,3 +33,11 @@ def as_iso_date(value):
 @register.filter
 def split(value, sep=","):
     return value.split(sep)
+
+
+@register.filter
+def json_prettify(value):
+    try:
+        return json.dumps(value, indent=4, ensure_ascii=False)
+    except Exception:
+        return str(value)

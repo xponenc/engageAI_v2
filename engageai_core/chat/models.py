@@ -169,6 +169,14 @@ class Message(models.Model):
         related_name='sent_messages',
         verbose_name=_('Отправитель')
     )
+    reply_to = models.OneToOneField(
+        "Message",
+        verbose_name=_("ответ на"),
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="answer"
+    )
     content = models.TextField(
         verbose_name=_('Содержание сообщения')
     )

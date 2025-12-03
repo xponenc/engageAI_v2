@@ -4,50 +4,10 @@ import traceback
 from typing import Callable, Any
 
 import httpx
+import yaml
 from aiogram.types import Message, CallbackQuery
 
 from bots.test_bot.config import CORE_API, BOT_INTERNAL_KEY, bot_logger, BOT_NAME
-
-
-# async def core_post(url: str, payload: dict, ):
-#     """Унифицированный запрос с безопасной обработкой ошибок."""
-#     bot_tag = f"[{BOT_NAME}]"
-#     bot_logger.info(f"{bot_tag} запрос {CORE_API}{url}")
-#     try:
-#         async with aiohttp.ClientSession() as session:
-#             async with session.post(
-#                     f"{CORE_API}{url}",
-#                     json=payload,
-#                     headers={"X-Internal-Key": BOT_INTERNAL_KEY},
-#                     timeout=15
-#             ) as resp:
-#
-#                 bot_logger.info(f"{bot_tag} POST {url} payload={payload} status={resp.status}")
-#
-#                 if resp.status >= 500:
-#                     return False, "Сервер временно недоступен. Попробуйте позже."
-#                 if resp.status in (401, 403):
-#                     return False, "Ошибка авторизации бота. Сообщите администратору."
-#
-#                 try:
-#                     data = await resp.json()
-#                 except Exception:
-#                     bot_logger.error(f"{bot_tag} Ошибка чтения JSON")
-#                     return False, "Ошибка обработки ответа сервера."
-#
-#                 if not data.get("success", True):
-#                     bot_logger.warning(f"{bot_tag} API вернул ошибку: {data}")
-#                     return False, data.get("detail", "Ошибка на сервере.")
-#
-#                 bot_logger.info(f"{bot_tag} Успешный ответ: {data}")
-#                 return True, data
-#
-#     except asyncio.TimeoutError:
-#         bot_logger.warning(f"{bot_tag} Timeout при обращении к {url}")
-#         return False, "Сервер не отвечает. Попробуйте позже."
-#     except Exception as e:
-#         bot_logger.error(f"{bot_tag} Неизвестная ошибка: {e}")
-#         return False, "Неизвестная ошибка. Попробуйте позже."
 
 
 async def core_post(url: str, payload: dict, context: dict = None, **kwargs):
@@ -86,21 +46,37 @@ async def core_post(url: str, payload: dict, context: dict = None, **kwargs):
         "url": url,
         "update_id": context.get("update_id") if context else None,
         "user_id": context.get("user_id") if context else None,
-        "session_id": context.get("session_id") if context else None,
-        "chat_id": context.get("chat_id") if context else None,
         "event_type": context.get("event_type") if context else None,
-        "traceback": traceback.format_stack(limit=5)[-2].strip() if context else None
+        "traceback": traceback.format_stack(limit=5)[-2].strip() if context else None,
+        "error_message": context.get("error_message") if context else None,
     }
 
-    request_log = (
-        f"{bot_tag} Запрос к API\n"
+    base_log = (
+
         f"├── Эндпоинт: {CORE_API}{url}\n"
         f"├── Вызывающая функция: {caller_name} ({caller_module})\n"
-        f"├── Update ID: {full_context['update_id'] or 'N/A'}\n"
         f"├── User ID: {full_context['user_id'] or 'N/A'}\n"
-        f"├── Event type: {full_context['event_type'] or 'N/A'}\n"
-        f"└── Payload: {payload}"
     )
+    update_id = full_context['update_id']
+    if update_id:
+        base_log += f"├── Update ID: {update_id}\n"
+
+    request_log = f"{bot_tag} Запрос к API\n" + base_log
+
+    event_type = full_context['event_type']
+    if event_type:
+        request_log += f"├── Event type: {event_type}\n"
+
+    # traceback_data = full_context['traceback']
+    # if traceback_data:
+    #     request_log += f"├── Traceback: {traceback_data}\n"
+
+    error_message = full_context['error_message']
+    if error_message:
+        request_log += f"├── Update ID: {error_message}\n"
+
+    request_log += f"└── Payload: {payload}"
+
     bot_logger.info(request_log)
 
     try:
@@ -118,10 +94,11 @@ async def core_post(url: str, payload: dict, context: dict = None, **kwargs):
             response_log = (
                 f"{bot_tag} Ответ от API\n"
                 f"├── Статус: {response.status_code}\n"
-                f"├── Эндпоинт: {CORE_API}{url}\n"
-                f"├── Update ID: {full_context['update_id'] or 'N/A'}\n"
-                f"└── Длина ответа: {len(response.content)} байт"
+            ) + base_log + (
+                f"├── Длина ответа: {len(response.content)} байт\n"
+                f"└── Ответ[:50]: {response.content[:50]}"
             )
+
             bot_logger.info(response_log)
 
             try:
@@ -131,19 +108,18 @@ async def core_post(url: str, payload: dict, context: dict = None, **kwargs):
                     data = response.json()
                 except ValueError as e:
                     error_msg = f"Ошибка парсинга JSON: {str(e)}"
-                    bot_logger.error(f"{bot_tag} {error_msg}\nОтвет: {response.text[:200]}")
+                    error_log = (
+                        f"{bot_tag} Ответ от API(обработка)\n" + base_log +
+                        f"├── {error_msg}\n"
+                        f"└── Ответ: {response.text}"
+                    )
+                    bot_logger.error(error_log)
                     return False, error_msg
-
-                if not data.get("success", True):
-                    detail = data.get("detail", "Неизвестная ошибка бизнес-логики")
-                    bot_logger.warning(f"{bot_tag} Бизнес-ошибка API: {detail}\nДанные: {data}")
-                    return False, detail
-
+                success_msg = "Успешный парсинг ответа"
                 success_log = (
-                    f"{bot_tag} Успешный запрос\n"
-                    f"├── Эндпоинт: {CORE_API}{url}\n"
-                    f"├── Update ID: {full_context['update_id'] or 'N/A'}\n"
-                    f"└── Ответ: {data}"
+                        f"{bot_tag} Ответ от API(обработка)\n" + base_log +
+                        f"├── {success_msg}\n"
+                        f"└── Data: {data}"
                 )
                 bot_logger.debug(success_log)
                 return True, data
@@ -151,14 +127,14 @@ async def core_post(url: str, payload: dict, context: dict = None, **kwargs):
             except httpx.HTTPStatusError as e:
                 status_code = e.response.status_code
                 error_detail = e.response.text
-
+                error_msg = f"HTTP ошибка ({status_code})"
                 error_log = (
-                    f"{bot_tag} HTTP ошибка ({status_code})\n"
-                    f"├── Эндпоинт: {CORE_API}{url}\n"
-                    f"├── Update ID: {full_context['update_id'] or 'N/A'}\n"
-                    f"├── Заголовки запроса: {dict(response.request.headers)}\n"
-                    f"└── Ответ сервера: {error_detail[:500]}"
+                        f"{bot_tag} Ответ от API(ошибка)\n" + base_log +
+                        f"├── {error_msg}\n"
+                        f"├── Заголовки запроса: {dict(response.request.headers)}\n"
+                        f"└── Ответ сервера: {error_detail[:500]}"
                 )
+
                 bot_logger.error(error_log)
 
                 if status_code in (401, 403):
@@ -170,24 +146,24 @@ async def core_post(url: str, payload: dict, context: dict = None, **kwargs):
 
     except httpx.TimeoutException as e:
         # Таймауты
+        error_msg = f"Таймаут запроса"
         timeout_log = (
-            f"{bot_tag} ⏱ Таймаут запроса\n"
-            f"├── Эндпоинт: {CORE_API}{url}\n"
-            f"├── Update ID: {full_context['update_id'] or 'N/A'}\n"
-            f"└── Ошибка: {str(e)}"
+                f"{bot_tag} Ответ от API(таймаут)\n" + base_log +
+                f"├── {error_msg}\n"
+                f"└── Ошибка: {str(e)}"
         )
         bot_logger.warning(timeout_log)
         return False, "Сервер не отвечает. Попробуйте позже."
 
     except Exception as e:
         # Неизвестные ошибки
+        error_msg = f"Неизвестная ошибка"
         exception_log = (
-            f"{bot_tag} Неизвестная ошибка\n"
-            f"├── Эндпоинт: {CORE_API}{url}\n"
-            f"├── Update ID: {full_context['update_id'] or 'N/A'}\n"
-            f"├── Тип ошибки: {type(e).__name__}\n"
-            f"├── Сообщение: {str(e)}\n"
-            f"└── Traceback:\n{traceback.format_exc()}"
+                f"{bot_tag} Ответ от API(ошибка)\n" + base_log +
+                f"├── {error_msg}\n"
+                f"├── Тип ошибки: {type(e).__name__}\n"
+                f"├── Сообщение: {str(e)}\n"
+                f"└── Traceback:\n{traceback.format_exc()}"
         )
         bot_logger.exception(exception_log)
         return False, "Неизвестная ошибка. Попробуйте позже."
@@ -233,50 +209,74 @@ def _add_context(func, explicit_caller: str, *args, **kwargs) -> Any:
         "function": func_name,
         "caller_module": module_name,
     }
+    # # Извлекаем ID обновления безопасно
+    # update_id = getattr(update, 'update_id', None)
+    # if update_id is None and hasattr(update, 'message') and hasattr(update.message, 'message_id'):
+    #     update_id = f"msg_{update.message.message_id}"
+    # elif update_id is None and hasattr(update, 'callback_query') and hasattr(update.callback_query, 'id'):
+    #     update_id = f"cb_{update.callback_query.id}"
+    # else:
+    #     update_id = "unknown"
 
     # Если передан event (Message или CallbackQuery) — добавляем данные из него
+
+    # for arg in args:
+    #     if isinstance(arg, Message):
+    #         tg_user_id = arg.from_user.id
+    #         event_message_id = arg.message_id
+    #         event_type = "message"
+    #         context.update({
+    #                 "user_id": tg_user_id,
+    #                 "message_id": event_message_id,
+    #                 "event_type": event_type,
+    #             })
+    #         break
+    #     elif isinstance(arg, CallbackQuery):
+    #         tg_user_id = arg.from_user.id
+    #         event_message_id = arg.message.message_id
+    #         event_type = "callback"
+    #         context.update({
+    #             "user_id": tg_user_id,
+    #             "message_id": event_message_id,
+    #             "event_type": event_type,
+    #         })
+    #         break
+    #     # if hasattr(arg, "from_user") and hasattr(arg.from_user, "id"):
+    #     #     context.update({
+    #     #         "user_id": arg.from_user.id,
+    #     #         "chat_id": getattr(getattr(arg, "chat", None), "id", None),
+    #     #         "update_id": getattr(arg, "update_id", None),
+    #     #         "message_id": getattr(arg, "message_id", None),
+    #     #         "event_type": "callback_query" if hasattr(arg, "callback_query") else "message",
+    #     #     })
+    #     #     break
+    #
+    # # Если в kwargs уже есть context — дополняем его нашим
+    # if "context" in kwargs:
+    #     kwargs["context"].update(context)
+    # else:
+    #     kwargs["context"] = context
+    #
+    # # Вызываем оригинальную функцию с обновлёнными kwargs
+    # return func(*args, **kwargs)
+
     for arg in args:
-        if isinstance(arg, Message):
-            tg_user_id = arg.from_user.id
+        if hasattr(arg, "from_user") and hasattr(arg.from_user, "id"):
+            context["user_id"] = arg.from_user.id
 
-            chat_id = arg.chat.id
-            event_message_id = arg.message_id
-            command = arg.text
-            event_type = "message"
-            context.update({
-                    "user_id": tg_user_id,
-                    "chat_id": chat_id,
-                    "message_id": event_message_id,
-                    "event_type": event_type,
-                })
+        if hasattr(arg, "message") and hasattr(arg.message, "message_id"):
+            context["message_id"] = arg.message.message_id
+            context["chat_id"] = arg.message.chat.id
+            context["event_type"] = "callback"
+        elif hasattr(arg, "message_id"):
+            context["message_id"] = arg.message_id
+            context["chat_id"] = arg.chat.id
+            context["event_type"] = "message"
+
+        # Прекращаем поиск при первом подходящем аргументе
+        if "user_id" in context:
             break
-        elif isinstance(arg, CallbackQuery):
-            tg_user_id = arg.from_user.id
-            chat_id = arg.message.chat.id
-            event_message_id = arg.message.message_id
-            event_type = "callback"
-            context.update({
-                "user_id": tg_user_id,
-                "chat_id": chat_id,
-                "message_id": event_message_id,
-                "event_type": event_type,
-            })
-            break
-        # if hasattr(arg, "from_user") and hasattr(arg.from_user, "id"):
-        #     context.update({
-        #         "user_id": arg.from_user.id,
-        #         "chat_id": getattr(getattr(arg, "chat", None), "id", None),
-        #         "update_id": getattr(arg, "update_id", None),
-        #         "message_id": getattr(arg, "message_id", None),
-        #         "event_type": "callback_query" if hasattr(arg, "callback_query") else "message",
-        #     })
-        #     break
 
-    # Если в kwargs уже есть context — дополняем его нашим
-    if "context" in kwargs:
-        kwargs["context"].update(context)
-    else:
-        kwargs["context"] = context
-
-    # Вызываем оригинальную функцию с обновлёнными kwargs
+    # Добавляем или обновляем контекст
+    kwargs.setdefault("context", {}).update(context)
     return func(*args, **kwargs)

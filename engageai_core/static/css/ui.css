@@ -13,7 +13,7 @@
 
     padding: var(--btn-padding, 12px 28px);
     border-radius: var(--btn-radius, var(--radius-md));
-    min-width: 250px;
+    min-width: 180px;
 
     font-weight: 600;
     font-size: 0.95rem;

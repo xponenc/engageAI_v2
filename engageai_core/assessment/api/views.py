@@ -241,7 +241,7 @@ class AnswerAPI(
 
             ai_message = Message.objects.create(
                 chat=chat,
-                content=level,
+                content=msg,
                 is_ai=True,
                 source_type=MessageSource.TELEGRAM,
                 sender=None

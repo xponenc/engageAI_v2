@@ -84,7 +84,7 @@ class TelegramUpdateSaveView(InternalBotAuthMixin, APIView):
 
     def _process_message_update(self, update_data, bot_tag, assistant_slug):
         """Обработка обычного сообщения"""
-
+        update_id = update_data['update_id']
         message_data = update_data['message']
         chat_data = message_data['chat']
         from_user = message_data['from']
@@ -115,7 +115,7 @@ class TelegramUpdateSaveView(InternalBotAuthMixin, APIView):
             sender=user,
             content=text,
             source_type=MessageSource.TELEGRAM,
-            external_id=message_id,
+            external_id=update_id,
             metadata={
                 'telegram': {
                     'update_id': update_data['update_id'],
@@ -200,6 +200,8 @@ class TelegramUpdateSaveView(InternalBotAuthMixin, APIView):
 
     def _process_callback_update(self, update_data, bot_tag, assistant_slug):
         """Обработка callback-запроса (нажатие на кнопку)"""
+        update_id = update_data['update_id']
+
         callback_data = update_data['callback_query']
         message_data = callback_data['message']
         chat_data = message_data['chat']
@@ -240,7 +242,7 @@ class TelegramUpdateSaveView(InternalBotAuthMixin, APIView):
             sender=user,
             content=f"[Нажата кнопка: {data}]",
             source_type=MessageSource.TELEGRAM,
-            external_id=f"callback_{callback_id}",
+            external_id=update_id,
             metadata={
                 'telegram': {
                     'callback_query_id': callback_id,

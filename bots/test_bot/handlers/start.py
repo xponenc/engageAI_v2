@@ -106,5 +106,5 @@ async def start(message: Message, state: FSMContext):
     await state.update_data(last_message={
         "id": answer_message.message_id,
         "text": answer_text,
-        "keyboard": answer_keyboard.model_dump_json()
+        "keyboard": answer_keyboard.model_dump_json() if answer_keyboard else None
     })

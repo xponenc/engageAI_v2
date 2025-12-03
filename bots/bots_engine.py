@@ -145,20 +145,29 @@ async def get_redis_client(request: Request):
     return request.app.state.redis_client
 
 # --- Feed update с Retry ---
-async def feed_update_with_retry(bot: Bot, dp: Dispatcher, update: types.Update, bot_name: str):
+async def feed_update_with_retry(bot: Bot, dispatcher: Dispatcher, update: types.Update, bot_name: str):
+    bot_tag = f"[Bot:{bot_name}]"
+    # Извлекаем ID обновления безопасно
+    update_id = getattr(update, 'update_id', None)
+    if update_id is None and hasattr(update, 'message') and hasattr(update.message, 'message_id'):
+        update_id = f"msg_{update.message.message_id}"
+    elif update_id is None and hasattr(update, 'callback_query') and hasattr(update.callback_query, 'id'):
+        update_id = f"cb_{update.callback_query.id}"
+    else:
+        update_id = "unknown"
+
     last_exception = None
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            await asyncio.wait_for(dp.feed_update(bot, update), timeout=FEED_TIMEOUT)
-            logger.info(f"Апдейт успешно обработан ботом {bot_name} (attempt {attempt})")
+            await asyncio.wait_for(dispatcher.feed_update(bot, update), timeout=FEED_TIMEOUT)
+            logger.info(f"{bot_tag} (attempt {attempt}) Update id={update_id} успешно обработан ботом")
             return
         except Exception as e:
-            logger.warning(f"Попытка {attempt} feed_update для {bot_name} не удалась: {e}")
+            logger.warning(f"{bot_tag} (attempt {attempt}) Update id={update_id} завершился ошибкой: {e}")
             last_exception = e
             if attempt < MAX_RETRIES:
                 await asyncio.sleep(RETRY_DELAY)
-    # Если все попытки провалились
-    logger.error(f"Апдейт для {bot_name} не обработан после {MAX_RETRIES} попыток")
+    logger.error(f"{bot_tag} Update id={update_id} не обработан после {MAX_RETRIES} попыток")
     raise last_exception
 
 
@@ -195,14 +204,13 @@ async def internal_update(
         logger.warning(f"403 Forbidden: Invalid internal key for {bot_name}")
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    # Создаём объект Update
+    # тест-проверка Update
     try:
         update = types.Update(**update_data)
     except Exception as e:
         logger.error(f"Ошибка парсинга update: {e}")
         raise HTTPException(status_code=400, detail="Invalid update format")
-    logger.error(f"\n\n\n{update_data=}\n\n\n")
-    # ПРОВЕРКА НА ДУБЛИКАТЫ
+
     if update_id:
         try:
             duplicate_key = f"telegram:processed:{update_id}"

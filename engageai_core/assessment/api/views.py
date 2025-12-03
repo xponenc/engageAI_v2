@@ -32,7 +32,9 @@ class StartAssessmentAPI(
         if isinstance(user, Response):
             return user  # ошибка уже возвращена
 
-        core_api_logger.info(f"{bot_tag} Start TestSession for user={user.id}")
+        incoming_message_id = request.data.get("message_id")
+
+        core_api_logger.info(f"{bot_tag} Start TestSession for user={user.id}, message_id={incoming_message_id}")
 
         session, expired_flag = start_assessment_for_user(
             user,
@@ -72,12 +74,23 @@ class StartAssessmentAPI(
             platform=ChatPlatform.TELEGRAM,
         )
 
+        reply_to_msg = None
+
+        if incoming_message_id:
+            reply_to_msg = Message.objects.filter(
+                external_id=str(incoming_message_id),
+                is_ai=False,
+                chat__user=user
+            ).first()
+
         ai_message = Message.objects.create(
             chat=chat,
             content=question.question_json["question_text"],
             is_ai=True,
             source_type=MessageSource.TELEGRAM,
-            sender=None
+            sender=None,
+            reply_to=reply_to_msg,  # ← ВОТ ТУТ ПРОИСХОДИТ ПРИВЯЗКА
+            external_id=None,  # боту вернём позже real Telegram msg_id
         )
 
         question_number = QuestionInstance.objects.filter(session=session).exclude(answer__isnull=True).count() + 1
@@ -95,7 +108,8 @@ class StartAssessmentAPI(
                     "options": question.question_json.get("options"),
                     "number": question_number,
                     "total_questions": MAIN_QUESTIONS_LIMIT,
-                }
+                },
+                "ai_message_id": ai_message.id
             },
             status=201
         )

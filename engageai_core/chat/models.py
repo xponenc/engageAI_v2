@@ -1,3 +1,4 @@
+from django.contrib.postgres.indexes import GinIndex
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.contrib.auth import get_user_model
@@ -246,6 +247,7 @@ class Message(models.Model):
             models.Index(fields=['is_read', 'timestamp']),
             models.Index(fields=['source_type', '-timestamp']),
             models.Index(fields=['external_id']),
+            GinIndex(fields=["metadata"], name="message_metadata_gin_idx"),
         ]
 
     def __str__(self):

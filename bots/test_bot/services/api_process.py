@@ -37,6 +37,9 @@ async def core_post(url: str, payload: dict, context: dict = None, **kwargs):
     if not context:
         context = {"handler": "direct_call", "function": "core_post"}
 
+    if "telegram_message_id" not in payload and context.get("message_id"):
+        payload["telegram_message_id"] = context["message_id"]
+
     caller_name = context.get("function", "unknown")
     caller_module = context.get("caller_module", "unknown")
 
@@ -198,85 +201,129 @@ def auto_context(explicit_caller: str = None):
     return decorator
 
 
-def _add_context(func, explicit_caller: str, *args, **kwargs) -> Any:
-    # Определяем имя функции и модуля (надёжно, без currentframe)
+# def _add_context(func, explicit_caller: str, *args, **kwargs) -> Any:
+#     # Определяем имя функции и модуля (надёжно, без currentframe)
+#     func_name = explicit_caller or func.__name__
+#     module_name = func.__module__
+#
+#     # Базовый контекст
+#     context = {
+#         "handler": f"{func_name} ({module_name})",
+#         "function": func_name,
+#         "caller_module": module_name,
+#     }
+#     # # Извлекаем ID обновления безопасно
+#     # update_id = getattr(update, 'update_id', None)
+#     # if update_id is None and hasattr(update, 'message') and hasattr(update.message, 'message_id'):
+#     #     update_id = f"msg_{update.message.message_id}"
+#     # elif update_id is None and hasattr(update, 'callback_query') and hasattr(update.callback_query, 'id'):
+#     #     update_id = f"cb_{update.callback_query.id}"
+#     # else:
+#     #     update_id = "unknown"
+#
+#     # Если передан event (Message или CallbackQuery) — добавляем данные из него
+#
+#     # for arg in args:
+#     #     if isinstance(arg, Message):
+#     #         tg_user_id = arg.from_user.id
+#     #         event_message_id = arg.message_id
+#     #         event_type = "message"
+#     #         context.update({
+#     #                 "user_id": tg_user_id,
+#     #                 "message_id": event_message_id,
+#     #                 "event_type": event_type,
+#     #             })
+#     #         break
+#     #     elif isinstance(arg, CallbackQuery):
+#     #         tg_user_id = arg.from_user.id
+#     #         event_message_id = arg.message.message_id
+#     #         event_type = "callback"
+#     #         context.update({
+#     #             "user_id": tg_user_id,
+#     #             "message_id": event_message_id,
+#     #             "event_type": event_type,
+#     #         })
+#     #         break
+#     #     # if hasattr(arg, "from_user") and hasattr(arg.from_user, "id"):
+#     #     #     context.update({
+#     #     #         "user_id": arg.from_user.id,
+#     #     #         "chat_id": getattr(getattr(arg, "chat", None), "id", None),
+#     #     #         "update_id": getattr(arg, "update_id", None),
+#     #     #         "message_id": getattr(arg, "message_id", None),
+#     #     #         "event_type": "callback_query" if hasattr(arg, "callback_query") else "message",
+#     #     #     })
+#     #     #     break
+#     #
+#     # # Если в kwargs уже есть context — дополняем его нашим
+#     # if "context" in kwargs:
+#     #     kwargs["context"].update(context)
+#     # else:
+#     #     kwargs["context"] = context
+#     #
+#     # # Вызываем оригинальную функцию с обновлёнными kwargs
+#     # return func(*args, **kwargs)
+#
+#     for arg in args:
+#         if hasattr(arg, "from_user") and hasattr(arg.from_user, "id"):
+#             context["user_id"] = arg.from_user.id
+#
+#         if hasattr(arg, "message") and hasattr(arg.message, "message_id"):
+#             context["message_id"] = arg.message.message_id
+#             context["chat_id"] = arg.message.chat.id
+#             context["event_type"] = "callback"
+#         elif hasattr(arg, "message_id"):
+#             context["message_id"] = arg.message_id
+#             context["chat_id"] = arg.chat.id
+#             context["event_type"] = "message"
+#
+#         # Прекращаем поиск при первом подходящем аргументе
+#         if "user_id" in context:
+#             break
+#
+#     # Добавляем или обновляем контекст
+#     kwargs.setdefault("context", {}).update(context)
+#     return func(*args, **kwargs)
+
+def _add_context(func, explicit_caller: str, *args, **kwargs):
+    """
+    Формирует context для core_post автоматически.
+    Работает для Message и CallbackQuery.
+    """
+
     func_name = explicit_caller or func.__name__
     module_name = func.__module__
 
-    # Базовый контекст
     context = {
         "handler": f"{func_name} ({module_name})",
         "function": func_name,
         "caller_module": module_name,
     }
-    # # Извлекаем ID обновления безопасно
-    # update_id = getattr(update, 'update_id', None)
-    # if update_id is None and hasattr(update, 'message') and hasattr(update.message, 'message_id'):
-    #     update_id = f"msg_{update.message.message_id}"
-    # elif update_id is None and hasattr(update, 'callback_query') and hasattr(update.callback_query, 'id'):
-    #     update_id = f"cb_{update.callback_query.id}"
-    # else:
-    #     update_id = "unknown"
 
-    # Если передан event (Message или CallbackQuery) — добавляем данные из него
-
-    # for arg in args:
-    #     if isinstance(arg, Message):
-    #         tg_user_id = arg.from_user.id
-    #         event_message_id = arg.message_id
-    #         event_type = "message"
-    #         context.update({
-    #                 "user_id": tg_user_id,
-    #                 "message_id": event_message_id,
-    #                 "event_type": event_type,
-    #             })
-    #         break
-    #     elif isinstance(arg, CallbackQuery):
-    #         tg_user_id = arg.from_user.id
-    #         event_message_id = arg.message.message_id
-    #         event_type = "callback"
-    #         context.update({
-    #             "user_id": tg_user_id,
-    #             "message_id": event_message_id,
-    #             "event_type": event_type,
-    #         })
-    #         break
-    #     # if hasattr(arg, "from_user") and hasattr(arg.from_user, "id"):
-    #     #     context.update({
-    #     #         "user_id": arg.from_user.id,
-    #     #         "chat_id": getattr(getattr(arg, "chat", None), "id", None),
-    #     #         "update_id": getattr(arg, "update_id", None),
-    #     #         "message_id": getattr(arg, "message_id", None),
-    #     #         "event_type": "callback_query" if hasattr(arg, "callback_query") else "message",
-    #     #     })
-    #     #     break
-    #
-    # # Если в kwargs уже есть context — дополняем его нашим
-    # if "context" in kwargs:
-    #     kwargs["context"].update(context)
-    # else:
-    #     kwargs["context"] = context
-    #
-    # # Вызываем оригинальную функцию с обновлёнными kwargs
-    # return func(*args, **kwargs)
-
+    event = None
     for arg in args:
-        if hasattr(arg, "from_user") and hasattr(arg.from_user, "id"):
-            context["user_id"] = arg.from_user.id
-
-        if hasattr(arg, "message") and hasattr(arg.message, "message_id"):
-            context["message_id"] = arg.message.message_id
-            context["chat_id"] = arg.message.chat.id
-            context["event_type"] = "callback"
-        elif hasattr(arg, "message_id"):
-            context["message_id"] = arg.message_id
-            context["chat_id"] = arg.chat.id
-            context["event_type"] = "message"
-
-        # Прекращаем поиск при первом подходящем аргументе
-        if "user_id" in context:
+        if isinstance(arg, (Message, CallbackQuery)):
+            event = arg
             break
 
-    # Добавляем или обновляем контекст
+    if isinstance(event, Message):
+        context["event_type"] = "message"
+        context["user_id"] = event.from_user.id
+        context["chat_id"] = event.chat.id
+        context["message_id"] = event.message_id
+
+    elif isinstance(event, CallbackQuery):
+        context["event_type"] = "callback"
+        context["user_id"] = event.from_user.id
+
+        # callback может быть без .message → inline mode
+        if event.message:
+            context["chat_id"] = event.message.chat.id
+            context["message_id"] = event.message.message_id
+        else:
+            # inline callback — chat_id нет
+            context["chat_id"] = None
+            context["message_id"] = None
+
     kwargs.setdefault("context", {}).update(context)
+
     return func(*args, **kwargs)

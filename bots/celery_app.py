@@ -6,7 +6,6 @@ from pathlib import Path
 from celery.signals import worker_ready, worker_shutdown
 from dotenv import load_dotenv
 
-
 load_dotenv()
 
 REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
@@ -67,6 +66,7 @@ celery_app.autodiscover_tasks(['bots'], force=True)
 celery_app.conf.bots = {}
 logger = celery_app.log.get_default_logger()
 
+
 @worker_ready.connect
 def worker_ready_handler(sender, **kwargs):
     logger.info(f"Celery worker {sender.hostname} готов к работе")
@@ -99,46 +99,108 @@ def init_bots_on_worker_start(sender, **kwargs):
     logger.info(f"Всего загружено ботов: {len(sender.app.conf.bots)}")
 
 
-@worker_shutdown.connect
-def shutdown_bots_on_worker_stop(sender, **kwargs):
-    """Закрывает соединения ботов при остановке воркера"""
-    logger.info(f"Воркер {sender.hostname} начинает завершение работы...")
+#
+# @worker_shutdown.connect
+# def shutdown_bots_on_worker_stop(sender, **kwargs):
+#     """Закрывает соединения ботов при остановке воркера"""
+#     logger.info(f"Воркер {sender.hostname} начинает завершение работы...")
+#
+#     # if hasattr(sender.app.conf, 'bots') and sender.app.conf.bots:
+#     #     for bot_name, bot_conf in sender.app.conf.bots.items():
+#     #         try:
+#     #             # Закрываем сессию бота
+#     #             if hasattr(bot_conf["bot"], 'session') and bot_conf["bot"].session:
+#     #                 bot_conf["bot"].session.close()
+#     #                 logger.info(f"Сессия бота {bot_name} закрыта")
+#     #         except Exception as e:
+#     #             logger.error(f"Ошибка закрытия сессии бота {bot_name}: {e}")
+#     #
+#     #     # Очищаем состояние
+#     #     sender.app.conf.bots = {}
+#     #     logger.info("Все боты остановлены и состояние очищено")
+#
+#     bots = getattr(sender.app.conf, 'bots', {})
+#     if not bots:
+#         return
+#
+#     async def close_sessions():
+#         for bot_name, bot_conf in list(bots.items()):  # list() чтобы избежать изменений во время итерации
+#             bot = bot_conf.get("bot")
+#             if bot and hasattr(bot, "session") and bot.session:
+#                 try:
+#                     await bot.session.close()
+#                     logger.info(f"Сессия бота {bot_name} закрыта асинхронно")
+#                 except Exception as e:
+#                     logger.error(f"Ошибка закрытия сессии {bot_name}: {e}")
+#         sender.app.conf.bots.clear()
+#
+#     # Универсальный запуск
+#     try:
+#         loop = asyncio.get_running_loop()
+#         loop.create_task(close_sessions())  # не блокируем shutdown
+#     except RuntimeError:  # нет запущенного loop'а (редко)
+#         asyncio.run(close_sessions())
 
-    # if hasattr(sender.app.conf, 'bots') and sender.app.conf.bots:
-    #     for bot_name, bot_conf in sender.app.conf.bots.items():
-    #         try:
-    #             # Закрываем сессию бота
-    #             if hasattr(bot_conf["bot"], 'session') and bot_conf["bot"].session:
-    #                 bot_conf["bot"].session.close()
-    #                 logger.info(f"Сессия бота {bot_name} закрыта")
-    #         except Exception as e:
-    #             logger.error(f"Ошибка закрытия сессии бота {bot_name}: {e}")
-    #
-    #     # Очищаем состояние
-    #     sender.app.conf.bots = {}
-    #     logger.info("Все боты остановлены и состояние очищено")
+
+def shutdown_bots_on_worker_stop(sender, **kwargs):
+    """Корректное закрытие асинхронных сессий ботов при остановке воркера"""
+    logger.info(f"Воркер {sender.hostname} начинает завершение работы...")
 
     bots = getattr(sender.app.conf, 'bots', {})
     if not bots:
+        logger.info("Нет загруженных ботов для закрытия")
         return
 
     async def close_sessions():
-        for bot_name, bot_conf in list(bots.items()):  # list() чтобы избежать изменений во время итерации
+        """Асинхронное закрытие всех сессий ботов"""
+        close_tasks = []
+        for bot_name, bot_conf in list(bots.items()):
             bot = bot_conf.get("bot")
-            if bot and hasattr(bot, "session") and bot.session:
-                try:
-                    await bot.session.close()
-                    logger.info(f"Сессия бота {bot_name} закрыта асинхронно")
-                except Exception as e:
-                    logger.error(f"Ошибка закрытия сессии {bot_name}: {e}")
+            if bot and hasattr(bot, "session") and bot.session and not bot.session.closed:
+                logger.debug(f"Запрашивается закрытие сессии для бота {bot_name}")
+                close_tasks.append(bot.session.close())
+
+        if close_tasks:
+            results = await asyncio.gather(*close_tasks, return_exceptions=True)
+            for bot_name, result in zip(bots.keys(), results):
+                if isinstance(result, Exception):
+                    logger.error(f"Ошибка закрытия сессии {bot_name}: {result}")
+                else:
+                    logger.info(f"Сессия бота {bot_name} успешно закрыта")
+        else:
+            logger.info("Нет активных сессий для закрытия")
+
+        # Очищаем состояние после закрытия всех сессий
         sender.app.conf.bots.clear()
 
-    # Универсальный запуск
     try:
+        # Проверяем, есть ли запущенный event loop
         loop = asyncio.get_running_loop()
-        loop.create_task(close_sessions())  # не блокируем shutdown
-    except RuntimeError:  # нет запущенного loop'а (редко)
-        asyncio.run(close_sessions())
+        logger.debug("Обнаружен запущенный event loop")
+
+        # Создаем задачу и ждем ее завершения с таймаутом
+        task = loop.create_task(close_sessions())
+        try:
+            loop.run_until_complete(asyncio.wait_for(task, timeout=5.0))
+            logger.info("Все сессии ботов закрыты в основном event loop")
+        except asyncio.TimeoutError:
+            logger.warning("Таймаут при закрытии сессий (5 секунд). Некоторые соединения могут быть не закрыты")
+        except Exception as e:
+            logger.error(f"Критическая ошибка при закрытии сессий: {e}")
+
+    except RuntimeError:
+        # Нет активного event loop - создаем новый
+        logger.debug("Создание нового event loop для закрытия сессий")
+        new_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(new_loop)
+        try:
+            new_loop.run_until_complete(close_sessions())
+            logger.info("Все сессии ботов закрыты в новом event loop")
+        except Exception as e:
+            logger.error(f"Ошибка в новом event loop при закрытии сессий: {e}")
+        finally:
+            new_loop.close()
+            asyncio.set_event_loop(None)
 
 # можно запускать разные воркеры для разных очередей с разной приоритетностью или ресурсами.
 # Воркер только для Telegram-апдейтов (высокий приоритет, быстрая реакция)

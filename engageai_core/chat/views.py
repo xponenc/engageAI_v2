@@ -5,6 +5,7 @@ from django.http import JsonResponse, Http404
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
+
 from django.views import View
 from django.views.generic import ListView
 
@@ -34,7 +35,6 @@ class AiChatView(LoginRequiredMixin, View):
             # logger.error(f"Ошибка при создании чата: {str(e)}")
             raise Http404("Не удалось создать чат с AI-ассистентом")
 
-
     def _get_ajax_response(self, user_message_text, ai_message, request):
         """Формирует AJAX-ответ для чата"""
         return JsonResponse({
@@ -46,7 +46,6 @@ class AiChatView(LoginRequiredMixin, View):
                 "text": ai_message.content,
             },
         })
-
 
     def _process_ai_response(self, chat, user_message_text):
         """Обрабатывает запрос к AI и возвращает ответ"""
@@ -69,7 +68,6 @@ class AiChatView(LoginRequiredMixin, View):
         #     # logger.exception(f"Критическая ошибка при работе с AI-оркестратором: {str(e)}")
         #     return ("Извините, сейчас я не могу обработать ваш запрос."
         #             " Попробуйте позже или воспользуйтесь командами из меню.")
-
 
     def get(self, request, slug, *args, **kwargs):
         """Отображает интерфейс чата с историей сообщений"""
@@ -145,6 +143,7 @@ class ChatClearView(LoginRequiredMixin, View):
 
 class AIMessageScoreView(LoginRequiredMixin, View):
     """Установка оценки ответа AI"""
+
     def post(self, request, message_pk):
         try:
             data = json.loads(request.body)

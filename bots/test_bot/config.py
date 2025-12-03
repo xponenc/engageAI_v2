@@ -14,7 +14,7 @@ bot_config = dotenv_values(BOT_ENV)
 
 BOT_NAME = bot_config.get("BOT_NAME")
 BOT_TOKEN = bot_config.get("BOT_TOKEN")
-BOT_ASSISTANT_SLUG=bot_config.get("BOT_ASSISTANT_SLUG")
+BOT_ASSISTANT_SLUG = bot_config.get("BOT_ASSISTANT_SLUG")
 
 AUTH_CACHE_TTL_SECONDS = 1 * 86400
 
@@ -51,13 +51,12 @@ UNINSTALL_EMOJI = u'\U0001F4E4'
 SCHEME_EMOJI = u'\U0001F5FA'
 TARGET_EMOJI = u'\U0001F3AF'
 
-
 # Telegram Message Effects
-MESSAGE_EFFECT_FIRE = "5104841245755180586"   # Огонь
-MESSAGE_EFFECT_LIKE = "5107584321108051014"   # лайк
-MESSAGE_EFFECT_DISLIKE = "5104858069142078462"   # дизлайк
-MESSAGE_EFFECT_CONFETTI = "5046509860389126442"      # 🎉 Конфетти
-MESSAGE_EFFECT_POOP = "5046589136895476101"      # 💩
+MESSAGE_EFFECT_FIRE = "5104841245755180586"  # Огонь
+MESSAGE_EFFECT_LIKE = "5107584321108051014"  # лайк
+MESSAGE_EFFECT_DISLIKE = "5104858069142078462"  # дизлайк
+MESSAGE_EFFECT_CONFETTI = "5046509860389126442"  # 🎉 Конфетти
+MESSAGE_EFFECT_POOP = "5046589136895476101"  # 💩
 
 MAIN_COMMANDS = {
     "start": {
@@ -96,12 +95,10 @@ CUSTOMER_COMMANDS = {
 }
 
 MAIN_MENU = [
-        BotCommand(command=f'/{key}', description=value.get("name", "")) for key, value in MAIN_COMMANDS.items()]
+    BotCommand(command=f'/{key}', description=value.get("name", "")) for key, value in MAIN_COMMANDS.items()]
 GUEST_MENU = [
     BotCommand(command=f'/{key}', description=value.get("name", "")) for key, value in GUEST_COMMANDS.items()]
 CUSTOMER_MENU = [
     BotCommand(command=f'/{key}', description=value.get("name", "")) for key, value in CUSTOMER_COMMANDS.items()]
 
 bot_logger = setup_logger(name=__file__, log_dir="logs/telegram_bot", log_file="bot.log")
-
-

@@ -2,6 +2,7 @@ import html
 import inspect
 from typing import Union
 
+import yaml
 from aiogram import Router, F
 from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery, Update
 from aiogram.fsm.context import FSMContext
@@ -523,7 +524,11 @@ async def process_text_answer(message: Message, state: FSMContext, **kwargs):
         caller_name = "unknown"
         caller_module = "unknown"
 
-    context = {
+    context = kwargs.get("context", {})
+    bot_logger.warning(f"process_text_answer context:\n"
+                     f"{yaml.dump(context, allow_unicode=True, default_flow_style=False)}")
+
+    context.update({
         "update_id": update_id,
         "user_id": tg_user_id,
         "chat_id": chat_id,
@@ -533,7 +538,10 @@ async def process_text_answer(message: Message, state: FSMContext, **kwargs):
         "command": command[:100] if command else None,
         "function": "process_start_assessment_test",
         "action": "assessment_start"
-    }
+    })
+
+    bot_logger.warning(f"process_text_answer updated context:\n"
+                     f"{yaml.dump(context, allow_unicode=True, default_flow_style=False)}")
 
     data = await state.get_data()
     session_id = data["session_id"]

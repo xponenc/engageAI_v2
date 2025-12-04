@@ -129,7 +129,6 @@ class AnswerAPI(
         bot = getattr(request, "internal_bot", None)
         bot_tag = f"[bot:{bot}]"
 
-
         telegram_id = request.data.get("telegram_id")
         answer_text = request.data.get("answer_text")
         if not answer_text:

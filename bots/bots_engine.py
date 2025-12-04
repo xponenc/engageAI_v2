@@ -41,6 +41,7 @@ REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
 REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
 BOTS_REDIS_DB_ID = int(os.getenv('BOTS_REDIS_DB_ID', '1'))
 
+
 # Глобальный Redis клиент
 # redis_client = None
 
@@ -108,6 +109,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+
 # # --- Startup / Shutdown ---
 # @app.on_event("startup")
 # async def on_startup():
@@ -144,6 +146,7 @@ async def get_redis_client(request: Request):
     """Получает Redis-клиент из состояния приложения"""
     return request.app.state.redis_client
 
+
 # --- Feed update с Retry ---
 async def feed_update_with_retry(bot: Bot, dispatcher: Dispatcher, update: types.Update, bot_name: str):
     bot_tag = f"[Bot:{bot_name}]"
@@ -175,7 +178,7 @@ async def feed_update_with_retry(bot: Bot, dispatcher: Dispatcher, update: types
 async def internal_update(
         request: Request,
         background_tasks: BackgroundTasks,
-        redis_client = Depends(get_redis_client)
+        redis_client=Depends(get_redis_client)
 ):
     """
     Принимает апдейт от Gateway и проксирует в нужного бота.
@@ -197,8 +200,6 @@ async def internal_update(
     if bot_conf is None:
         logger.warning(f"404 Bot not found: {bot_name}")
         raise HTTPException(status_code=404, detail="Bot not found")
-
-
 
     if key != bot_conf["internal_key"]:
         logger.warning(f"403 Forbidden: Invalid internal key for {bot_name}")

@@ -299,9 +299,11 @@
 .mb-1 {
     margin-bottom: 8px;
 }
+
 .mb-2 {
     margin-bottom: 16px;
 }
+
 .mb-3 {
     margin-bottom: 24px;
 }
@@ -800,7 +802,7 @@
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         gap: 14px;
     }
-    
+
     .result__study-plan {
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     }
@@ -813,39 +815,39 @@
         align-items: flex-start;
         gap: 12px;
     }
-    
+
     .result__ai-confidence {
         align-items: flex-start;
     }
-    
+
     .result__skills-grid {
         grid-template-columns: 1fr;
         gap: 12px;
     }
-    
+
     .result__ai-columns {
         grid-template-columns: 1fr;
         gap: 20px;
     }
-    
+
     .result__study-plan {
         grid-template-columns: 1fr;
     }
-    
+
     .recommendation-card {
         flex-direction: column;
         gap: 12px;
         padding: 14px;
     }
-    
+
     .recommendation-card__number {
         align-self: flex-start;
     }
-    
+
     .result__ai-content {
         gap: 24px;
     }
-    
+
     .result__ai-section {
         gap: 14px;
     }
@@ -857,44 +859,44 @@
         margin-bottom: 20px;
         padding-bottom: 14px;
     }
-    
+
     .result__section-title {
         font-size: 1.3rem;
     }
-    
+
     .result__subsection-title {
         font-size: 1rem;
     }
-    
+
     .skill-card {
         padding: 14px;
     }
-    
+
     .study-day {
         padding: 14px;
     }
-    
+
     .result__notes {
         padding: 16px;
     }
-    
+
     .result__list-item {
         padding: 10px;
         font-size: 0.9rem;
     }
-    
+
     /* Адаптивные кнопки */
     .result__actions {
         flex-direction: column;
         align-items: stretch;
         gap: 12px;
     }
-    
+
     .result__actions .btn {
         width: 100%;
         justify-content: center;
     }
-    
+
     .result__ai-actions .btn {
         width: 100%;
     }
@@ -905,45 +907,45 @@
     .result__ai {
         padding: 14px;
     }
-    
+
     .result__ai-content {
         gap: 20px;
     }
-    
+
     .result__ai-section {
         gap: 12px;
     }
-    
+
     .skill-card__header {
         flex-direction: column;
         align-items: flex-start;
         gap: 8px;
     }
-    
+
     .skill-card__score {
         align-self: flex-end;
     }
-    
+
     .study-day__header {
         flex-direction: column;
         align-items: flex-start;
         gap: 8px;
     }
-    
+
     .study-day__status {
         align-self: flex-end;
     }
-    
+
     .result__debug-summary {
         padding: 10px 12px;
         font-size: 0.85rem;
     }
-    
+
     .result__debug-content {
         padding: 12px;
         font-size: 0.75rem;
     }
-    
+
     /* Уменьшаем отступы для очень маленьких экранов */
     .container {
         padding: 8px 12px;
@@ -955,21 +957,21 @@
     .result__ai {
         padding: 12px;
     }
-    
+
     .skill-card,
     .study-day,
     .recommendation-card {
         padding: 12px;
     }
-    
+
     .result__section-title {
         font-size: 1.2rem;
     }
-    
+
     .result__subsection-title {
         font-size: 0.95rem;
     }
-    
+
     .result__ai-text,
     .study-day__task,
     .recommendation-card__text {
@@ -982,11 +984,11 @@
     .result__skills-grid {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     }
-    
+
     .result__ai-section {
         gap: 10px;
     }
-    
+
     .skill-card {
         padding: 12px;
     }
@@ -1005,18 +1007,18 @@
         transform: none;
         box-shadow: var(--shadow-sm);
     }
-    
+
     .skill-card__progress-bar {
         transition: width 1.2s ease;
     }
-    
+
     /* Увеличиваем области касания для мобильных */
     .result__debug-summary {
         min-height: 44px;
         display: flex;
         align-items: center;
     }
-    
+
     .btn {
         min-height: 44px;
     }
@@ -1079,11 +1081,11 @@
 }
 
 /* Стиль для ошибки чекбокса */
-.checkbox input.input-error + .checkbox__custom {
+.checkbox input.input-error+.checkbox__custom {
     border-color: var(--color-error);
 }
 
-.checkbox input.input-error:focus + .checkbox__custom {
+.checkbox input.input-error:focus+.checkbox__custom {
     box-shadow: 0 0 0 3px var(--color-error-bg);
 }
 
@@ -1092,11 +1094,11 @@
     .auth-form {
         padding: 30px 20px;
     }
-    
+
     .form-fields {
         gap: 16px;
     }
-    
+
     .auth-form__actions .btn {
         width: 100%;
         justify-content: center;
@@ -1107,7 +1109,7 @@
     .auth-form {
         padding: 20px 15px;
     }
-    
+
     .checkbox__label {
         font-size: 0.8rem;
         line-height: 1.4;
@@ -1125,6 +1127,7 @@
 
 /* Улучшения для доступности */
 @media (prefers-reduced-motion: reduce) {
+
     .input-wrapper input,
     .custom-field__error-message,
     .custom-field__success-message {
@@ -1202,7 +1205,7 @@ input:valid:not(:focus):not(:placeholder-shown) {
     .reading-passage {
         padding: 16px;
     }
-    
+
     .reading-passage__content {
         padding: 12px;
     }
@@ -1578,7 +1581,9 @@ input:valid:not(:focus):not(:placeholder-shown) {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* ====================
@@ -1928,23 +1933,23 @@ input:valid:not(:focus):not(:placeholder-shown) {
     .session-questions {
         padding: 16px;
     }
-    
+
     .question-card__header {
         flex-direction: column;
         gap: 8px;
         align-items: flex-start;
     }
-    
+
     .question-card__content {
         padding: 16px;
     }
-    
+
     .answer-item__header {
         flex-direction: column;
         gap: 8px;
         align-items: flex-start;
     }
-    
+
     .options-list {
         grid-template-columns: 1fr;
     }
@@ -1954,15 +1959,15 @@ input:valid:not(:focus):not(:placeholder-shown) {
     .debug-content {
         padding: 0;
     }
-    
+
     .session-questions {
         padding: 12px;
     }
-    
+
     .question-text__content {
         padding: 12px;
     }
-    
+
     .answer-item {
         padding: 12px;
     }
@@ -1978,23 +1983,55 @@ input:valid:not(:focus):not(:placeholder-shown) {
         opacity: 0;
         transform: translateY(10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
     }
 }
 
-/* Улучшения для JSON отображения */
-.debug-json,
-.question-json,
-.feedback-json {
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    tab-size: 2;
+.json__block {
+    margin: 0;
+    padding: 0 0 0 1em;
+    font-family: monospace;
+    position: relative;
 }
 
-/* Подсветка синтаксиса для JSON (базовая) */
-.debug-json .string { color: var(--color-success); }
-.debug-json .number { color: var(--color-accent); }
-.debug-json .boolean { color: var(--color-warning); }
-.debug-json .null { color: var(--color-error); }
-.debug-json .key { color: var(--color-text); }
+.json__indent {
+    margin-left: 1em;
+}
+
+.json__line {
+    white-space: nowrap;
+}
+
+.json__key {
+    color: #a71d5d;
+    font-weight: bold;
+}
+
+.json__string {
+    color: #183691;
+    white-space: pre-line;
+    word-break: break-word;
+}
+
+.json__url {
+    color: #0066cc;
+    text-decoration: underline;
+}
+
+.json__bracket {
+    font-weight: bold;
+}
+
+.json__collapsed > .json__indent {
+    display: none;
+    margin-left: 0;
+    padding-left: 0;
+}
+
+.json__collapsed:hover {
+    cursor: pointer;
+}
+

@@ -157,7 +157,6 @@ async def process_cancel_test_by_command(event: Union[Message, CallbackQuery], s
 async def start_assessment_test(message: Message, state: FSMContext):
     await process_start_assessment_test(message, state)
 
-
 @assessment_router.callback_query(F.data == CUSTOMER_COMMANDS["base_test"]["callback_data"], AuthFilter())
 async def start_assessment_test_callback(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
@@ -328,13 +327,12 @@ async def mcq_answer(callback: CallbackQuery, state: FSMContext, **kwargs):
             )
         except TelegramBadRequest:
             pass
-
+    context = kwargs.get("context", {}) # получение контекста от auto_context
     payload = {
         "session_id": session_id,
         "answer_text": answer,
         "telegram_id": callback.from_user.id,
     }
-
     ok, response = await core_post(
         url=f"/assessment/api/v1/assessment/session/{session_id}/{question.get('id', ' ')}/answer/",
         payload=payload,
@@ -549,6 +547,7 @@ async def process_text_answer(message: Message, state: FSMContext, **kwargs):
         except TelegramBadRequest:
             pass
 
+    context = kwargs.get("context", {})  # получение контекста от auto_context
     payload = {
         "session_id": session_id,
         "answer_text": message.text,
@@ -558,7 +557,7 @@ async def process_text_answer(message: Message, state: FSMContext, **kwargs):
     ok, response = await core_post(
         url=f"/assessment/api/v1/assessment/session/{session_id}/{question['id']}/answer/",
         payload=payload,
-        # context=context
+        context=context
     )
 
     if not ok:

@@ -37,6 +37,9 @@ async def core_post(url: str, payload: dict, context: dict = None, **kwargs):
     if not context:
         context = {"handler": "direct_call", "function": "core_post"}
 
+    # bot_logger.warning(f"process_update_task bots:\n"
+    #                f"{yaml.dump(context, allow_unicode=True, default_flow_style=False)}")
+
     if "telegram_message_id" not in payload and context.get("message_id"):
         payload["telegram_message_id"] = context["message_id"]
 

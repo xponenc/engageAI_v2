@@ -1,6 +1,7 @@
 import inspect
+import os
 import time
-from typing import Optional, Union
+from typing import Optional, Union, Any
 
 from aiogram.filters import BaseFilter
 from aiogram.types import Message, CallbackQuery
@@ -21,39 +22,40 @@ class AuthFilter(BaseFilter):
     async def start_test(msg: Message, state: FSMContext):
     """
 
-    async def __call__(self, event: Union[Message, CallbackQuery], state: FSMContext) -> bool:
+    async def __call__(self,
+                       event: Union[Message, CallbackQuery],
+                       state: FSMContext,
+                       handler: Any
+                       ) -> bool:
         bot_tag = f"[{BOT_NAME}]"
+
+        # Извлекаем информацию о хендлере
+        # handler_name = handler.callback.__name__ if hasattr(handler, 'callback') else "unknown"
+        # handler_module = handler.callback.__module__ if hasattr(handler, 'callback') else "unknown"
+        handler_info = self._get_handler_info(handler)
+
         # Унификация для Message / CallbackQuery
         if isinstance(event, CallbackQuery):
             telegram_id = event.from_user.id
             reply_func = event.message.answer
             callback_answer = event.answer
-
-            chat_id = event.message.chat.id
             message_id = event.message.message_id
-            command = event.data
         else:
             telegram_id = event.from_user.id
             reply_func = event.answer
             callback_answer = None
-
-            chat_id = event.chat.id
             message_id = event.message_id
-            command = event.text
 
-        # Автоопределение вызывающей функции
-        try:
-            caller_frame = inspect.currentframe().f_back
-            caller_name = caller_frame.f_code.co_name if caller_frame else "unknown"
-            caller_module = inspect.getmodule(caller_frame).__name__ if caller_frame else "unknown"
-        except Exception:
-            caller_name = "unknown"
-            caller_module = "unknown"
+        bot_logger.info(
+            f"{bot_tag} Проверка авторизации для telegram_id={telegram_id}, "
+            f"Хендлер: {handler_info['full_name']}\n"
+            f"├── Модуль: {handler_info['module']}\n"
+            f"├── Файл: {handler_info['file_path']}\n"
+            f"├── Строка: {handler_info['line_number']}\n"
+            f"└── Сигнатура: {handler_info['signature']}"
+        )
 
-        bot_logger.debug(f"{bot_tag} Проверка авторизации для telegram_id={telegram_id},"
-                         f" Вызывающая функция: {caller_name} ({caller_module})")
-
-        # ----- Кэш -----
+        # Кэш авторизации
         state_data = await state.get_data()
         cache = state_data.get("telegram_auth_cache", {})
 
@@ -68,22 +70,24 @@ class AuthFilter(BaseFilter):
         if is_cached:
             user_id = cache.get("user_id")
             if user_id:
-                bot_logger.debug(f"{bot_tag} Авторизация найдена в кэше: user_id={user_id},"
-                                 f" Вызывающая функция: {caller_name} ({caller_module})")
+                bot_logger.debug(
+                    f"{bot_tag} Авторизация найдена в кэше: user_id={user_id}, "
+                    f"Хендлер: {handler_info['full_name']}"
+                )
 
         # Вызов API
         if not user_id:
-            bot_logger.debug(f"{bot_tag} Запрос к API /check_telegram/ для telegram_id={telegram_id}, "
-                             f"Вызывающая функция: {caller_name} ({caller_module}")
+            bot_logger.debug(
+                f"{bot_tag} Запрос к API /check_telegram/ для telegram_id={telegram_id}, "
+                f"Хендлер: {handler_info['full_name']}"
+            )
             context = {
+                # "handler": f"{handler_name} ({handler_module})",
+                "function": handler_info['name'],
+                "caller_module": handler_info['file_path'],
                 "update_id": getattr(event, "update_id", None),
                 "user_id": telegram_id,
-                "chat_id": chat_id,
                 "message_id": message_id,
-                "event_type": "callback" if isinstance(event, CallbackQuery) else "message",
-                "filter_name": "AuthFilter",
-                "handler": f"{caller_name} ({caller_module})",
-                "command": command[:100] if command else None,
             }
 
             ok, resp = await core_post(
@@ -102,11 +106,13 @@ class AuthFilter(BaseFilter):
                 })
                 bot_logger.info(
                     f"{bot_tag} Авторизация подтверждена (API): telegram_id={telegram_id} → user_id={user_id},"
-                    f" Вызывающая функция: {caller_name} ({caller_module}"
+                    f" Хендлер: {handler_info['full_name']}"
                 )
             else:
-                bot_logger.info(f"{bot_tag} Авторизация не найдена для telegram_id={telegram_id}, "
-                                f"Вызывающая функция: {caller_name} ({caller_module})")
+                bot_logger.info(
+                    f"{bot_tag} Авторизация не найдена для telegram_id={telegram_id}, "
+                    f"Хендлер: {handler_info['full_name']}"
+                )
 
         # NOT AUTHORIZED
         if not user_id:
@@ -117,7 +123,65 @@ class AuthFilter(BaseFilter):
                 "Используйте /registration, чтобы ввести код из личного кабинета."
             )
             bot_logger.info(f"{bot_tag} Пользователь {telegram_id} перенаправлен на регистрацию, "
-                            f"Вызывающая функция: {caller_name} ({caller_module})")
+                             f"Хендлер: {handler_info['full_name']}")
             return False
         # AUTHORIZED
         return True
+
+
+    def _get_handler_info(self, handler: Any) -> dict:
+        """Получает подробную информацию о хендлере через интроспекцию"""
+        result = {
+            "name": "unknown",
+            "module": "unknown",
+            "file_path": "unknown",
+            "line_number": "unknown",
+            "signature": "unknown",
+            "full_name": "unknown",
+            "docstring": "unknown"
+        }
+
+        try:
+            if hasattr(handler, 'callback'):
+                callback = handler.callback
+
+                # Имя функции
+                result["name"] = callback.__name__
+
+                # Модуль
+                if hasattr(callback, '__module__'):
+                    result["module"] = callback.__module__
+
+                # Путь к файлу и номер строки
+                try:
+                    file_path = inspect.getfile(callback)
+                    # Обрезаем путь до проекта для читаемости
+                    project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+                    relative_path = os.path.relpath(file_path, project_root)
+                    result["file_path"] = relative_path
+
+                    # Номер строки
+                    _, line_number = inspect.getsourcelines(callback)
+                    result["line_number"] = line_number
+                except (TypeError, OSError, IOError):
+                    pass
+
+                # Сигнатура функции
+                try:
+                    signature = inspect.signature(callback)
+                    result["signature"] = str(signature)
+                except ValueError:
+                    pass
+
+                # Docstring
+                if callback.__doc__:
+                    # Берем только первую строку docstring
+                    result["docstring"] = callback.__doc__.strip().split('\n')[0]
+
+                # Формируем полное имя
+                result["full_name"] = f"{result['name']} ({result['module']})"
+
+        except Exception as e:
+            bot_logger.warning(f"Ошибка при получении информации о хендлере: {e}")
+
+        return result

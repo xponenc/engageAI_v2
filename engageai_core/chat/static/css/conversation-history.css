@@ -155,6 +155,18 @@
 }
 
 
+.json-key { color: #c466ff; }
+.json-string { color: #7bd88f; }
+.json-number { color: #f6c177; }
+.json-boolean { color: #eb6f92; }
+.json-null { color: #9ccfd8; }
+
+.json-viewer pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+}
+
 @media (max-width: 768px) {
     .report-stats { grid-template-columns: repeat(2, 1fr); }
 }

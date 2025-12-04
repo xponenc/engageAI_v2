@@ -1,0 +1,58 @@
+{% load json_tags %}
+
+{% if data|is_dict %}
+<div class="json__block">
+    <span class="json__bracket">{</span>
+    <div class="json__indent">
+        {% for key, value in data.items %}
+        <div class="json__line">
+            <span class="json__key">"{{ key }}"</span>: 
+            {% if value|is_dict or value|is_list %}
+                <div class="json__block json__collapsed">
+                    {% include "widgets/_json_recursive.html" with data=value %}
+                </div>
+            {% else %}
+                {% if value|is_url %}
+                    <a class="json__string json__url" href="{{ value }}">"{{ value }}"</a>
+                {% else %}
+                    <span class="json__string">"{{ value }}"</span>
+                {% endif %}
+            {% endif %}
+            {% if not forloop.last %},{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    <span class="json__bracket">}</span>
+</div>
+
+{% elif data|is_list %}
+<div class="json__block">
+    <span class="json__bracket">[</span>
+    <div class="json__indent">
+        {% for item in data %}
+        <div class="json__line">
+            {% if item|is_dict or item|is_list %}
+                <div class="json__block json__collapsed">
+                    {% include "widgets/_json_recursive.html" with data=item %}
+                </div>
+            {% else %}
+                {% if item|is_url %}
+                    <a class="json__string json__url" href="{{ item }}">"{{ item }}"</a>
+                {% else %}
+                    <span class="json__string">"{{ item }}"</span>
+                {% endif %}
+            {% endif %}
+            {% if not forloop.last %},{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    <span class="json__bracket">]</span>
+</div>
+
+{% else %}
+    {% if data|is_url %}
+        <a class="json__string json__url" href="{{ data }}">"{{ data }}"</a>
+    {% else %}
+        <span class="json__string">"{{ data }}"</span>
+    {% endif %}
+{% endif %}

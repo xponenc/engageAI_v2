@@ -195,9 +195,9 @@ class AIConversationHistoryView(LoginRequiredMixin, ListView):
             )
 
         qs = (
-            Message.objects.filter(chat_id__in=self._chat_ids, is_ai=False)
+            Message.objects.filter(chat_id__in=self._chat_ids)
             .select_related("sender", "chat", "reply_to")
-            .order_by("-timestamp")
+            .order_by("timestamp")
         )
         return qs
 
@@ -210,9 +210,15 @@ class AIConversationHistoryView(LoginRequiredMixin, ListView):
         ai_messages = qs.filter(is_ai=True).count()
         user_messages = total_messages - ai_messages
 
-        # first/last message
-        first_msg = qs.earliest("timestamp")  # SELECT ... ORDER BY timestamp ASC LIMIT 1
-        last_msg = qs.latest("timestamp")  # SELECT ... ORDER BY timestamp DESC LIMIT 1
+        try:
+            first_msg = qs.earliest("timestamp")
+        except qs.model.DoesNotExist:
+            first_msg = None
+
+        try:
+            last_msg = qs.latest("timestamp")
+        except qs.model.DoesNotExist:
+            last_msg = None
 
         context.update({
             "ai_assistant": self.get_ai_assistant(),

@@ -1,3 +1,5 @@
+from pprint import pprint
+
 from django.contrib.auth import get_user_model
 from django.db import transaction, IntegrityError
 from django.db.models import F
@@ -390,6 +392,7 @@ class TelegramUpdateSaveView(APIView):
 
     def _process_message(self, message_data, update_id, bot_tag, assistant_slug):
         """Обычное сообщение"""
+        pprint(message_data)
         chat_data = message_data["chat"]
         from_user = message_data["from"]
         message_id = str(message_data["message_id"])
@@ -485,7 +488,7 @@ class TelegramUpdateSaveView(APIView):
                     "update_id": update_id,
                     "callback_query_id": callback_id,
                     "callback_data": data,
-                    "original_message_id": original_message_id if original_message else None,
+                    # "original_message_id": original_message_id if original_message else None,
                     "user": from_user,
                     "raw": callback_data
                 }

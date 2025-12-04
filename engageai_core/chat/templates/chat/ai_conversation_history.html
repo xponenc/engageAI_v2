@@ -79,6 +79,7 @@
                                 <span class="message-type message-type--{% if message.is_ai %}ai{% else %}user{% endif %}">
                                     {% if message.is_ai %}AI{% else %}User{% endif %}
                                 </span>
+                                {{ message.answer }}
                             </td>
                             <td>
                                 <div class="message-preview">
@@ -123,7 +124,11 @@
                                     <div class="message-details__section">
                                         <div class="message-details__title">Метаданные</div>
                                         <div class="message-metadata">
-                                            <pre>{{ message.metadata|json_prettify }}</pre>
+                                            <div class="json-container">
+                                                {% spaceless %}
+                                                {% include 'widgets/_json_recursive.html' with data=message.metadata level=0 %}
+                                                {% endspaceless %}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -180,7 +185,11 @@
                                         <div class="message-details__section">
                                             <div class="message-details__title">Метаданные</div>
                                             <div class="message-metadata">
-                                                <pre>{{ message.metadata|json_prettify }}</pre>
+                                                <div class="json-container">
+                                                    {% spaceless %}
+                                                    {% include 'widgets/_json_recursive.html' with data=message.metadata level=0 %}
+                                                    {% endspaceless %}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -230,5 +239,6 @@ function toggleDetails(messageId) {
     document.querySelectorAll('.message-details-row').forEach(r => r.style.display = 'none');
     row.style.display = visible ? 'none' : 'table-row';
 }
+
 </script>
 {% endblock script %}

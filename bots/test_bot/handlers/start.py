@@ -10,6 +10,7 @@ from aiogram.filters import Command, CommandStart, StateFilter
 
 from dotenv import load_dotenv
 
+from bots.services.utils import get_assistant_slug
 from bots.test_bot.config import MAIN_COMMANDS, bot_logger, BOT_NAME, \
     START_EMOJI, GUEST_COMMANDS, CUSTOMER_COMMANDS, MAIN_MENU, GUEST_MENU, CUSTOMER_MENU
 from bots.test_bot.services.api_process import auto_context
@@ -118,16 +119,13 @@ async def set_menu_button(bot: Bot):
 @auto_context()
 async def start(message: Message, state: FSMContext):
     """start"""
-    await state.clear()
+    await state.clear() # TODO временная заглушка сносящая все состояния при старте
     await state.set_state(None)
 
     data = await state.get_data()
     telegram_auth_cache = data.get("telegram_auth_cache", {})
     user_id = telegram_auth_cache.get("user_id")
 
-    # =========================
-    # 1. Формирование текста и клавиатуры
-    # =========================
     if user_id:
         # Авторизованный пользователь
         profile = data.get("profile")
@@ -182,15 +180,14 @@ async def start(message: Message, state: FSMContext):
             items=[v for v in GUEST_COMMANDS.values()]
         )
 
-    # =========================
-    # 2. Универсальная отправка через reply_and_update_last_message
-    # =========================
+    assistant_slug = get_assistant_slug(message.bot)
     last_message_update_text = f"\n\n{START_EMOJI}\tСтартовое меню"
-
     await reply_and_update_last_message(
         message=message,
         state=state,
         last_message_update_text=last_message_update_text,
         answer_text=answer_text,
         answer_keyboard=answer_keyboard,
+        assistant_slug=assistant_slug,
     )
+

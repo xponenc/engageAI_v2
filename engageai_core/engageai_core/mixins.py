@@ -1,4 +1,4 @@
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.response import Response
 from django.conf import settings
@@ -8,69 +8,105 @@ from utils.setup_logger import setup_logger
 core_api_logger = setup_logger(name=__file__, log_dir="logs/core_api", log_file="core_api.log")
 
 
-class InternalBotAuthMixin:
-    """Mixin для проверки доступа внутренних ботов через X-Internal-Key."""
+class BotAuthenticationMixin:
+    """
+    Миксин для аутентификации внутренних ботов через X-Internal-Key.
+
+    Добавляет в request:
+    - internal_bot: имя бота (строка)
+    - bot_config: конфигурация бота из settings.INTERNAL_BOTS
+
+    Возвращает 401/403 при неудачной аутентификации.
+    """
 
     def dispatch(self, request, *args, **kwargs):
         key = request.headers.get("X-Internal-Key")
         ip = request.META.get("REMOTE_ADDR")
+        path = request.path
 
+        # Проверка наличия ключа
         if not key:
             core_api_logger.warning(
-                f"[BOT AUTH] Missing X-Internal-Key | IP={ip} | PATH={request.path}"
+                f"[AUTH FAIL] Missing X-Internal-Key | IP={ip} | PATH={path}"
             )
-            return Response({"detail": "Missing bot key"}, status=401)
+            return Response({"detail": "Missing bot authentication key"}, status=401)
 
+        # Поиск бота по ключу
         bot_id = None
+        bot_config = None
 
-        if key not in set(settings.INTERNAL_BOTS.values()):
-            core_api_logger.error(
-                f"[BOT AUTH] Invalid X-Internal-Key attempt | KEY={key} | IP={ip} | PATH={request.path}"
-            )
-            return Response({"detail": "Invalid bot key"}, status=403)
+        for name, config in settings.INTERNAL_BOTS.items():
+            config_key = config.get("key") if isinstance(config, dict) else config
+            if config_key == key:
+                bot_id = name
+                bot_config = config if isinstance(config, dict) else {"key": config}
+                break
 
-        for name, data in settings.INTERNAL_BOTS.items():
-            if isinstance(data, dict) and data.get("key") == key:
-                bot_id = name
-                break
-            elif data == key:
-                bot_id = name
-                break
+        # Обработка ошибок аутентификации
         if not bot_id:
             core_api_logger.error(
-                f"[BOT AUTH] Key exists in config but bot_id unresolved | KEY={key} | IP={ip}"
+                f"[AUTH FAIL] Invalid key | KEY={key[:4]}... | IP={ip} | PATH={path}"
             )
-            return Response({"detail": "Invalid bot configuration"}, status=403)
+            return Response({"detail": "Invalid bot authentication key"}, status=403)
 
+        # Успешная аутентификация
         request.internal_bot = bot_id
+        request.bot_config = bot_config
+
+        core_api_logger.info(
+            f"[AUTH SUCCESS] Bot {bot_id} authenticated | IP={ip} | PATH={path}"
+        )
 
         return super().dispatch(request, *args, **kwargs)
 
 
-class TelegramUserMixin:
+class TelegramUserResolverMixin:
     """
-    Mixin для извлечения пользователя по telegram_id.
-    Требует, чтобы InternalBotAuthMixin уже выполнился и добавил request.internal_bot.
+    Миксин для разрешения пользователя по telegram_id.
+
+    Предварительное условие: BotAuthenticationMixin должен быть применен ранее.
+
+    Добавляет в request:
+    - tg_user: объект пользователя, привязанного к telegram_id
+
+    Возвращает 400/404 при отсутствии telegram_id или пользователя соответственно.
     """
 
-    def get_telegram_user(self, request):
-        telegram_id = request.data.get("telegram_id") or request.query_params.get("telegram_id")
-        bot = getattr(request, "internal_bot", None)
+    def resolve_telegram_user(self, request):
+        """
+        Разрешает пользователя по telegram_id из запроса.
+
+        Args:
+            request: HTTP-запрос с telegram_id в data или query_params
+
+        Returns:
+            User: объект пользователя или Response при ошибке
+        """
+        bot = getattr(request, "internal_bot", "unknown")
         bot_tag = f"[bot:{bot}]"
 
+        # Извлечение telegram_id из разных частей запроса
+        telegram_id = (
+                request.data.get("telegram_id") or
+                request.query_params.get("telegram_id") or
+                request.data.get("user_telegram_id")
+        )
+
         if not telegram_id:
-            core_api_logger.warning(f"{bot_tag} Missing telegram_id в запросе {request.path}")
+            core_api_logger.warning(f"{bot_tag} Missing telegram_id in request | PATH={request.path}")
             return Response({"detail": "telegram_id is required"}, status=400)
 
         try:
-            user = (
-                User.objects.select_related("profile")
-                .get(telegram_profile__telegram_id=telegram_id, is_active=True)
+            # Поиск активного пользователя по telegram_id
+            User = get_user_model()
+            user = User.objects.select_related("profile", "telegram_profile").get(
+                telegram_profile__telegram_id=str(telegram_id),
+                is_active=True
             )
 
             core_api_logger.info(
-                f"{bot_tag} Профиль найден: user_id={user.id}, "
-                f"name={user.first_name} {user.last_name} | telegram_id={telegram_id}"
+                f"{bot_tag} User resolved: ID={user.id}, "
+                f"name={user.get_full_name()}, telegram_id={telegram_id}"
             )
 
             request.tg_user = user
@@ -78,9 +114,9 @@ class TelegramUserMixin:
 
         except ObjectDoesNotExist:
             core_api_logger.warning(
-                f"{bot_tag} Профиль НЕ найден для telegram_id={telegram_id}"
+                f"{bot_tag} User NOT found for telegram_id={telegram_id} | PATH={request.path}"
             )
             return Response(
-                {"detail": "User with given telegram_id not found"},
+                {"detail": f"No active user found for telegram_id={telegram_id}"},
                 status=404
             )

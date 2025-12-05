@@ -6,10 +6,11 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 
-from engageai_core.mixins import InternalBotAuthMixin, core_api_logger, TelegramUserMixin
-
 from ai_assistant.models import AIAssistant
 from chat.models import Chat, ChatPlatform, Message, MessageSource
+from engageai_core.mixins import BotAuthenticationMixin, TelegramUserResolverMixin
+
+from utils.setup_logger import setup_logger
 from ..mixins import AssessmentTestSessionMixin, QuestionInstanceMixin
 from ..models import TestSession, QuestionInstance, SessionSourceType
 from ..services.assessment_service import start_assessment_for_user, \
@@ -17,11 +18,10 @@ from ..services.assessment_service import start_assessment_for_user, \
 from ..services.test_flow import MAIN_QUESTIONS_LIMIT
 
 
-class StartAssessmentAPI(
-    InternalBotAuthMixin,
-    TelegramUserMixin,
-    APIView
-):
+core_api_logger = setup_logger(name=__file__, log_dir="logs/core_api", log_file="core_api.log")
+
+
+class StartAssessmentAPI(BotAuthenticationMixin, TelegramUserResolverMixin, APIView):
     """Запуск теста через API с проверкой ключа"""
 
     def post(self, request):
@@ -31,8 +31,6 @@ class StartAssessmentAPI(
         user = self.get_telegram_user(request)
         if isinstance(user, Response):
             return user  # ошибка уже возвращена
-        print("StartAssessmentAPI")
-        print(request.data)
         incoming_message_id = str(request.data.get("telegram_message_id")) if request.data.get(
             "telegram_message_id") else None
 
@@ -48,7 +46,7 @@ class StartAssessmentAPI(
                 f"{bot_tag} Previous session expired → new created | user={user.id}"
             )
 
-        # --- Получаем первый вопрос ---
+        # Получаем первый вопрос
         question, status_ = get_next_question_for_session(
             session=session,
             source_question_request=SessionSourceType.TELEGRAM

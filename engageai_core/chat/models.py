@@ -1,3 +1,5 @@
+from typing import Optional
+
 from django.contrib.postgres.indexes import GinIndex
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
@@ -126,10 +128,18 @@ class Chat(models.Model):
             self.participants.add(self.owner)
 
     @classmethod
-    def get_or_create_ai_chat(cls, user, ai_assistant, platform=ChatPlatform.WEB):
+    def get_or_create_ai_chat(
+        cls,
+        user:User,
+        ai_assistant:AIAssistant,
+        platform=ChatPlatform.WEB,
+        title: Optional[str] = None
+    ):
         """
         Получает или создаёт чат с конкретным AI-ассистентом
         """
+        default_title = title or f"Чат с {ai_assistant.name}"
+
         chat, created = cls.objects.get_or_create(
             owner=user,
             ai_assistant=ai_assistant,
@@ -137,7 +147,7 @@ class Chat(models.Model):
             defaults={
                 'scope': ChatScope.PRIVATE,
                 'is_ai_enabled': True,
-                'title': f"Чат с {ai_assistant.name}"
+                'title': default_title
             }
         )
         return chat

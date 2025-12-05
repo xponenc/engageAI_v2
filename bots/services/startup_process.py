@@ -123,6 +123,7 @@ def load_bots(bots_dict: dict, bots_root: Path):
         dp = Dispatcher(storage=storage)
         # dp = Dispatcher()
         bot.dispatcher = dp
+        bot.assistant_slug = bot_assistant_slug
 
         # --- Подключение хендлеров ---
         normal_handlers = []

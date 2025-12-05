@@ -11,7 +11,7 @@ async def reply_and_update_last_message(
         state,
         last_message_update_text: str,
         answer_text: str,
-        core_message_id: int,
+        core_message_id: Optional[int] = None,
         answer_keyboard: Optional[InlineKeyboardMarkup] = None,
         message_effect_id: Optional[str] = None,
         assistant_slug: Optional[str] = None

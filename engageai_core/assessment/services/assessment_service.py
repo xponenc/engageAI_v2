@@ -95,9 +95,7 @@ def submit_answer(session, qinst, answer_text):
             user_index = options.index(answer_text)
         except ValueError:
             user_index = None
-        print(f"{user_index=} {answer_text=}")
         correct = qj.get("correct_answer", {}).get("index")
-        print(f"{correct=}")
         if user_index is not None and correct is not None:
             ans.score = 1.0 if user_index == correct else 0.0
     else:

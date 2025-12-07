@@ -1,9 +1,6 @@
-from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework import status
-from django.shortcuts import get_object_or_404
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from django.conf import settings
 
 from ai_assistant.models import AIAssistant
@@ -12,9 +9,11 @@ from engageai_core.mixins import BotAuthenticationMixin, TelegramUserResolverMix
 
 from utils.setup_logger import setup_logger
 from ..mixins import AssessmentTestSessionMixin, QuestionInstanceMixin
-from ..models import TestSession, QuestionInstance, SessionSourceType
+from ..models import QuestionInstance, SessionSourceType
 from ..services.assessment_service import start_assessment_for_user, \
     get_next_question_for_session, submit_answer, finish_assessment
+from ..services.presentation_service import AssessmentProgressService
+from ..services.telegram_service import TelegramAssessmentService
 from ..services.test_flow import MAIN_QUESTIONS_LIMIT
 
 
@@ -28,9 +27,12 @@ class StartAssessmentAPI(BotAuthenticationMixin, TelegramUserResolverMixin, APIV
         bot = getattr(request, "internal_bot", None)
         bot_tag = f"[bot:{bot}]"
 
-        user = self.get_telegram_user(request)
-        if isinstance(user, Response):
-            return user  # ошибка уже возвращена
+        user_resolve_result = self.resolve_telegram_user(request)
+        if isinstance(user_resolve_result, dict):
+            result = user_resolve_result
+            return Response(result["payload"], status=result["response_status"])
+        user = user_resolve_result
+
         incoming_message_id = str(request.data.get("telegram_message_id")) if request.data.get(
             "telegram_message_id") else None
 
@@ -56,7 +58,7 @@ class StartAssessmentAPI(BotAuthenticationMixin, TelegramUserResolverMixin, APIV
             core_api_logger.error(f"{bot_tag} Failed to generate first question | session={session.id}")
             return Response(
                 {"success": False, "detail": "Failed to generate question"},
-                status=500
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         # TODO нужно получать от бота assistant_slug
         assistant_slug = "main_orchestrator"
@@ -68,7 +70,7 @@ class StartAssessmentAPI(BotAuthenticationMixin, TelegramUserResolverMixin, APIV
                 status=500
             )
 
-        chat = Chat.get_or_create_ai_chat(
+        chat, created = Chat.get_or_create_ai_chat(
             user=user,
             ai_assistant=assistant,
             platform=ChatPlatform.TELEGRAM,
@@ -90,18 +92,16 @@ class StartAssessmentAPI(BotAuthenticationMixin, TelegramUserResolverMixin, APIV
             is_ai=True,
             source_type=MessageSource.TELEGRAM,
             sender=None,
-            reply_to=reply_to_msg,  # ← ВОТ ТУТ ПРОИСХОДИТ ПРИВЯЗКА
-            external_id=None,  # боту вернём позже real Telegram msg_id
+            reply_to=reply_to_msg,
+            external_id=None,
         )
 
         question_number = QuestionInstance.objects.filter(session=session).exclude(answer__isnull=True).count() + 1
 
         return Response(
             {
-                "success": True,
                 "expired_previous": expired_flag,
                 "session_id": session.id,
-
                 "question": {
                     "id": question.id,
                     "text": question.question_json["question_text"],
@@ -110,18 +110,93 @@ class StartAssessmentAPI(BotAuthenticationMixin, TelegramUserResolverMixin, APIV
                     "number": question_number,
                     "total_questions": MAIN_QUESTIONS_LIMIT,
                 },
-                "ai_message_id": ai_message.id
+                "core_message_id": ai_message.id
             },
             status=201
         )
 
 
+class StartAssessmentTestAPIView(BotAuthenticationMixin, TelegramUserResolverMixin, APIView):
+    """Запуск TestSession"""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.telegram_service = TelegramAssessmentService()
+        self.progress_service = AssessmentProgressService()
+
+    def post(self, request):
+        bot = getattr(request, "internal_bot", None)
+        bot_tag = f"[bot:{bot}]"
+
+        # Разрешение пользователя
+        user_resolve_result = self.resolve_telegram_user(request)
+        if isinstance(user_resolve_result, Response):
+            response = user_resolve_result
+            return response
+
+        user = user_resolve_result
+
+        incoming_message_id = str(request.data.get("telegram_message_id")) if request.data.get(
+            "telegram_message_id") else None
+        core_api_logger.info(f"{bot_tag} Start TestSession for user={user.id}")
+
+        session, expired_flag = start_assessment_for_user(
+            user,
+            source=SessionSourceType.TELEGRAM
+        )
+
+        if expired_flag:
+            core_api_logger.info(f"{bot_tag} Previous session expired → new created | user={user.id}")
+
+        # Получаем первый вопрос
+        question, status_ = get_next_question_for_session(
+            session=session,
+            source_question_request=SessionSourceType.TELEGRAM
+        )
+        if not question:
+            core_api_logger.error(f"{bot_tag} Failed to generate first question | session={session.id}")
+            return Response(
+                {"success": False, "detail": "Failed to generate question"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        # Создаем сообщение в чате
+        ai_message = self.telegram_service.create_question_message(
+            user=user,
+            session=session,
+            question=question,
+            incoming_message_id=incoming_message_id,
+            bot=bot
+        )
+
+        if isinstance(ai_message, Response):
+            return ai_message
+
+        question_number = self.progress_service.get_question_number(session)
+
+        return Response(
+            {
+                "expired_previous": expired_flag,
+                "session_id": session.id,
+                "question": {
+                    "id": question.id,
+                    "text": question.question_json["question_text"],
+                    "type": question.question_json["type"],
+                    "options": question.question_json.get("options"),
+                    "number": question_number,
+                    "total_questions": MAIN_QUESTIONS_LIMIT,
+                },
+                "core_answer": {
+                    "core_message_id": ai_message.id,
+                    "reply_to_message_id": incoming_message_id,
+                },
+            },
+            status=201
+        )
+
 class AnswerAPI(
-    InternalBotAuthMixin,
-    TelegramUserMixin,
-    AssessmentTestSessionMixin,
-    QuestionInstanceMixin,
-    APIView
+    BotAuthenticationMixin, TelegramUserResolverMixin, AssessmentTestSessionMixin,
+    QuestionInstanceMixin, APIView
 ):
     def post(self, request, session_id, question_id):
         bot = getattr(request, "internal_bot", None)
@@ -133,15 +208,15 @@ class AnswerAPI(
             return Response({"detail": "answer_text missing"}, status=400)
 
         user = self.get_telegram_user(request)
-        if isinstance(user, Response):
+        if isinstance(user, dict):
             return user
 
         session = self.get_user_session(session_id, user, bot_tag)
-        if isinstance(session, Response):
+        if isinstance(session, dict):
             return session
 
         qinst = self.get_question_instance(question_id, session, bot_tag)
-        if isinstance(qinst, Response):
+        if isinstance(qinst, dict):
             return qinst
 
         if not hasattr(qinst, "answer"):  # вопрос уже имеет ответ - из другого источника тестирования web/tg
@@ -166,7 +241,7 @@ class AnswerAPI(
                 status=500
             )
         print(assistant)
-        chat = Chat.get_or_create_ai_chat(
+        chat, created = Chat.get_or_create_ai_chat(
             user=user,
             ai_assistant=assistant,
             platform=ChatPlatform.TELEGRAM,
@@ -244,7 +319,7 @@ class AnswerAPI(
                 status=500
             )
 
-        chat = Chat.get_or_create_ai_chat(
+        chat, created = Chat.get_or_create_ai_chat(
             user=user,
             ai_assistant=assistant,
             platform=ChatPlatform.TELEGRAM,
@@ -277,34 +352,126 @@ class AnswerAPI(
             }
         )
 
-#
-# class FinishAssessmentAPI(
-#     InternalBotAuthMixin,
-#     TelegramUserMixin,
-#     AssessmentTestSessionMixin,
-#     APIView
-# ):
-#
-#     def post(self, request, session_id):
-#         bot = getattr(request, "internal_bot", None)
-#         bot_tag = f"[bot:{bot}]"
-#
-#         user = self.get_telegram_user(request)
-#         if isinstance(user, Response):
-#             return user
-#
-#         session = self.get_user_session(session_id, user, bot_tag)
-#         if isinstance(session, Response):
-#             return session
-#
-#         protocol = finish_assessment(session)
-#
-#         core_api_logger.info(f"{bot_tag} Manual finish | session={session_id}")
-#
-#         return Response(
-#             {
-#                 "success": True,
-#                 "finished": True,
-#                 "protocol": protocol
-#             }
-#         )
+
+class AnswerAPIView(
+    BotAuthenticationMixin, TelegramUserResolverMixin, AssessmentTestSessionMixin,
+    QuestionInstanceMixin, APIView
+):
+    """Обработка ответа на вопрос и выдача следующего вопроса"""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.telegram_service = TelegramAssessmentService()
+        self.progress_service = AssessmentProgressService()
+
+    def post(self, request, session_id, question_id):
+        bot = getattr(request, "internal_bot", None)
+        bot_tag = f"[bot:{bot}]"
+        answer_text = request.data.get("answer_text")
+
+        if not answer_text:
+            return Response({"detail": "answer_text missing"}, status=400)
+
+        # Разрешение пользователя
+        user_resolve_result = self.resolve_telegram_user(request)
+        if isinstance(user_resolve_result, Response):
+            response = user_resolve_result
+            return response
+
+        user = user_resolve_result
+
+        session = self.get_user_session(session_id, user, bot_tag)
+        if isinstance(session, Response):
+            return session
+
+        qinst = self.get_question_instance(question_id, session, bot_tag)
+        if isinstance(qinst, Response):
+            return qinst
+
+        incoming_message_id = str(request.data.get("telegram_message_id")) if request.data.get(
+            "telegram_message_id") else None
+
+        # Сохраняем ответ, если он еще не был дан
+        if not self.progress_service.has_existing_answer(qinst):
+            submit_answer(session, qinst, answer_text)
+            core_api_logger.info(
+                f"{bot_tag} Answer received | {session} qinst={qinst} text='{answer_text}'"
+            )
+
+        # Получаем следующий вопрос
+        question, expired_flag = get_next_question_for_session(
+            session=session,
+            source_question_request=SessionSourceType.TELEGRAM
+        )
+
+        if expired_flag == "expired":  # TODO тут не совсем правильный ответ
+            return Response(
+                data={"success": False, "detail": "Session expired"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Если следующего вопроса нет, завершаем тест
+        if not question:
+            protocol = finish_assessment(session)
+            level = protocol.get("estimated_level")
+            view_url = f"{settings.SITE_URL}/assessment/result/{session.id}/"
+
+            core_api_logger.info(f"{bot_tag} Test finished | session={session_id} user={user.id}")
+
+            ai_message = self.telegram_service.create_finish_message(
+                user=user,
+                session=session,
+                level=level,
+                view_url=view_url,
+                incoming_message_id=incoming_message_id,
+                bot=bot
+            )
+
+            if isinstance(ai_message, Response):
+                return ai_message
+
+            return Response(
+                {
+                    "finished": True,
+                    "session_id": str(session.id),
+                    "level": level,
+                    "view_url": view_url,
+                    "core_answer": {
+                        "core_message_id": ai_message.id,
+                        "reply_to_message_id": incoming_message_id,
+                    }
+                }
+            )
+
+        # Создаем сообщение для следующего вопроса
+        ai_message = self.telegram_service.create_question_message(
+            user=user,
+            session=session,
+            question=question,
+            incoming_message_id=incoming_message_id,
+            bot=bot
+        )
+
+        if isinstance(ai_message, Response):
+            return ai_message
+
+        question_number = self.progress_service.get_question_number(session)
+
+        return Response(
+            {
+                "expired_previous": expired_flag,
+                "session_id": session.id,
+                "question": {
+                    "id": question.id,
+                    "text": question.question_json["question_text"],
+                    "type": question.question_json["type"],
+                    "options": question.question_json.get("options"),
+                    "number": question_number,
+                    "total_questions": MAIN_QUESTIONS_LIMIT,
+                },
+                "core_answer": {
+                    "core_message_id": ai_message.id,
+                    "reply_to_message_id": incoming_message_id,
+                }
+            }
+        )

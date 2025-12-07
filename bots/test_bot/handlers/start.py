@@ -39,6 +39,7 @@ async def set_menu_button(bot: Bot):
     # await bot.set_my_commands([])
     await bot.set_my_commands(MAIN_MENU + GUEST_MENU)
 
+
 #
 # @start_router.message(CommandStart())
 # @start_router.message(StateFilter(None))
@@ -117,9 +118,9 @@ async def set_menu_button(bot: Bot):
 @start_router.message(StateFilter(None))
 @start_router.message(Command('start'))
 @auto_context()
-async def start(message: Message, state: FSMContext):
+async def start(message: Message, state: FSMContext, **kwargs):
     """start"""
-    await state.clear() # TODO временная заглушка сносящая все состояния при старте
+    await state.clear()  # TODO временная заглушка сносящая все состояния при старте
     await state.set_state(None)
 
     data = await state.get_data()
@@ -143,11 +144,9 @@ async def start(message: Message, state: FSMContext):
         )
 
         answer_text = (
-            f"Привет, {profile['user_first_name']}!\n\nСтартовое меню\n\n"
-            + "\n\n".join(
-                f"{command['name']} - {command['help_text']}"
-                for command in list(CUSTOMER_COMMANDS.values()) + list(MAIN_COMMANDS.values())
-            )
+                f"Привет, {profile['user_first_name']}!\n\nСтартовое меню\n\n"
+                + "\n\n".join(f"{command['name']} - {command['help_text']}" for command in
+                              list(CUSTOMER_COMMANDS.values()) + list(MAIN_COMMANDS.values()))
         )
 
         answer_keyboard = await reply_start_keyboard(
@@ -168,12 +167,10 @@ async def start(message: Message, state: FSMContext):
         )
 
         answer_text = (
-            f"Привет, {message.chat.first_name or message.chat.username or message.chat.id or 'Anonymous'}\n\n"
-            f"Стартовое меню\n\n"
-            + "\n\n".join(
-                f"{command['name']} - {command['help_text']}"
-                for command in list(GUEST_COMMANDS.values()) + list(MAIN_COMMANDS.values())
-            )
+                f"Привет, {message.chat.first_name or message.chat.username or message.chat.id or 'Anonymous'}\n\n"
+                f"Стартовое меню\n\n"
+                + "\n\n".join(f"{command['name']} - {command['help_text']}" for command in
+                              list(GUEST_COMMANDS.values()) + list(MAIN_COMMANDS.values()))
         )
 
         answer_keyboard = await reply_start_keyboard(
@@ -183,11 +180,10 @@ async def start(message: Message, state: FSMContext):
     assistant_slug = get_assistant_slug(message.bot)
     last_message_update_text = f"\n\n{START_EMOJI}\tСтартовое меню"
     await reply_and_update_last_message(
-        message=message,
+        event=message,
         state=state,
         last_message_update_text=last_message_update_text,
         answer_text=answer_text,
         answer_keyboard=answer_keyboard,
         assistant_slug=assistant_slug,
     )
-

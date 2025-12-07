@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
+from rest_framework import status
 from rest_framework.response import Response
 from django.conf import settings
 
@@ -16,7 +17,7 @@ class BotAuthenticationMixin:
     - internal_bot: имя бота (строка)
     - bot_config: конфигурация бота из settings.INTERNAL_BOTS
 
-    Возвращает 401/403 при неудачной аутентификации.
+    Возвращает dict 401/403 при неудачной аутентификации.
     """
 
     def dispatch(self, request, *args, **kwargs):
@@ -29,7 +30,12 @@ class BotAuthenticationMixin:
             core_api_logger.warning(
                 f"[AUTH FAIL] Missing X-Internal-Key | IP={ip} | PATH={path}"
             )
-            return Response({"detail": "Missing bot authentication key"}, status=401)
+            return {
+                "payload": {
+                    "detail": f"Missing bot authentication key"
+                },
+                "response_status": status.HTTP_401_UNAUTHORIZED,
+            }
 
         # Поиск бота по ключу
         bot_id = None
@@ -47,7 +53,12 @@ class BotAuthenticationMixin:
             core_api_logger.error(
                 f"[AUTH FAIL] Invalid key | KEY={key[:4]}... | IP={ip} | PATH={path}"
             )
-            return Response({"detail": "Invalid bot authentication key"}, status=403)
+            return {
+                "payload": {
+                    "detail": "Invalid bot authentication key"
+                },
+                "response_status": status.HTTP_403_FORBIDDEN,
+            }
 
         # Успешная аутентификация
         request.internal_bot = bot_id
@@ -72,7 +83,8 @@ class TelegramUserResolverMixin:
     Возвращает 400/404 при отсутствии telegram_id или пользователя соответственно.
     """
 
-    def resolve_telegram_user(self, request):
+    @staticmethod
+    def resolve_telegram_user(request):
         """
         Разрешает пользователя по telegram_id из запроса.
 
@@ -94,7 +106,10 @@ class TelegramUserResolverMixin:
 
         if not telegram_id:
             core_api_logger.warning(f"{bot_tag} Missing telegram_id in request | PATH={request.path}")
-            return Response({"detail": "telegram_id is required"}, status=400)
+            return Response(
+                data={"detail": f"Missing 'user_telegram_id' in request"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             # Поиск активного пользователя по telegram_id
@@ -117,6 +132,6 @@ class TelegramUserResolverMixin:
                 f"{bot_tag} User NOT found for telegram_id={telegram_id} | PATH={request.path}"
             )
             return Response(
-                {"detail": f"No active user found for telegram_id={telegram_id}"},
-                status=404
+                data={"detail": f"No active user found for telegram_id={telegram_id}"},
+                status=status.HTTP_404_NOT_FOUND,
             )

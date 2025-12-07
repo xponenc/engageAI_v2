@@ -129,11 +129,11 @@ class Chat(models.Model):
 
     @classmethod
     def get_or_create_ai_chat(
-        cls,
-        user:User,
-        ai_assistant:AIAssistant,
-        platform=ChatPlatform.WEB,
-        title: Optional[str] = None
+            cls,
+            user: User,
+            ai_assistant: AIAssistant,
+            platform=ChatPlatform.WEB,
+            title: Optional[str] = None
     ):
         """
         Получает или создаёт чат с конкретным AI-ассистентом
@@ -150,8 +150,7 @@ class Chat(models.Model):
                 'title': default_title
             }
         )
-        return chat
-
+        return chat, created
 
 
 class MessageSource(models.TextChoices):
@@ -180,13 +179,13 @@ class Message(models.Model):
         related_name='sent_messages',
         verbose_name=_('Отправитель')
     )
-    reply_to = models.OneToOneField(
+    reply_to = models.ForeignKey(
         "Message",
         verbose_name=_("ответ на"),
         blank=True,
         null=True,
         on_delete=models.CASCADE,
-        related_name="answer"
+        related_name="answers"
     )
     content = models.TextField(
         verbose_name=_('Содержание сообщения')
@@ -210,7 +209,7 @@ class Message(models.Model):
         default=False,
         verbose_name=_('сообщение удалено пользователем'),
     )
-    source_type = models.CharField(  # Ключевое поле для мультиисточников
+    source_type = models.CharField(
         max_length=20,
         choices=MessageSource.choices,
         default=MessageSource.WEB,

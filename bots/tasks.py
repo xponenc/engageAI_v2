@@ -105,7 +105,7 @@ async def _async_process_update(
             bot_name=bot_name,
             update_data=update_data,
             assistant_slug=assistant_slug,
-            status="success")
+            update_status="success")
 
         return True
 
@@ -115,7 +115,7 @@ async def _async_process_update(
             bot_name=bot_name,
             update_data=update_data,
             assistant_slug=assistant_slug,
-            status="cancelled"
+            update_status="cancelled"
         )
 
     except Exception as e:
@@ -132,23 +132,27 @@ async def _save_update_to_drf(
         bot_name: str,
         update_data: dict,
         assistant_slug: str,
-        status: str = "pending",
+        update_status: str = "pending",
         error: str = None,
         **kwargs):
     """Асинхронное сохранение в DRF API"""
-    core_drf_url = f"/chat/api/v1/chat/telegram/updates/"
+    core_drf_url = f"/chat/api/v1/chat/telegram/update/"
     bot_tag = f"[Bot:{bot_name}]"
     update_id = update_data.get('update_id')
 
+    user_telegram_id = (update_data.get('message', {}).get('from', {}).get('id') or
+                                 update_data.get('callback_query', {}).get('from', {}).get('id'))
+
     context = kwargs.get("context", {})
-    context.update({
-        "update_id": update_id,
-        "bot_name": bot_name,
-        "status": status,
-        "user_id": update_data.get('message', {}).get('from', {}).get('id') or
-                   update_data.get('callback_query', {}).get('from', {}).get('id'),
-        "error": error[:200] if error and isinstance(error, str) else error,
-    })
+    context.update(
+        {
+            "bot_name": bot_name,
+            "update_id": update_id,
+            "update_status": update_status,
+            "user_telegram_id": user_telegram_id,
+            "update_error": error[:200] if error and isinstance(error, str) else error,
+        }
+    )
 
     # logger.warning(f"_save_update_to_drf updated context:\n"
     #                f"{yaml.dump(context, allow_unicode=True, default_flow_style=False)}")
@@ -157,8 +161,9 @@ async def _save_update_to_drf(
         "bot_name": bot_name,
         "assistant_slug": assistant_slug,
         "update": update_data,
-        "processing_status": status,
-        "error_message": error
+        "update_status": update_status,
+        "update_error": error,
+        "user_telegram_id": user_telegram_id,
     }
     ok, response = await core_post(
         url=core_drf_url,

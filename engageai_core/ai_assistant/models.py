@@ -12,6 +12,8 @@ class AIAssistantType(models.TextChoices):
 
 class AIAssistant(models.Model):
     """Модель AI-ассистента с параметрами и настройками"""
+    objects = models.Manager()
+
     name = models.CharField(max_length=100, verbose_name=_('Название'))
     slug = models.SlugField(unique=True, verbose_name=_('Слаг'))
 

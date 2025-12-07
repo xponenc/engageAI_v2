@@ -6,9 +6,8 @@ import time
 import requests
 from pathlib import Path
 from dotenv import dotenv_values, set_key
-import signal
-import os
 import re
+import threading
 
 BASE_DIR = Path(__file__).resolve().parent
 NGROK_PATH = BASE_DIR / "utils" / "ngrok.exe"
@@ -29,7 +28,6 @@ def start_ngrok():
         bufsize=1  # Построчный вывод
     )
 
-import threading
 
 def read_ngrok_logs(ngrok_proc):
     """Читает и выводит логи ngrok в реальном времени"""
@@ -62,6 +60,7 @@ def extract_port(addr_str):
         return addr_str
 
     return None
+
 
 def get_ngrok_url(port, timeout=30):
     """Надежно получает ngrok URL для указанного порта"""
@@ -123,6 +122,7 @@ def get_ngrok_url(port, timeout=30):
         f"Last error: {last_error}"
     )
 
+
 # ---------------------------
 # Update .env
 # ---------------------------
@@ -130,6 +130,7 @@ def update_env(env_path, key, value):
     print(f"🔧 Updating {key} in {env_path}")
     set_key(str(env_path), key, value)
     print(f"✔ {key} updated to {value}")
+
 
 # ---------------------------
 # Update Django ALLOWED_HOSTS + INTERNAL_IPS + CSRF_TRUSTED_ORIGINS
@@ -152,21 +153,24 @@ def update_django_config(ngrok_url: str):
             r"ALLOWED_HOSTS\s*=\s*\[.*?\]",
             f'ALLOWED_HOSTS = ["127.0.0.1", "{host}"]',
             content
-        ) if re.search(r"ALLOWED_HOSTS\s*=\s*\[.*?\]", content) else content + f'\nALLOWED_HOSTS = ["127.0.0.1", "{host}"]\n'
+        ) if re.search(r"ALLOWED_HOSTS\s*=\s*\[.*?\]",
+                       content) else content + f'\nALLOWED_HOSTS = ["127.0.0.1", "{host}"]\n'
 
         # INTERNAL_IPS
         content = re.sub(
             r"INTERNAL_IPS\s*=\s*\[.*?\]",
             f'INTERNAL_IPS = ["127.0.0.1", "{host}"]',
             content
-        ) if re.search(r"INTERNAL_IPS\s*=\s*\[.*?\]", content) else content + f'\nINTERNAL_IPS = ["127.0.0.1", "{host}"]\n'
+        ) if re.search(r"INTERNAL_IPS\s*=\s*\[.*?\]",
+                       content) else content + f'\nINTERNAL_IPS = ["127.0.0.1", "{host}"]\n'
 
         # CSRF_TRUSTED_ORIGINS
         content = re.sub(
             r"CSRF_TRUSTED_ORIGINS\s*=\s*\[.*?\]",
             f'CSRF_TRUSTED_ORIGINS = ["https://{host}"]',
             content
-        ) if re.search(r"CSRF_TRUSTED_ORIGINS\s*=\s*\[.*?\]", content) else content + f'\nCSRF_TRUSTED_ORIGINS = ["https://{host}"]\n'
+        ) if re.search(r"CSRF_TRUSTED_ORIGINS\s*=\s*\[.*?\]",
+                       content) else content + f'\nCSRF_TRUSTED_ORIGINS = ["https://{host}"]\n'
 
         # Перезаписываем файл
         f.seek(0)
@@ -175,6 +179,7 @@ def update_django_config(ngrok_url: str):
 
     print("✔ Django config updated (ALLOWED_HOSTS + INTERNAL_IPS + CSRF_TRUSTED_ORIGINS)")
 
+
 # ---------------------------
 # Start subprocesses
 # ---------------------------
@@ -182,19 +187,21 @@ def start_gateway():
     env = dotenv_values(GATEWAY_ENV)
     print("🚀 Starting FastAPI Gateway...")
     return subprocess.Popen(
-        ["uvicorn", "core_webhook:app", "--host", env.get("FAST_API_IP","127.0.0.1"),
-         "--port", env.get("FAST_API_PORT","8001"), "--log-level", "warning", "--no-use-colors"],
+        ["uvicorn", "core_webhook:app", "--host", env.get("FAST_API_IP", "127.0.0.1"),
+         "--port", env.get("FAST_API_PORT", "8001"), "--log-level", "warning", "--no-use-colors"],
         cwd=str(BASE_DIR / "api_gateway")
     )
+
 
 def start_bots():
     env = dotenv_values(PROJECT_ENV)
     print("🤖 Starting Bots Cluster...")
     return subprocess.Popen(
-        ["uvicorn", "bots_engine:app", "--host", env.get("INTERNAL_BOT_API_IP","127.0.0.1"),
-         "--port", env.get("INTERNAL_BOT_API_PORT","8002"), "--log-level", "warning", "--no-use-colors"],
+        ["uvicorn", "bots_engine:app", "--host", env.get("INTERNAL_BOT_API_IP", "127.0.0.1"),
+         "--port", env.get("INTERNAL_BOT_API_PORT", "8002"), "--log-level", "warning", "--no-use-colors"],
         cwd=str(BASE_DIR / "bots")
     )
+
 
 def start_django():
     print("🟢 Starting Django server...")
@@ -203,12 +210,14 @@ def start_django():
         cwd=str(BASE_DIR / "engageai_core")
     )
 
+
 def start_celery():
     print("⚡ Starting Celery worker...")
     return subprocess.Popen(
         ["celery", "-A", "engageai_core", "worker", "--pool=solo", "-l", "info"],
         cwd=str(BASE_DIR / "engageai_core")
     )
+
 
 # ---------------------------
 # Launcher
@@ -252,6 +261,7 @@ def main():
         for p in processes:
             p.kill()
         print("✔ All stopped cleanly.")
+
 
 if __name__ == "__main__":
     main()

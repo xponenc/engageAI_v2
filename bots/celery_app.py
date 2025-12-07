@@ -16,6 +16,7 @@ CELERY_BROKER_URL = f'redis://{REDIS_HOST}:{REDIS_PORT}/{BOTS_REDIS_DB_ID}'
 CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/{BOTS_REDIS_DB_ID}'
 
 celery_app = Celery('bots')
+logger = celery_app.log.get_default_logger()
 
 celery_app.config_from_object({
     'broker_url': CELERY_BROKER_URL,
@@ -39,7 +40,7 @@ celery_app.config_from_object({
 def autodiscover_bot_tasks():
     """Автоматически находит все файлы tasks.py в папках ботов"""
     bots_root = Path(__file__).parent
-    task_modules = []
+    task_modules = ["bots.tasks"]
 
     # Ищем все директории ботов
     for item in bots_root.iterdir():
@@ -55,16 +56,16 @@ def autodiscover_bot_tasks():
 
 
 # Загружаем задачи
-# celery_app.autodiscover_tasks(
-#     packages=autodiscover_bot_tasks,
-#     related_name='tasks',
-#     force=True
-# )
+celery_app.autodiscover_tasks(
+    packages=autodiscover_bot_tasks,
+    related_name='tasks',
+    force=True
+)
 
 # celery_app.autodiscover_tasks(packages=['bots'], related_name='tasks', force=True)
-celery_app.autodiscover_tasks(['bots'], force=True)
+# celery_app.autodiscover_tasks(['bots'], force=True)
 celery_app.conf.bots = {}
-logger = celery_app.log.get_default_logger()
+
 
 
 @worker_ready.connect

@@ -5,14 +5,13 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from engageai_core.mixins import InternalBotAuthMixin
-
+from engageai_core.mixins import BotAuthenticationMixin
 from utils.setup_logger import setup_logger
 
 core_api_logger = setup_logger(name=__file__, log_dir="logs/core_api", log_file="core_api.log")
 
 
-class TelegramRegistrationView(InternalBotAuthMixin, APIView):
+class TelegramRegistrationView(BotAuthenticationMixin, APIView):
     """
     Регистрирует пользователя через Telegram и привязывает его к личному кабинету.
     Формат ответа совместим с core_post:
@@ -97,7 +96,7 @@ class TelegramRegistrationView(InternalBotAuthMixin, APIView):
             )
 
 
-class TelegramGetUserProfileView(InternalBotAuthMixin, APIView):
+class TelegramGetUserProfileView(BotAuthenticationMixin, APIView):
     """
     Получение профиля пользователя по Telegram ID
     """

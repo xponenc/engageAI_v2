@@ -73,9 +73,7 @@ def can_generate_next_main_packet(session):
     """
     Возвращает True, если разрешено генерировать следующую партию основных вопросов.
     """
-    print("Проверка на возможность генерации следующей партии вопросов")
     total_created = QuestionInstance.objects.filter(session=session).count()
-    print(f"{total_created=}")
     # 1) даже диагностическая часть ещё не создана полностью
     if total_created < DIAGNOSTIC_COUNT:
         print("total_created < DIAGNOSTIC_COUNT", total_created < DIAGNOSTIC_COUNT)

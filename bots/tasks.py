@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import sys
 
@@ -9,6 +10,7 @@ from .bots_engine import feed_update_with_retry
 from aiogram import types, Bot, Dispatcher
 
 from bots.test_bot.services.api_process import core_post, auto_context
+from .test_bot.config import bot_logger
 
 logger = logging.getLogger("bots_tasks")
 
@@ -91,6 +93,8 @@ async def _async_process_update(
     """Обработки апдейта"""
     bot_tag = f"[Bot:{bot_name}]"
     update_id = update_data.get('update_id')
+
+    bot_logger.info(f"Пришедший Update: \n", update_data)
 
     try:
         update = types.Update(**update_data)

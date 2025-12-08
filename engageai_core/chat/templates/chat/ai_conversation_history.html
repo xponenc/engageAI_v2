@@ -146,7 +146,19 @@
                                             </td>
                                             <td>
                                                 <div class="message-preview">
-                                                    <div class="message-preview__text">{{ message.content|truncatechars:200 }}</div>
+                                                    <div class="message-preview__text">{{ message.content|safe|linebreaks }}
+                                                        {% if message.source_type == 'telegram' and  message.metadata.telegram.raw.reply_markup.inline_keyboard %}
+                                                            <div class="message-preview__keyboard"> 
+                                                                {% for row in message.metadata.telegram.raw.reply_markup.inline_keyboard %}
+                                                                    <div class="message-preview__row">
+                                                                        {% for btn in row %}
+                                                                            <span class="message-preview__btn">{{  btn.text }}</span>
+                                                                        {% endfor %}
+                                                                    </div>
+                                                                {% endfor %}
+                                                            </div>  
+                                                        {% endif %}
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td>

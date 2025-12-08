@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict
 
+import yaml
 from aiogram.filters import StateFilter
 from aiogram.fsm.storage.base import DefaultKeyBuilder
 from aiogram.fsm.storage.redis import RedisStorage
@@ -16,6 +17,7 @@ from redis.asyncio import Redis
 
 from bots.services.startup_process import init_redis_clients, load_bots, close_bot_connections, close_redis_clients
 from bots.state_manager import BotStateManager
+from bots.test_bot.config import bot_logger
 from utils.setup_logger import setup_logger
 
 logger = setup_logger(
@@ -151,13 +153,34 @@ async def get_redis_client(request: Request):
 async def feed_update_with_retry(bot: Bot, dispatcher: Dispatcher, update: types.Update, bot_name: str):
     bot_tag = f"[Bot:{bot_name}]"
     # Извлекаем ID обновления безопасно
-    update_id = getattr(update, 'update_id', None)
-    if update_id is None and hasattr(update, 'message') and hasattr(update.message, 'message_id'):
-        update_id = f"msg_{update.message.message_id}"
-    elif update_id is None and hasattr(update, 'callback_query') and hasattr(update.callback_query, 'id'):
+    update_id = None
+
+    # Логируем структуру update для отладки
+    bot_logger.debug(f"Структура update при получении: {type(update)}")
+    bot_logger.debug(f"update.as_dict(): {yaml.dump(update.model_dump(), default_flow_style=False)}")
+
+    # Сначала пробуем стандартный update_id
+    if hasattr(update, 'update_id') and update.update_id:
+        update_id = update.update_id
+    # Для callback_query
+    elif hasattr(update, 'callback_query'):
         update_id = f"cb_{update.callback_query.id}"
+        # Важно: для callback ID сообщения получаем через callback_query.message
+        if hasattr(update.callback_query, 'message') and hasattr(update.callback_query.message, 'message_id'):
+            bot_logger.debug(f"Callback message_id: {update.callback_query.message.message_id}")
+    # Для обычных сообщений
+    elif hasattr(update, 'message') and hasattr(update.message, 'message_id'):
+        update_id = f"msg_{update.message.message_id}"
+    # Для других типов апдейтов
     else:
-        update_id = "unknown"
+        # Дополнительные проверки для других типов апдейтов
+        if hasattr(update, 'edited_message') and hasattr(update.edited_message, 'message_id'):
+            update_id = f"edit_{update.edited_message.message_id}"
+        elif hasattr(update, 'channel_post') and hasattr(update.channel_post, 'message_id'):
+            update_id = f"chpost_{update.channel_post.message_id}"
+        else:
+            update_id = "unknown"
+            bot_logger.warning(f"Не удалось определить update_id для объекта типа: {type(update)}")
 
     last_exception = None
     for attempt in range(1, MAX_RETRIES + 1):

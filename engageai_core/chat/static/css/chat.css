@@ -274,6 +274,8 @@
     font-size: 1.3rem;
     flex-shrink: 0;
     border: 2px solid var(--color-surface);
+    border-radius: 50%;
+    overflow: hidden;
 }
 
 .avatar--user {

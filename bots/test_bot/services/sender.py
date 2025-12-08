@@ -2,10 +2,12 @@ import json
 import time
 from typing import Optional, Dict, Union
 
+import yaml
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message, InlineKeyboardMarkup, CallbackQuery
 
+from ..config import bot_logger
 from ..tasks import process_save_message
 
 
@@ -40,23 +42,18 @@ async def reply_and_update_last_message(
         assistant_slug: slug ассистента engageai_core.ai_assistant.models.AIAssistant для определения чата в core
     """
 
+    bot_logger.info(f"SENDER Структура event при получении: {type(event)}")
+    bot_logger.info(f"event: {yaml.dump(event.model_dump(), default_flow_style=False)}")
+
     # Определяем тип события и получаем необходимые данные
     if isinstance(event, CallbackQuery):
         reply_target = event.message
-        # telegram_user_id = event.from_user.id
-        #
-        if event.message:
-            chat_id = event.message.chat.id
-            message_id = event.message.message_id
-        #
-        else:
-            chat_id = None
-            message_id = None
+        message_id = event.id
+        chat_id = event.message.chat.id
     else:  # Message
         reply_target = event
-        # telegram_user_id = event.chat.id
-        chat_id = event.chat.id
         message_id = event.message_id
+        chat_id = event.chat.id
 
     data = await state.get_data()
     last_message = data.get("last_message")
@@ -102,7 +99,7 @@ async def reply_and_update_last_message(
 
     # 4) Отправка core_post для ОБНОВЛЕНИЯ существующего сообщения
 
-    print(f"reply_and_update EVENT\n", answer_message.model_dump_json(indent=4))
+    # print(f"reply_and_update EVENT\n", answer_message.model_dump_json(indent=4))
 
     core_message_id = current_ai_response.get("core_message_id") if current_ai_response else None
 
@@ -129,14 +126,11 @@ async def reply_and_update_last_message(
         "reply_to_message_id": message_id,
         "message_id": answer_message_id,
         "telegram_message_id": answer_message_id,
-        "chat_id": chat_id,
         "text": answer_text,
         "assistant_slug": assistant_slug,
         "user_telegram_id": telegram_user_id,
-        "metadata": answer_message.model_dump(),  # полный дамп сообщения telegram
+        "metadata": answer_keyboard.model_dump(),  # полный дамп сообщения telegram с клавиатурой
     }
-
-    print(f"reply_and_update payload\n", json.dumps(payload, indent=4, ensure_ascii=False))
 
     process_save_message.delay(payload=payload)
 

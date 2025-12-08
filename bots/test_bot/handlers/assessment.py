@@ -28,7 +28,7 @@ class AssessmentState(StatesGroup):
 
 # --- helper для отправки вопроса ---
 async def send_question(
-        msg: Message,
+        event: Union[Message, CallbackQuery],
         state: FSMContext,
         session_message: str = None,
         last_message_update_text: str = None,
@@ -37,8 +37,12 @@ async def send_question(
     question = { id, question_text, type, options }
     """
 
-    print("send_question msg", msg)
-    assistant_slug = get_assistant_slug(msg.bot)
+    if isinstance(event, CallbackQuery):
+        bot = event.message.bot
+    else:
+        bot = event.bot
+
+    assistant_slug = get_assistant_slug(bot)
 
     data = await state.get_data()
     assessment_test_data = data.get("assessment_test")
@@ -80,7 +84,7 @@ async def send_question(
         answer_keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
     await reply_and_update_last_message(
-        event=msg,
+        event=event,
         state=state,
         last_message_update_text=last_message_update_text,
         answer_text=answer_text,
@@ -171,13 +175,13 @@ async def process_start_assessment_test(event: Union[Message, CallbackQuery], st
     else:  # Message
         reply_target = event
 
-    bot_logger.warning(f"process_start_assessment_test event:\n"
-                       f"{yaml.dump(event.model_dump(), allow_unicode=True, default_flow_style=False)}")
+    # bot_logger.warning(f"process_start_assessment_test event:\n"
+    #                    f"{yaml.dump(event.model_dump(), allow_unicode=True, default_flow_style=False)}")
 
     context = kwargs.get("context", {})
 
-    bot_logger.warning(f"process_start_assessment_test context:\n"
-                       f"{yaml.dump(context, allow_unicode=True, default_flow_style=False)}")
+    # bot_logger.warning(f"process_start_assessment_test context:\n"
+    #                    f"{yaml.dump(context, allow_unicode=True, default_flow_style=False)}")
 
     user_telegram_id = context["user_telegram_id"]
 
@@ -238,7 +242,7 @@ async def process_start_assessment_test(event: Union[Message, CallbackQuery], st
 
     # Отправляем первый вопрос
     await send_question(
-        msg=reply_target,
+        event=event,
         state=state,
         last_message_update_text=last_message_update_text,
         session_message=session_message,
@@ -250,6 +254,13 @@ async def process_start_assessment_test(event: Union[Message, CallbackQuery], st
 @auto_context()
 async def mcq_answer(callback: CallbackQuery, state: FSMContext, **kwargs):
     await callback.answer()
+    print("\n\n\n\nMCQ ANSWER\n\n\n\n\n\n")
+
+
+    bot_logger.info(f"mcq_answer Структура event при получении: {type(callback)}")
+    bot_logger.info(f"callback: {yaml.dump(callback.model_dump(), default_flow_style=False)}")
+
+
     assistant_slug = get_assistant_slug(callback.message.bot)
 
     # Извлекаем ответ пользователя из callback без префикса
@@ -281,6 +292,8 @@ async def mcq_answer(callback: CallbackQuery, state: FSMContext, **kwargs):
         payload=payload,
         context=context
     )
+
+
 
     if not ok:
         bot_logger.error(f"{bot_tag} Ошибка при обработке ответа на вопроса id={question_id}"
@@ -385,7 +398,7 @@ async def mcq_answer(callback: CallbackQuery, state: FSMContext, **kwargs):
         await state.set_state(AssessmentState.waiting_text_answer)
 
     await send_question(
-        msg=callback.message,
+        event=callback,
         state=state,
         last_message_update_text=last_message_update_text,
     )
@@ -402,7 +415,7 @@ async def handle_text_during_mcq(message: Message, state: FSMContext):
     )
 
     await send_question(
-        msg=message,
+        event=message,
         state=state,
         last_message_update_text=last_message_update_text,
         session_message=session_message,
@@ -420,7 +433,7 @@ async def handle_callback_during_text_answer(callback: CallbackQuery, state: FSM
     )
 
     await send_question(
-        msg=callback.message,
+        event=callback,
         state=state,
         last_message_update_text=last_message_update_text,
         session_message=session_message,
@@ -559,7 +572,7 @@ async def process_text_answer(message: Message, state: FSMContext, **kwargs):
         await state.set_state(AssessmentState.waiting_text_answer)
 
     await send_question(
-        msg=message,
+        event=message,
         state=state,
         last_message_update_text=last_message_update_text,
     )

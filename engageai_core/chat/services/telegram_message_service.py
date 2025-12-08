@@ -495,76 +495,163 @@ class TelegramMessageService:
                 reply_to_message_id=reply_to_message_id,
             )
 
+    # def _update_existing_message(
+    #         self,
+    #         bot_tag: str,
+    #         core_message_id: str,
+    #         telegram_message_id: str,
+    #         content: str,
+    #         metadata: Dict[str, Any],
+    #         reply_to_message_id: str,
+    # ):
+    #     """Обновляет существующее AI-сообщение в core с привязкой к Telegram"""
+    #
+    #     try:
+    #         try:
+    #             message = Message.objects.get(
+    #                 id=core_message_id,
+    #                 is_ai=True,
+    #                 sender=None,
+    #                 source_type=MessageSource.TELEGRAM
+    #             )
+    #
+    #         except ObjectDoesNotExist:
+    #             core_api_logger.error(f"{bot_tag} AI message not found: core_id={core_message_id}")
+    #             return {
+    #                 "payload": {
+    #                     "detail": f"AI message with ID {core_message_id} not found"
+    #                 },
+    #                 "response_status": status.HTTP_404_NOT_FOUND,
+    #             }
+    #
+    #         # Обновление метаданных Telegram для AI-сообщения
+    #         updated_message = self._update_ai_message_metadata(
+    #             message=message,
+    #             message_id=telegram_message_id,
+    #             extra_metadata=metadata
+    #         )
+    #         if updated_message.content != content:
+    #             updated_message.content = content
+    #             updated_message.save(update_fields=["content", ])
+    #
+    #         core_api_logger.info(
+    #             f"{bot_tag} Updated AI message: core_id={core_message_id}, telegram_id={telegram_message_id}"
+    #         )
+    #
+    #         if reply_to_message_id:
+    #             reply_to = Message.objects.filter(
+    #                 source_type=MessageSource.TELEGRAM,
+    #                 metadata__telegram__message_id=str(reply_to_message_id),
+    #                 chat=message.chat,
+    #             ).first()
+    #             if reply_to:
+    #                 message.reply_to = reply_to
+    #                 message.save(update_fields=["reply_to", ])
+    #                 core_api_logger.info(
+    #                     f"{bot_tag} AI message: core_id={core_message_id}, telegram_id={telegram_message_id}"
+    #                     f" set reply_to={reply_to.id}"
+    #                 )
+    #
+    #         return {
+    #             "payload": {
+    #                 "core_message_id": updated_message.pk,
+    #             },
+    #             "response_status": status.HTTP_200_OK,
+    #         }
+    #
+    #     except Exception as e:
+    #         core_api_logger.exception(f"{bot_tag} Error updating AI message {core_message_id}: {str(e)}")
+    #         return {
+    #             "payload": {
+    #                 "detail": f"Error updating AI message: {str(e)}"
+    #             },
+    #             "response_status": status.HTTP_500_INTERNAL_SERVER_ERROR,
+    #         }
+
     def _update_existing_message(
             self,
             bot_tag: str,
-            core_message_id: str,
-            telegram_message_id: str,
+            core_message_id: Union[int, str],
+            telegram_message_id: Union[int, str],
             content: str,
             metadata: Dict[str, Any],
-            reply_to_message_id: str,
+            reply_to_message_id: Optional[Union[int, str]],
     ):
-        """Обновляет существующее AI-сообщение в core с привязкой к Telegram"""
+        """
+        Обновляет существующее AI-сообщение.
+        Предполагается, что гонок нет — сообщение обновляется один раз после отправки Telegram-ботом.
+        """
 
         try:
             try:
-                message = Message.objects.get(
-                    id=core_message_id,
-                    is_ai=True,
-                    sender=None,
-                    source_type=MessageSource.TELEGRAM
+                message = (
+                    Message.objects
+                    .select_related("chat")
+                    .get(
+                        id=core_message_id,
+                        is_ai=True,
+                        sender=None,
+                        source_type=MessageSource.TELEGRAM,
+                    )
                 )
-
             except ObjectDoesNotExist:
                 core_api_logger.error(f"{bot_tag} AI message not found: core_id={core_message_id}")
                 return {
-                    "payload": {
-                        "detail": f"AI message with ID {core_message_id} not found"
-                    },
+                    "payload": {"detail": f"AI message with ID {core_message_id} not found"},
                     "response_status": status.HTTP_404_NOT_FOUND,
                 }
 
-            # Обновление метаданных Telegram для AI-сообщения
-            updated_message = self._update_ai_message_metadata(
-                message=message,
-                message_id=telegram_message_id,
-                extra_metadata=metadata
-            )
-            if updated_message.content != content:
-                updated_message.content = content
-                updated_message.save(update_fields=["content", ])
+            # --- Обновление metadata ---
+            metadata_telegram = message.metadata.get("telegram", {}) if message.metadata else {}
+            metadata_telegram["message_id"] = str(telegram_message_id)
+            metadata_telegram["raw"] = metadata
+
+            message.metadata["telegram"] = metadata_telegram
+            message.timestamp = timezone.now()
+
+            fields_to_update = ["metadata", "timestamp"]
+
+            # обновляем только если изменилось
+            if message.content != content:
+                message.content = content
+                fields_to_update.append("content")
+
+            # --- Установка reply_to, если есть ---
+            if reply_to_message_id:
+                reply_to_id = (
+                    Message.objects
+                    .filter(
+                        source_type=MessageSource.TELEGRAM,
+                        metadata__telegram__message_id=str(reply_to_message_id),
+                        chat=message.chat,
+                    )
+                    .only("id")
+                    .values_list("id", flat=True)
+                    .first()
+                )
+
+                if reply_to_id:
+                    message.reply_to_id = reply_to_id
+                    fields_to_update.append("reply_to")
+                    core_api_logger.info(
+                        f"{bot_tag} AI message core_id={core_message_id} set reply_to={reply_to_id}"
+                    )
+
+            message.save(update_fields=fields_to_update)
 
             core_api_logger.info(
                 f"{bot_tag} Updated AI message: core_id={core_message_id}, telegram_id={telegram_message_id}"
             )
 
-            if reply_to_message_id:
-                reply_to = Message.objects.filter(
-                    source_type=MessageSource.TELEGRAM,
-                    metadata__telegram__message_id=str(reply_to_message_id),
-                    chat=message.chat,
-                ).first()
-                if reply_to:
-                    message.reply_to = reply_to
-                    message.save(update_fields=["reply_to", ])
-                    core_api_logger.info(
-                        f"{bot_tag} AI message: core_id={core_message_id}, telegram_id={telegram_message_id}"
-                        f" set reply_to={reply_to.id}"
-                    )
-
             return {
-                "payload": {
-                    "core_message_id": updated_message.pk,
-                },
+                "payload": {"core_message_id": message.pk},
                 "response_status": status.HTTP_200_OK,
             }
 
         except Exception as e:
             core_api_logger.exception(f"{bot_tag} Error updating AI message {core_message_id}: {str(e)}")
             return {
-                "payload": {
-                    "detail": f"Error updating AI message: {str(e)}"
-                },
+                "payload": {"detail": f"Error updating AI message: {str(e)}"},
                 "response_status": status.HTTP_500_INTERNAL_SERVER_ERROR,
             }
 
@@ -642,8 +729,8 @@ class TelegramMessageService:
                 "response_status": status.HTTP_500_INTERNAL_SERVER_ERROR,
             }
 
-    @staticmethod
     def _create_ai_message(
+            self,
             chat: Chat,
             content: str,
             message_id: Optional[Union[str, int]] = None,
@@ -684,39 +771,33 @@ class TelegramMessageService:
             }
         )
 
-    @staticmethod
-    def _update_ai_message_metadata(
-            message: Message,
-            message_id: Union[str, int],
-            extra_metadata: Optional[dict] = None
-    ) -> Message:
-        """
-        Обновляет metadata объекта chat.models.Message AI-сообщения после ботом сообщения пользователю
-        и получения данных о нем на api.
-
-        Args:
-            message: объект Message для обновления
-            message_id: Telegram message_id (если есть)
-            extra_metadata: дополнительные данные для вложения в metadata["telegram"]
-
-        Returns:
-            Message: обновлённое сообщение
-        """
-        telegram_metadata = message.metadata.get("telegram", {}) if message.metadata else {}
-
-        telegram_metadata["message_id"] = str(message_id)
-
-        if extra_metadata:
-            telegram_metadata["raw"] = extra_metadata
-
-            telegram_keys = ["entities", "chat", "user", "callback_query_id", "callback_data"]
-            for key in telegram_keys:
-                if extra_metadata and key in extra_metadata:
-                    telegram_metadata[key] = extra_metadata[key]
-        message.timestamp = timezone.now()
-        message.metadata["telegram"] = telegram_metadata
-        message.save(update_fields=["metadata", "timestamp"])
-        return message
+    # @staticmethod
+    # def _update_ai_message_metadata(
+    #         message: Message,
+    #         message_id: Union[str, int],
+    #         extra_metadata: Optional[dict] = None
+    # ) -> Message:
+    #     """
+    #     Обновляет metadata объекта chat.models.Message AI-сообщения после ботом сообщения пользователю
+    #     и получения данных о нем на api.
+    #
+    #     Args:
+    #         message: объект Message для обновления
+    #         message_id: Telegram message_id (если есть)
+    #         extra_metadata: дополнительные данные для вложения в metadata["telegram"]
+    #
+    #     Returns:
+    #         Message: обновлённое сообщение
+    #     """
+    #     telegram_metadata = message.metadata.get("telegram", {}) if message.metadata else {}
+    #
+    #     telegram_metadata["message_id"] = str(message_id)
+    #     telegram_metadata["raw"] = extra_metadata
+    #
+    #     message.timestamp = timezone.now()
+    #     message.metadata["telegram"] = telegram_metadata
+    #     message.save(update_fields=["metadata", "timestamp"])
+    #     return message
 
     @staticmethod
     def _get_or_create_chat(

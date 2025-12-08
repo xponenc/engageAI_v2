@@ -102,6 +102,32 @@
 
 .message-preview__text { color: var(--color-text); }
 
+.message-preview__keyboard {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 280px;
+}
+.message-preview__row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 4px;
+    width: 100%;
+    
+}
+.message-preview__btn {
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+}
+
+
 .message-score--positive { background: var(--color-success-bg); color: var(--color-success); }
 .message-score--negative { background: var(--color-error-bg); color: var(--color-error); }
 .message-score--neutral { background: #f5f5f5; color: #666; }

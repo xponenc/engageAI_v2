@@ -1,4 +1,5 @@
 import json
+import time
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count, Q, Min, Max
@@ -50,6 +51,7 @@ class AiChatView(LoginRequiredMixin, View):
 
     def _process_ai_response(self, chat, user_message_text):
         """Обрабатывает запрос к AI и возвращает ответ"""
+        time.sleep(10)
         return f"Re: {user_message_text}"
         # try:
         #     # Инициализируем оркестратор с текущим чатом
@@ -73,9 +75,10 @@ class AiChatView(LoginRequiredMixin, View):
     def get(self, request, slug, *args, **kwargs):
         """Отображает интерфейс чата с историей сообщений"""
         try:
-            assistant, chat = self._get_assistant_and_chat(request, slug)
+            assistant, (chat, created) = self._get_assistant_and_chat(request, slug)
         except Http404 as e:
             return render(request, "chat/assistant_not_found.html", {"error": str(e)}, status=404)
+        print(chat)
 
         # Получаем историю сообщений с пагинацией для производительности
         chat_history = chat.messages.filter(
@@ -106,7 +109,7 @@ class AiChatView(LoginRequiredMixin, View):
 
         # Получаем ассистента и чат
         try:
-            assistant, chat = self._get_assistant_and_chat(request, slug)
+            assistant, (chat, created) = self._get_assistant_and_chat(request, slug)
         except Http404 as e:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({"error": str(e)}, status=404)

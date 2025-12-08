@@ -118,7 +118,9 @@
                                     {% if message.is_ai %}
                                         <div class="avatar avatar--ai">🤖</div>
                                     {% else %}
-                                        <div class="avatar avatar--user">👤</div>
+                                        <div class="avatar avatar--user">
+                                            <img src="{{ user.profile.avatar.url }}" alt="Аватар пользователя">
+                                        </div>
                                     {% endif %}
                                 </div>
                                 
@@ -247,7 +249,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const userMessageHTML = `
         <div class="chat-message chat-message--user" id="${userMessageId}">
             <div class="chat-message__avatar">
-                <div class="avatar avatar--user">👤</div>
+                <div class="avatar avatar--user">
+                    <img src="{{ user.profile.avatar.url }}" alt="Аватар пользователя">
+                </div>
             </div>
             <div class="chat-message__content">
                 <div class="chat-message__text">${escapeHtml(message)}</div>

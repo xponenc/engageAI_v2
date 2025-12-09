@@ -125,14 +125,14 @@ async def start(message: Message, state: FSMContext, **kwargs):
 
     data = await state.get_data()
     telegram_auth_cache = data.get("telegram_auth_cache", {})
-    user_id = telegram_auth_cache.get("user_id")
+    core_user_id = telegram_auth_cache.get("core_user_id")
 
-    if user_id:
+    if core_user_id:
         # Авторизованный пользователь
         profile = data.get("profile")
 
         bot_logger.info(
-            f"[{BOT_NAME}] Access Granted for user with telegram ID {user_id}: {profile} {user_id}"
+            f"[{BOT_NAME}] Access Granted for user with telegram ID {message.from_user.id}: {profile} {core_user_id}"
         )
 
         await state.set_state(AuthStates.authorized)

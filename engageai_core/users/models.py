@@ -21,7 +21,7 @@ class Profile(models.Model):
         return os.path.sep.join(['users',
                                  f'user-id-{self.user.id}',
                                  'avatars',
-                                user + ".jpg"])
+                                 user + ".jpg"])
 
     def validate_date_in_past(value):
         today = datetime.date.today()
@@ -81,6 +81,7 @@ class CEFRLevel(models.TextChoices):
     B2 = "B2", "Upper Intermediate (B2)"
     C1 = "C1", "Advanced (C1)"
     C2 = "C2", "Proficiency (C2)"
+
 
 class StudyProfile(models.Model):
     """Профиль расширяющий данные по Telegram аккаунту пользователя"""

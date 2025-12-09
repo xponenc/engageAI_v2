@@ -7,8 +7,10 @@ from aiogram.filters import BaseFilter
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
+from bots.services.utils import get_assistant_slug
 from bots.test_bot.services.api_process import core_post, auto_context
-from bots.test_bot.config import bot_logger, BOT_NAME, AUTH_CACHE_TTL_SECONDS
+from bots.test_bot.config import bot_logger, BOT_NAME, AUTH_CACHE_TTL_SECONDS, NO_EMOJI
+from bots.test_bot.services.sender import reply_and_update_last_message
 
 
 class AuthFilter(BaseFilter):
@@ -29,25 +31,24 @@ class AuthFilter(BaseFilter):
                        ) -> bool:
         bot_tag = f"[{BOT_NAME}]"
 
-        # Извлекаем информацию о хендлере
-        # handler_name = handler.callback.__name__ if hasattr(handler, 'callback') else "unknown"
-        # handler_module = handler.callback.__module__ if hasattr(handler, 'callback') else "unknown"
         handler_info = self._get_handler_info(handler)
 
         # Унификация для Message / CallbackQuery
         if isinstance(event, CallbackQuery):
-            telegram_id = event.from_user.id
+            user_telegram_id = event.from_user.id
+            from_user = event.from_user
             reply_func = event.message.answer
             callback_answer = event.answer
             message_id = event.message.message_id
         else:
-            telegram_id = event.from_user.id
+            user_telegram_id = event.from_user.id
+            from_user = event.from_user
             reply_func = event.answer
             callback_answer = None
             message_id = event.message_id
 
         bot_logger.info(
-            f"{bot_tag} Проверка авторизации для telegram_id={telegram_id}, "
+            f"{bot_tag} Проверка авторизации для telegram_id={user_telegram_id}, "
             f"Хендлер: {handler_info['full_name']}\n"
             f"├── Модуль: {handler_info['module']}\n"
             f"├── Файл: {handler_info['file_path']}\n"
@@ -61,73 +62,99 @@ class AuthFilter(BaseFilter):
 
         now = int(time.time())
         is_cached = (
-            cache.get("telegram_id") == telegram_id
-            and now - cache.get("checked_at", 0) < AUTH_CACHE_TTL_SECONDS
+                cache.get("telegram_id") == user_telegram_id
+                and now - cache.get("checked_at", 0) < AUTH_CACHE_TTL_SECONDS
         )
 
-        user_id: Optional[int] = None
+        core_user_id = None
 
         if is_cached:
             user_id = cache.get("user_id")
             if user_id:
                 bot_logger.debug(
-                    f"{bot_tag} Авторизация найдена в кэше: user_id={user_id}, "
-                    f"Хендлер: {handler_info['full_name']}"
+                    f"{bot_tag} Авторизация найдена в кэше: user_id={user_id}, Хендлер: {handler_info['full_name']}"
                 )
 
         # Вызов API
-        if not user_id:
+        if not core_user_id:
             bot_logger.debug(
-                f"{bot_tag} Запрос к API /check_telegram/ для telegram_id={telegram_id}, "
+                f"{bot_tag} Запрос к API /check_telegram/ для telegram_id={user_telegram_id}, "
                 f"Хендлер: {handler_info['full_name']}"
             )
             context = {
                 # "handler": f"{handler_name} ({handler_module})",
                 "function": handler_info['name'],
                 "caller_module": handler_info['file_path'],
-                "update_id": getattr(event, "update_id", None),
-                "user_id": telegram_id,
+                "user_telegram_id": user_telegram_id,
                 "message_id": message_id,
             }
 
             ok, resp = await core_post(
                 url="/accounts/api/v1/users/profile/",
-                payload={"telegram_id": telegram_id},
+                payload={
+                    "user_telegram_id": user_telegram_id,
+                    "telegram_username": from_user.username,
+                    "telegram_username_first_name": from_user.first_name,
+                    "telegram_username_last_name": from_user.last_name,
+                },
                 context=context
             )
-            if ok and resp.get("user_id"):
-                profile = resp.get("profile")
+            if ok and isinstance(resp, dict) and resp.get("profile"):
+                profile = resp["profile"]
+                core_user_id = profile["core_user_id"]
+
                 await state.update_data(profile=profile)
-                user_id = resp["user_id"]
                 await state.update_data(telegram_auth_cache={
-                    "telegram_id": telegram_id,
-                    "user_id": user_id,
+                    "telegram_id": user_telegram_id,
+                    "core_user_id": core_user_id,
                     "checked_at": now
                 })
+
                 bot_logger.info(
-                    f"{bot_tag} Авторизация подтверждена (API): telegram_id={telegram_id} → user_id={user_id},"
-                    f" Хендлер: {handler_info['full_name']}"
-                )
-            else:
-                bot_logger.info(
-                    f"{bot_tag} Авторизация не найдена для telegram_id={telegram_id}, "
-                    f"Хендлер: {handler_info['full_name']}"
+                    f"{bot_tag} Авторизация успешна (API): telegram_id={user_telegram_id} → core_user={core_user_id}"
                 )
 
-        # NOT AUTHORIZED
-        if not user_id:
+            else:
+                bot_logger.warning(
+                    f"{bot_tag} Авторизация не найдена (telegram_id={user_telegram_id})"
+                )
+
+        # не авторизован
+        if not core_user_id:
+            await state.update_data(telegram_auth_cache={}, profile={})
+
             if callback_answer:
                 await callback_answer()
-            await reply_func(
-                "🔒 Для работы с AI-репетитором нужно привязать Telegram.\n"
-                "Используйте /registration, чтобы ввести код из личного кабинета."
-            )
-            bot_logger.info(f"{bot_tag} Пользователь {telegram_id} перенаправлен на регистрацию, "
-                             f"Хендлер: {handler_info['full_name']}")
-            return False
-        # AUTHORIZED
-        return True
 
+            # await reply_func(
+            #     "🔒 Для работы с AI-репетитором нужно привязать Telegram.\n"
+            #     "Используйте /registration, чтобы ввести код из личного кабинета."
+            # )
+            assistant_slug = get_assistant_slug(event.bot)
+            answer_text = (
+                    "🔒 <b>Требуется регистрация!</b>\n\n"
+                    "Чтобы пользоваться AI-репетитором, привяжите Telegram.\n"
+                    "Используйте /registration, чтобы ввести код из личного кабинета."
+                )
+            last_message_update_text = f"\n\n{NO_EMOJI}\t Базовый тест уровня языка"
+
+            await reply_and_update_last_message(
+                event=event,
+                state=state,
+                last_message_update_text=last_message_update_text,
+                answer_text=answer_text,
+                answer_keyboard=None,
+                current_ai_response=None,
+                assistant_slug=assistant_slug,
+            )
+
+            bot_logger.info(
+                f"{bot_tag} Пользователь {user_telegram_id} отправлен на регистрацию"
+            )
+            return False
+
+        # OK
+        return True
 
     def _get_handler_info(self, handler: Any) -> dict:
         """Получает подробную информацию о хендлере через интроспекцию"""

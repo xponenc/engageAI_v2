@@ -168,10 +168,8 @@ async def process_start_assessment_test(event: Union[Message, CallbackQuery], st
     - For CallbackQuery: reply to callback.message (and answer the callback to remove spinner)
     """
 
-    # Определяем тип события и получаем необходимые данные
     if isinstance(event, CallbackQuery):
         reply_target = event.message
-        await event.answer()  # Отвечаем на callback
     else:  # Message
         reply_target = event
 
@@ -254,12 +252,8 @@ async def process_start_assessment_test(event: Union[Message, CallbackQuery], st
 @auto_context()
 async def mcq_answer(callback: CallbackQuery, state: FSMContext, **kwargs):
     await callback.answer()
-    print("\n\n\n\nMCQ ANSWER\n\n\n\n\n\n")
 
-
-    bot_logger.info(f"mcq_answer Структура event при получении: {type(callback)}")
-    bot_logger.info(f"callback: {yaml.dump(callback.model_dump(), default_flow_style=False)}")
-
+    bot_logger.debug(f"callback: {yaml.dump(callback.model_dump(), default_flow_style=False)}")
 
     assistant_slug = get_assistant_slug(callback.message.bot)
 
@@ -292,8 +286,6 @@ async def mcq_answer(callback: CallbackQuery, state: FSMContext, **kwargs):
         payload=payload,
         context=context
     )
-
-
 
     if not ok:
         bot_logger.error(f"{bot_tag} Ошибка при обработке ответа на вопроса id={question_id}"

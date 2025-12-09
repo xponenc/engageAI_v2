@@ -37,9 +37,10 @@ REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
 REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
 BOTS_REDIS_DB_ID = int(os.getenv('BOTS_REDIS_DB_ID', '1'))
 
+
 async def init_redis_clients(app: FastAPI):
     """Инициализирует все необходимые Redis-клиенты"""
-    global redis_client
+    # global redis_client
 
     # Основной клиент
     redis_client = Redis(
@@ -150,17 +151,17 @@ def load_bots(bots_dict: dict, bots_root: Path):
                         else:
                             normal_handlers.append((attr, py_file.name))
 
-        # --- Подключаем обычные хендлеры ---
+        # Подключаем обычные хендлеры
         for router, filename in normal_handlers:
             dp.include_router(router)
             logger.info(f"Router из {filename} подключен для бота {bot_name}")
 
-        # --- Подключаем fallback хендлеры (всегда в конце) ---
+        # Подключаем fallback хендлеры (всегда в конце)
         for router, filename in fallback_handlers:
             dp.include_router(router)
             logger.info(f"Fallback router из {filename} подключен ПОСЛЕДНИМ для бота {bot_name}")
 
-        # --- Если нет fallback хендлеров, добавляем эхо как запасной вариант ---
+        # Если нет fallback хендлеров, добавляем эхо как запасной вариант
         if not fallback_handlers:
             logger.debug(f"Для бота {bot_name} не найдено fallback-хендлеров, добавляется эхо")
             echo_router = Router()
@@ -194,5 +195,3 @@ async def close_bot_connections(bots_dict: dict):
             logger.info(f"Соединение бота {bot_name} закрыто")
         except Exception as e:
             logger.error(f"Ошибка закрытия соединения бота {bot_name}: {e}")
-
-

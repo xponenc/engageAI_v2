@@ -178,7 +178,7 @@ async def _save_update_to_drf(
     if not ok:
         error_msg = f"{bot_tag} Update ID {update_id} Ошибка сохранения в DRF: {response}"
         logger.error(error_msg)
-        raise Exception(error_msg)
+        return False
 
     logger.info(f"{bot_tag} Update ID {update_id} Успешно сохранено в DRF")
     return response

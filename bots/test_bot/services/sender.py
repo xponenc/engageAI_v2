@@ -42,8 +42,8 @@ async def reply_and_update_last_message(
         assistant_slug: slug ассистента engageai_core.ai_assistant.models.AIAssistant для определения чата в core
     """
 
-    bot_logger.info(f"SENDER Структура event при получении: {type(event)}")
-    bot_logger.info(f"event: {yaml.dump(event.model_dump(), default_flow_style=False)}")
+    bot_logger.debug(f"Структура event при получении: {type(event)}")
+    bot_logger.debug(f"event: {yaml.dump(event.model_dump(), default_flow_style=False)}")
 
     # Определяем тип события и получаем необходимые данные
     if isinstance(event, CallbackQuery):
@@ -57,6 +57,8 @@ async def reply_and_update_last_message(
 
     data = await state.get_data()
     last_message = data.get("last_message")
+    cache = data.get("telegram_auth_cache", {})
+    core_user_id = cache.get("core_user_id")
     bot_tag = "[TelegramBot]"
 
     # Обновление прошлого сообщения с отметкой
@@ -101,38 +103,39 @@ async def reply_and_update_last_message(
 
     # print(f"reply_and_update EVENT\n", answer_message.model_dump_json(indent=4))
 
-    core_message_id = current_ai_response.get("core_message_id") if current_ai_response else None
+    if core_user_id:
+        core_message_id = current_ai_response.get("core_message_id") if current_ai_response else None
 
-    # Определяем тип ответа
-    if isinstance(answer_message, CallbackQuery):
-        answer_reply_target = answer_message.message
-        telegram_user_id = answer_message.from_user.id
+        # Определяем тип ответа
+        if isinstance(answer_message, CallbackQuery):
+            answer_reply_target = answer_message.message
+            telegram_user_id = answer_message.from_user.id
 
-        if answer_message.message:
-            chat_id = answer_message.message.chat.id
-            answer_message_id = answer_message.message.message_id
-        #
-        else:
-            chat_id = None
-            answer_message_id = None
-    else:  # Message
-        answer_reply_target = answer_message
-        telegram_user_id = answer_message.chat.id
-        chat_id = answer_message.chat.id
-        answer_message_id = answer_message.message_id
+            if answer_message.message:
+                chat_id = answer_message.message.chat.id
+                answer_message_id = answer_message.message.message_id
+            #
+            else:
+                chat_id = None
+                answer_message_id = None
+        else:  # Message
+            answer_reply_target = answer_message
+            telegram_user_id = answer_message.chat.id
+            chat_id = answer_message.chat.id
+            answer_message_id = answer_message.message_id
 
-    payload = {
-        "core_message_id": core_message_id,  # если не передано, то создастся новое engageai_core.chat.models.Message
-        "reply_to_message_id": message_id,
-        "message_id": answer_message_id,
-        "telegram_message_id": answer_message_id,
-        "text": answer_text,
-        "assistant_slug": assistant_slug,
-        "user_telegram_id": telegram_user_id,
-        "metadata": answer_keyboard.model_dump(),  # полный дамп сообщения telegram с клавиатурой
-    }
+        payload = {
+            "core_message_id": core_message_id,  # если не передано, то создастся новое engageai_core.chat.models.Message
+            "reply_to_message_id": message_id,
+            "message_id": answer_message_id,
+            "telegram_message_id": answer_message_id,
+            "text": answer_text,
+            "assistant_slug": assistant_slug,
+            "user_telegram_id": telegram_user_id,
+            "metadata": answer_message.model_dump(),  # полный дамп сообщения telegram с клавиатурой
+        }
 
-    process_save_message.delay(payload=payload)
+        process_save_message.delay(payload=payload)
 
     # 5) Обновление FSM state для нового последнего сообщения
     await state.update_data(last_message={

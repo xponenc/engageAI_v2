@@ -304,7 +304,11 @@ class TelegramUpdateService:
 
         # Создание сообщения для callback
         try:
-            content = f"[Callback: {callback_data_value}]"
+
+            content = f"({callback_data_value})"
+            callback_data_text = self.get_button_text_from_dict(callback_data)
+            if callback_data_text:
+                content = callback_data_text + " " + content
 
             callback_message = self._create_message_from_update(
                 chat=chat,
@@ -378,6 +382,23 @@ class TelegramUpdateService:
                 },
                 "response_status": status.HTTP_500_INTERNAL_SERVER_ERROR,
             }
+
+    @staticmethod
+    def get_button_text_from_dict(callback: dict) -> str | None:
+        """Возвращает текст кнопки по callback_data из словаря апдейта."""
+
+        data = callback.get("data")
+        message = callback.get("message", {})
+        reply_markup = message.get("reply_markup", {})
+        keyboard = reply_markup.get("inline_keyboard", [])
+
+        for row in keyboard:
+            for button in row:
+                # button — это dict
+                if button.get("callback_data") == data:
+                    return button.get("text")
+
+        return None
 
     @staticmethod
     def _create_message_from_update(

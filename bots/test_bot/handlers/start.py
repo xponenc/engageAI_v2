@@ -21,13 +21,6 @@ load_dotenv()
 
 start_router = Router()
 
-
-class AuthStates(StatesGroup):
-    """Статусы состояний пользователя"""
-    authorized = State()
-    guest = State()
-
-
 class MenuStates(StatesGroup):
     """Статусы состояний меню"""
     registration = State()
@@ -115,7 +108,7 @@ async def set_menu_button(bot: Bot):
 
 
 @start_router.message(CommandStart())
-@start_router.message(StateFilter(None))
+# @start_router.message(StateFilter(None))
 @start_router.message(Command('start'))
 @auto_context()
 async def start(message: Message, state: FSMContext, **kwargs):
@@ -134,9 +127,6 @@ async def start(message: Message, state: FSMContext, **kwargs):
         bot_logger.info(
             f"[{BOT_NAME}] Access Granted for user with telegram ID {message.from_user.id}: {profile} {core_user_id}"
         )
-
-        await state.set_state(AuthStates.authorized)
-        await state.update_data(user_data=profile)
 
         await message.bot.set_my_commands(
             MAIN_MENU + CUSTOMER_MENU,
@@ -159,12 +149,12 @@ async def start(message: Message, state: FSMContext, **kwargs):
             f"[{BOT_NAME}] Access Granted for user with telegram ID {message.from_user.id}: Anonymous"
         )
 
-        await state.set_state(AuthStates.guest)
-
         await message.bot.set_my_commands(
             MAIN_MENU + GUEST_MENU,
             scope=BotCommandScopeChat(chat_id=message.chat.id)
         )
+        data = await state.get_data()
+        bot_logger.info(f"{data=}")
 
         answer_text = (
                 f"Привет, {message.chat.first_name or message.chat.username or message.chat.id or 'Anonymous'}\n\n"

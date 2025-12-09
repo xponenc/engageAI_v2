@@ -1,0 +1,157 @@
+# Предлагаемая схема ответа от Core API
+
+{
+    "metadata": {
+        "message_id": 12345,  # ID сообщения в core
+        "conversation_id": "conv_abc123",
+        "processing_time_ms": 245,
+        "assistant_slug": "english_teacher_v2"
+    },
+    "content": {
+        "type": "text",  # text, photo, document, audio, voice, video, media_group, sticker, location, contact, poll
+        "text": "Привет! Чем я могу вам помочь сегодня?",  # Основной текст сообщения
+        "caption": "",  # Подпись к медиа (если нужна)
+        "media": [
+            {
+                "type": "photo",
+                "url": "https://example.com/image.jpg",
+                "width": 800,
+                "height": 600,
+                "file_size": 120000
+            }
+        ],
+        "keyboard": {
+            "type": "inline",
+            "buttons": [
+                {
+                    "text": "📚 Начать обучение",
+                    "callback_data": "menu:study"
+                },
+                {
+                    "text": "🎯 Пройти тест",
+                    "callback_data": "menu:test"
+                }
+            ],
+            "layout": [2]
+        }
+    },
+    "effects": {
+        "message_effect_id": "5046509860389126442",  # ID эффекта сообщения
+        "silent": false,  # Отправлять без звука
+        "pin": false  # Закрепить сообщение
+    },
+    "context": {
+        "conversation_state": "active",
+        "session_data": {
+            "last_topic": "grammar",
+            "difficulty_level": "intermediate"
+        }
+    },
+    "actions": {
+        "save_to_history": true,
+        "notify_admin": false,
+        "trigger_event": "user_engaged"
+    }
+}
+
+# Текстовый ответ
+
+{
+    "metadata": {
+        "message_id": 12346,
+        "conversation_id": "conv_abc123"
+    },
+    "content": {
+        "type": "text",
+        "text": "Привет! Рад вас видеть. Чем я могу вам помочь сегодня?"
+    }
+}
+
+# Фото с подписью и кнопками
+
+{
+    "metadata": {
+        "message_id": 12347,
+        "conversation_id": "conv_abc123"
+    },
+    "content": {
+        "type": "photo",
+        "text": "Вот пример правильного использования времён в английском:",
+        "media": [
+            {
+                "type": "photo",
+                "url": "https://example.com/tenses_chart.jpg",
+                "width": 1200,
+                "height": 800
+            }
+        ],
+        "keyboard": {
+            "type": "inline",
+            "buttons": [
+                {
+                    "text": "Еще примеры",
+                    "callback_data": "more_examples:tenses"
+                },
+                {
+                    "text": "Задать вопрос",
+                    "callback_data": "ask_question"
+                }
+            ],
+            "layout": [2]
+        }
+    }
+}
+
+# Медиа-группа (альбом)
+
+{
+    "metadata": {
+        "message_id": 12348,
+        "conversation_id": "conv_abc123"
+    },
+    "content": {
+        "type": "media_group",
+        "text": "Вот несколько примеров использования этого правила:",
+        "media": [
+            {
+                "type": "photo",
+                "url": "https://example.com/example1.jpg",
+                "width": 800,
+                "height": 600
+            },
+            {
+                "type": "photo",
+                "url": "https://example.com/example2.jpg",
+                "width": 800,
+                "height": 600
+            },
+            {
+                "type": "video",
+                "url": "https://example.com/explanation.mp4",
+                "width": 1280,
+                "height": 720,
+                "duration": 45
+            }
+        ]
+    }
+}
+
+# Голосовое сообщение
+
+{
+    "metadata": {
+        "message_id": 12349,
+        "conversation_id": "conv_abc123"
+    },
+    "content": {
+        "type": "voice",
+        "text": "Послушайте, как правильно произносится это слово:",
+        "media": [
+            {
+                "type": "voice",
+                "url": "https://example.com/pronunciation.ogg",
+                "duration": 3.5
+            }
+        ]
+    }
+}

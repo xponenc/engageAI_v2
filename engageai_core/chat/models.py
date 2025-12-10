@@ -161,6 +161,29 @@ class MessageSource(models.TextChoices):
     SYSTEM = 'system', _('Системное сообщение')
 
 
+class MessageType(models.TextChoices):
+    """Тип сообщения"""
+    TEXT = 'text', 'Текст'
+    IMAGE = 'image', 'Изображение'
+    AUDIO = 'audio', 'Аудио'
+    VIDEO = 'video', 'Видео'
+    DOCUMENT = 'document', 'Документ'
+
+
+class MediaFile(models.Model):
+    message = models.ForeignKey('Message', related_name='media_files', on_delete=models.CASCADE)
+    file = models.FileField(upload_to='chat_media/%Y/%m/%d/')
+    file_type = models.CharField(max_length=20)  # image, audio, video, document
+    mime_type = models.CharField(max_length=50)  # MIME type файла
+    size = models.PositiveIntegerField()  # Размер в байтах
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    ai_generated = models.BooleanField(default=False)  # Флаг для файлов, сгенерированных AI
+
+    def get_absolute_url(self):
+        return self.file.url
+
+
 class Message(models.Model):
     """Сообщение с поддержкой разных источников и метаданных"""
     objects = models.Manager()

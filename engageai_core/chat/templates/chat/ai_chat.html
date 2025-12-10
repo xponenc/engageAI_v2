@@ -125,9 +125,49 @@
                                 </div>
                                 
                                 <div class="chat-message__content">
+                                    {% if message.message_type == 'text' %}
                                     <div class="chat-message__text">
                                         {{ message.content|safe }}
                                     </div>
+                                    {% elif message.message_type == 'image' %}
+                                        <p>{{ message.content|linebreaks }}</p>
+                                        {% for media in message.media_files.all %}
+                                            <div class="media-container">
+                                            <img src="{{ media.get_absolute_url }}" class="chat-image" alt="Изображение в чате" loading="lazy">
+                                            </div>
+                                        {% endfor %}
+                                    {% elif message.message_type == 'audio' %}
+                                        <p>{{ message.content|linebreaks }}</p>
+                                        {% for media in message.media_files.all %}
+                                            <div class="media-container">
+                                            <audio controls class="chat-audio">
+                                                <source src="{{ media.get_absolute_url }}" type="{{ media.mime_type }}">
+                                                Ваш браузер не поддерживает аудио элемент.
+                                            </audio>
+                                            </div>
+                                        {% endfor %}
+                                    {% elif message.message_type == 'video' %}
+                                        <p>{{ message.content|linebreaks }}</p>
+                                        {% for media in message.media_files.all %}
+                                            <div class="media-container">
+                                            <video controls class="chat-video">
+                                                <source src="{{ media.get_absolute_url }}" type="{{ media.mime_type }}">
+                                                Ваш браузер не поддерживает видео элемент.
+                                            </video>
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <!-- Документы и другие типы -->
+                                        <p>{{ message.content|linebreaks }}</p>
+                                        {% for media in message.media_files.all %}
+                                            <div class="document-container">
+                                            <a href="{{ media.get_absolute_url }}" class="document-link" download>
+                                                <i class="fas fa-file-{{ media.file_type }}"></i>
+                                                {{ media.file.name|basename }}
+                                            </a>
+                                            </div>
+                                        {% endfor %}
+                                    {% endif %}
                                     
                                     <div class="chat-message__meta">
                                         <span class="chat-message__time">

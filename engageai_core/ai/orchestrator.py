@@ -4,6 +4,7 @@ import os
 from typing import Dict, Any
 from openai import AsyncOpenAI
 
+from ai.llm.llm_factory import llm_factory
 from engageai_core.ai.state_manager import UserStateManager
 from engageai_core.ai.agent_factory import AgentFactory
 
@@ -27,7 +28,7 @@ class Orchestrator:
         self.platform = platform
         self.state_manager = UserStateManager(self.user_id)
         self.agent_factory = AgentFactory()
-        self.client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        # self.client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     def _determine_current_agent(self) -> str:
         """
@@ -50,28 +51,60 @@ class Orchestrator:
 
         return 'curator'
 
-    async def _get_llm_response(self, agent_type: str, message: str) -> Dict[str, Any]:
+    async def _get_llm_response(self, agent_type: str, message: str, media_files=None) -> Dict[str, Any]:
         """
-        Получает и парсит ответ от LLM
+        Получает и парсит ответ от LLM с использованием LLMFactory
         """
         user_state = self.state_manager.get_current_state()
-        response = await self.agent_factory.create_agent_response(
-            agent_type=agent_type,
-            user_state=user_state,
-            user_message=message,
-            platform=self.platform
-        )
-        return response
 
-    def process_message(self, message_text: str) -> Dict[str, Any]:
+        # Формируем системный промпт
+        system_prompt = self.agent_factory._get_agent_prompt(agent_type, user_state)
+
+        # Генерируем ответ с использованием LLMFactory
+        generation_result = await llm_factory.generate_json_response(
+            system_prompt=system_prompt,
+            user_message=message,
+            conversation_history=user_state.get('history', []),
+            media_context=media_files
+        )
+
+        # Возвращаем структурированный ответ
+        return {
+            "message": generation_result.response.message,
+            "agent_state": generation_result.response.agent_state,
+            "metadata": {
+                "token_usage": generation_result.token_usage,
+                "cost": generation_result.cost,
+                "model_used": generation_result.model_used,
+                "generation_time": generation_result.generation_time
+            }
+        }
+
+    def process_message(self, user_context) -> Dict[str, Any]:
         """
-        Основной метод обработки сообщения
+        Основной метод обработки сообщения с поддержкой медиа
         """
+        # Определяем тип входных данных
+        if isinstance(user_context, dict):
+            message_text = user_context.get('text', '')
+            media_files = user_context.get('media', [])
+        else:
+            message_text = user_context
+            media_files = []
+
         current_agent = self._determine_current_agent()
 
         # Асинхронный вызов LLM
         import asyncio
-        result = asyncio.run(self._get_llm_response(current_agent, message_text))
+        result = asyncio.run(self._get_llm_response(current_agent, message_text, media_files))
+
+        # Обновление состояния пользователя
+        self.state_manager.update_state(
+            user_message=message_text,
+            agent_response=result
+        )
+
+        return result
 
         # Обновление состояния пользователя
         self.state_manager.update_state(

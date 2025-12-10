@@ -11,8 +11,9 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import ListView
 
+from ai.orchestrator import Orchestrator
 from ai_assistant.models import AIAssistant
-from .models import Chat, Message, MessageSource, ChatPlatform
+from .models import Chat, Message, MessageSource, ChatPlatform, MessageType, MediaFile
 
 
 class AiChatView(LoginRequiredMixin, View):
@@ -37,40 +38,124 @@ class AiChatView(LoginRequiredMixin, View):
             # logger.error(f"Ошибка при создании чата: {str(e)}")
             raise Http404("Не удалось создать чат с AI-ассистентом")
 
+    # def _get_ajax_response(self, user_message_text, ai_message, request):
+    #     """Формирует AJAX-ответ для чата"""
+    #     return JsonResponse({
+    #         'user_message': user_message_text,
+    #         'ai_response': {
+    #             "id": ai_message.pk,
+    #             "score": None,
+    #             "request_url": reverse_lazy("chat:ai-message-score", kwargs={"message_pk": ai_message.pk}),
+    #             "text": ai_message.content,
+    #         },
+    #     })
+
     def _get_ajax_response(self, user_message_text, ai_message, request):
-        """Формирует AJAX-ответ для чата"""
-        return JsonResponse({
+        """Формирует AJAX-ответ для чата с поддержкой медиа"""
+        response_data = {
             'user_message': user_message_text,
             'ai_response': {
                 "id": ai_message.pk,
                 "score": None,
                 "request_url": reverse_lazy("chat:ai-message-score", kwargs={"message_pk": ai_message.pk}),
                 "text": ai_message.content,
+                "message_type": ai_message.message_type,
+                "media_files": [
+                    {
+                        "url": media.get_absolute_url(),
+                        "type": media.file_type,
+                        "mime_type": media.mime_type
+                    } for media in ai_message.media_files.all()
+                ]
             },
-        })
+        }
+        return JsonResponse(response_data)
 
-    def _process_ai_response(self, chat, user_message_text):
+    def _process_ai_response(self, chat, user_message_text, media_files=None):
         """Обрабатывает запрос к AI и возвращает ответ"""
-        time.sleep(10)
-        return f"Re: {user_message_text}"
-        # try:
-        #     # Инициализируем оркестратор с текущим чатом
-        #     from engageai_core.ai.orchestrator import Orchestrator
-        #     orchestrator = Orchestrator(chat=chat)
-        #
-        #     # Получаем ответ от AI
-        #     ai_response = orchestrator.process_message(user_message_text)
-        #
-        #     if not ai_response.get('success', False):
-        #         # logger.error(f"Ошибка при генерации ответа AI: {ai_response.get('error', 'Неизвестная ошибка')}")
-        #         return "Извините, произошла ошибка при генерации ответа. Пожалуйста, попробуйте позже."
-        #
-        #     return ai_response.get('response_message', "Извините, я пока не могу ответить на ваш вопрос.")
-        #
-        # except Exception as e:
-        #     # logger.exception(f"Критическая ошибка при работе с AI-оркестратором: {str(e)}")
-        #     return ("Извините, сейчас я не могу обработать ваш запрос."
-        #             " Попробуйте позже или воспользуйтесь командами из меню.")
+
+        try:
+            orchestrator = Orchestrator(chat=chat)
+
+            # Подготавливаем расширенный контекст с медиа
+            user_context = {
+                'text': user_message_text,
+                'media': [
+                    {
+                        'url': media.get_absolute_url(),
+                        'type': media.file_type,
+                        'mime_type': media.mime_type,
+                        'path': media.file.path if hasattr(media.file, 'path') else None
+                    } for media in media_files
+                ] if media_files else []
+            }
+
+            # Получаем ответ от AI с возможными медиа
+            ai_response = orchestrator.process_message(user_context)
+
+            if not ai_response.get('success', False):
+                return "Извините, произошла ошибка при генерации ответа.", []
+
+            return ai_response.get('response_message',
+                                   "Извините, я пока не могу ответить на ваш вопрос."), ai_response.get('media_files',
+                                                                                                        [])
+
+        except Exception as e:
+            # logger.exception(f"Ошибка при работе с AI: {str(e)}")
+            return "Извините, сейчас не могу обработать ваш запрос.", []
+
+    def _handle_media_files(self, request, message):
+        """Обрабатывает загрузку медиафайлов"""
+        media_objects = []
+        media_files = request.FILES.getlist('media_files')  # Получаем загруженные файлы
+
+        for media_file in media_files:
+            # Валидация файла
+            if media_file.size > 10 * 1024 * 1024:  # 10MB limit
+                continue
+
+            # Определяем тип файла
+            file_type = self._determine_file_type(media_file)
+            if file_type not in ['image', 'audio', 'video', 'document']:
+                continue
+
+            # Сохраняем файл
+            media_obj = MediaFile.objects.create(
+                file=media_file,
+                file_type=file_type,
+                mime_type=media_file.content_type,
+                size=media_file.size,
+                created_by=request.user
+            )
+            media_objects.append(media_obj)
+
+        # Связываем медиа с сообщением
+        if media_objects:
+            message.media_files.add(*media_objects)
+            # Обновляем тип сообщения
+            if any(m.file_type == 'image' for m in media_objects):
+                message.message_type = MessageType.IMAGE
+            elif any(m.file_type == 'audio' for m in media_objects):
+                message.message_type = MessageType.AUDIO
+            elif any(m.file_type == 'video' for m in media_objects):
+                message.message_type = MessageType.VIDEO
+            elif any(m.file_type == 'document' for m in media_objects):
+                message.message_type = MessageType.DOCUMENT
+
+        message.save()
+        return media_objects
+
+    def _determine_file_type(self, file):
+        """Определяет тип файла по расширению"""
+        extension = file.name.split('.')[-1].lower()
+        if extension in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']:
+            return 'image'
+        elif extension in ['mp3', 'wav', 'ogg', 'm4a']:
+            return 'audio'
+        elif extension in ['mp4', 'avi', 'mov', 'wmv']:
+            return 'video'
+        else:
+            return 'document'
 
     def get(self, request, slug, *args, **kwargs):
         """Отображает интерфейс чата с историей сообщений"""
@@ -95,11 +180,12 @@ class AiChatView(LoginRequiredMixin, View):
     def post(self, request, slug, *args, **kwargs):
         """Обрабатывает отправку сообщения в чат"""
         user_message_text = request.POST.get('message', '').strip()
+        has_media = bool(request.FILES.getlist('media_files'))
 
         # Валидация сообщения
-        if not user_message_text:
+        if not user_message_text and not has_media:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({"error": "Пустое сообщение"}, status=400)
+                return JsonResponse({"error": "Сообщение или файлы отсутствуют"}, status=400)
             return redirect('chat:ai-chat', slug=slug)
 
         # if len(user_message_text) > 2000:
@@ -119,11 +205,17 @@ class AiChatView(LoginRequiredMixin, View):
             chat=chat,
             content=user_message_text,
             source_type=MessageSource.WEB,
-            sender=self.request.user
+            sender=self.request.user,
+            message_type=MessageType.TEXT
         )
 
+        # Обрабатываем медиафайлы, если есть
+        media_objects = []
+        if has_media:
+            media_objects = self._handle_media_files(request, user_message)
+
         # Генерируем ответ от AI
-        ai_message_text = self._process_ai_response(chat, user_message_text)
+        ai_message_text, ai_media_files = self._process_ai_response(chat, user_message_text, media_objects)
 
         ai_message = Message.objects.create(
             chat=chat,
@@ -131,8 +223,30 @@ class AiChatView(LoginRequiredMixin, View):
             content=ai_message_text,
             is_ai=True,
             source_type=MessageSource.WEB,
-            sender=None
+            sender=None,
+            message_type=MessageType.TEXT  # По умолчанию текст
         )
+
+        # Обрабатываем медиафайлы от AI
+        if ai_media_files:
+            ai_media_objects = []
+            for media_data in ai_media_files:
+                # Создаем объекты MediaFile для сгенерированных AI файлов
+                # Здесь предполагается, что ai_media_files содержит URL или пути к файлам
+                media_obj = MediaFile.objects.create(
+                    file=media_data['path'],
+                    file_type=media_data['type'],
+                    mime_type=media_data['mime_type'],
+                    size=media_data['size'],
+                    ai_generated=True
+                )
+                ai_media_objects.append(media_obj)
+
+            ai_message.media_files.add(*ai_media_objects)
+            # Обновляем тип сообщения AI
+            if ai_media_objects:
+                ai_message.message_type = self._determine_message_type(ai_media_objects)
+            ai_message.save()
 
         # Обрабатываем AJAX-запрос
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':

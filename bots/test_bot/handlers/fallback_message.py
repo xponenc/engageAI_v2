@@ -2,7 +2,7 @@ import asyncio
 import time
 import json
 from typing import Union, Optional, Dict, Any
-from aiogram import Router, F, types
+from aiogram import Router, F, types, Bot
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
@@ -178,15 +178,8 @@ async def handle_orchestrator_callback(callback: CallbackQuery, state: FSMContex
 #     media_group_event = MediaGroupEvent(message, media_info)
 #     return await process_ai_request(media_group_event, state)
 
-from aiogram import Bot
-from aiogram.types import Message
-import asyncio
 
 media_group_timers: dict[int, asyncio.Task] = {}
-
-# --------------------------
-#   ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ
-# --------------------------
 
 async def resolve_message_from_state(state: FSMContext, bot: Bot) -> Message | None:
     """Берёт последний message_id из real_messages и загружает настоящее сообщение через Bot API."""

@@ -213,9 +213,17 @@ def start_django():
 
 def start_celery():
     print("⚡ Starting Celery worker...")
+    print("Celery BASE_DIR", BASE_DIR)
     return subprocess.Popen(
-        ["celery", "-A", "engageai_core", "worker", "--pool=solo", "-l", "info"],
-        cwd=str(BASE_DIR / "engageai_core")
+        [
+            "celery",
+            "-A", "engageai_core",  # Django package с celery.py
+            "worker",
+            "--pool=solo",  # Windows-compatible
+            "-l", "info"
+        ],
+        cwd=str(BASE_DIR),  # Рабочая директория проекта
+        shell=True  # Windows: важно для правильного поиска исполняемого файла
     )
 
 

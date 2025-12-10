@@ -1,8 +1,10 @@
 # services.py
+from pathlib import Path
 from typing import Any
 
 import requests
 from django.conf import settings
+from dotenv import dotenv_values
 
 
 class TelegramBotService:
@@ -35,7 +37,12 @@ class TelegramBotService:
 def get_bot_by_tag(bot_tag: str) -> Any:
     """Получает объект бота по тегу (пример реализации)"""
     # В реальном проекте здесь должна быть логика получения токена
-    bot_name = bot_tag[5:-1]
-    bot_token = settings.INTERNAL_BOTS.get(bot_name)
+    # bot_name = bot_tag[5:-1]
+    # bot_token = settings.INTERNAL_BOTS.get(bot_name)
+    # TODO в Django тоже нужны токены ботов
+    BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent  # 4 уровня вверх до корня
+    env_path = BASE_DIR / ".env"
 
+    config = dotenv_values(env_path)
+    bot_token = config.get("TEST_BOT_TG_KEY")
     return type('Bot', (), {'token': bot_token})()

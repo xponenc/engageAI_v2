@@ -1,5 +1,7 @@
 # tasks.py
+import mimetypes
 import os
+import tempfile
 from io import BytesIO
 from django.core.files import File
 from django.core.files.temp import NamedTemporaryFile
@@ -53,10 +55,10 @@ def process_telegram_media(self, message_id, file_data, bot_token):
         )
 
         # 5. Сохраняем основной файл
-        temp_file = NamedTemporaryFile(delete=True)
-        temp_file.write(file_content)
-        temp_file.flush()
-        media_file.file.save(file_name, File(temp_file), save=False)
+        with tempfile.NamedTemporaryFile() as temp_file:  # стандартный tempfile
+            temp_file.write(file_content)
+            temp_file.flush()
+            media_file.file.save(file_name, File(temp_file), save=False)
 
         # 6. Генерируем миниатюру для изображений
         if file_data['file_type'] == 'image':

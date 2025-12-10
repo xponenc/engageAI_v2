@@ -471,5 +471,6 @@ class AnswerAPIView(
                     "core_message_id": ai_message.id,
                     "reply_to_message_id": incoming_message_id,
                 }
-            }
+            },
+            status=status.HTTP_200_OK
         )

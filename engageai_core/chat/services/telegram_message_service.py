@@ -12,6 +12,9 @@ from rest_framework import status
 from ai_assistant.models import AIAssistant
 from chat.models import Message, MessageSource, Chat, ChatPlatform
 from utils.setup_logger import setup_logger
+from .telegram_bot_services import get_bot_by_tag
+
+from ..tasks import process_telegram_media
 
 User = get_user_model()
 
@@ -172,6 +175,8 @@ class TelegramUpdateService:
                 message_id=message_id,
                 extra_metadata=message_data
             )
+
+            self._process_media_files(message, message_data, bot_tag)
 
             core_api_logger.info(f"{bot_tag} Создано сообщение ID {message.pk} из апдейта {update_id}")
             return {
@@ -382,6 +387,94 @@ class TelegramUpdateService:
                 },
                 "response_status": status.HTTP_500_INTERNAL_SERVER_ERROR,
             }
+
+    def _process_media_files(self, message: Message, message_data: dict, bot_tag: str):
+        """Анализирует update и запускает фоновые задачи для медиа"""
+        media_tasks = []
+
+        # 1. Проверяем наличие медиа в сообщении
+        if photo := message_data.get("photo"):
+            media_tasks.append(self._prepare_photo_task(photo[-1]))  # Берем самый большой размер
+
+        elif document := message_data.get("document"):
+            media_tasks.append(self._prepare_document_task(document))
+
+        elif audio := message_data.get("audio"):
+            media_tasks.append(self._prepare_audio_task(audio))
+
+        elif video := message_data.get("video"):
+            media_tasks.append(self._prepare_video_task(video))
+
+        elif voice := message_data.get("voice"):
+            media_tasks.append(self._prepare_voice_task(voice))
+
+        # 2. Запускаем задачи для всех найденных медиа
+        for task_data in media_tasks:
+            transaction.on_commit(
+                lambda td=task_data: self._enqueue_media_task(message, td, bot_tag)
+            )
+
+    def _prepare_photo_task(self, photo_size: dict) -> dict:
+        """Подготавливает данные для обработки фото"""
+        return {
+            "file_id": photo_size["file_id"],
+            "file_type": "image",
+            "width": photo_size.get("width"),
+            "height": photo_size.get("height")
+        }
+
+    def _prepare_document_task(self, document: dict) -> dict:
+        """Подготавливает данные для обработки аудио"""
+        mime_type = document.get("mime_type", "")
+        file_type = "image" if mime_type.startswith("image/") else "document"
+        return {
+            "file_id": document["file_id"],
+            "file_type": file_type,
+            "mime_type": mime_type,
+            "file_name": document.get("file_name", "document")
+        }
+
+    def _prepare_audio_task(self, audio: dict) -> dict:
+        """Подготавливает данные для обработки видео"""
+        mime_type = audio.get("mime_type", "")
+        file_type = "image" if mime_type.startswith("image/") else "document"
+        return {
+            "file_id": audio["file_id"],
+            "file_type": file_type,
+            "mime_type": mime_type,
+            "file_name": audio.get("file_name", "audio")
+        }
+
+    def _prepare_video_task(self, video: dict) -> dict:
+        """Подготавливает данные для обработки документа"""
+        mime_type = video.get("mime_type", "")
+        file_type = "image" if mime_type.startswith("image/") else "document"
+        return {
+            "file_id": video["file_id"],
+            "file_type": file_type,
+            "mime_type": mime_type,
+            "file_name": video.get("file_name", "video")
+        }
+
+    def _prepare_voice_task(self, voice: dict) -> dict:
+        """Подготавливает данные для обработки документа"""
+        mime_type = voice.get("mime_type", "")
+        file_type = "image" if mime_type.startswith("image/") else "document"
+        return {
+            "file_id": voice["file_id"],
+            "file_type": file_type,
+            "mime_type": mime_type,
+            "file_name": voice.get("file_name", "audio")
+        }
+
+    def _enqueue_media_task(self, message: Message, task_data: dict, bot_tag: str):
+        """Ставит задачу в очередь Celery"""
+        bot = get_bot_by_tag(bot_tag)  # Реализация получения токена бота по тегу
+        process_telegram_media.delay(
+            message_id=message.pk,
+            file_data=task_data,
+            bot_token=bot.token
+        )
 
     @staticmethod
     def get_button_text_from_dict(callback: dict) -> str | None:

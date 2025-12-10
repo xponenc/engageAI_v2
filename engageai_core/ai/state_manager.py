@@ -2,7 +2,7 @@ import time
 from datetime import datetime
 from typing import Dict, Any, List
 
-from engageai_core.ai.repositories import UserRepository
+from ai.repositories import UserRepository
 
 
 class UserStateManager:

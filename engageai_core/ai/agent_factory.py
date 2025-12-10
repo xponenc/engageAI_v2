@@ -267,10 +267,10 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 
 # Локальные импорты
-from engageai_core.ai.prompts.system_prompts import get_agent_prompt
-from engageai_core.ai.prompts.examples import DIAGNOSTIC_EXAMPLES, CURATOR_EXAMPLES
-from engageai_core.ai.prompts.templates import format_platform_message
-from engageai_core.ai.llm.llm_factory import llm_factory, GenerationResult  # Новый импорт
+from ai.prompts.system_prompts import get_agent_prompt
+from ai.prompts.examples import DIAGNOSTIC_EXAMPLES, CURATOR_EXAMPLES
+from ai.prompts.templates import format_platform_message
+from ai.llm.llm_factory import llm_factory, GenerationResult  # Новый импорт
 
 logger = logging.getLogger(__name__)  # Добавляем логирование
 

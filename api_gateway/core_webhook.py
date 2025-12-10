@@ -35,9 +35,11 @@ async def lifespan(app: FastAPI):
     logger.info("Main FastApi Gateway starting up...")
 
     bots = GATEWAY_SETTINGS.bots
+    logger.info(f"{bots=}")
     for bot_name, bot_config in bots.items():
         bot_token = bot_config.token
         bot = Bot(bot_token)
+        logger.info(f"{bot_name=} {bot_token=}")
 
         webhook_host = GATEWAY_SETTINGS.webhook_host.strip().rstrip("/")
         bot_name_clean = bot_name.strip()

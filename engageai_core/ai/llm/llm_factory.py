@@ -45,11 +45,15 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
-from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.runnables import RunnableConfig
+
+# Кэширование
 from langchain_community.cache import InMemoryCache, RedisCache
-from langchain.globals import set_llm_cache
+# from langchain_redis.cache import RedisCache
+# или от langchain-core, в зависимости от версии
+from langchain_core.globals import set_llm_cache
+from pydantic import Field
 
 # Для rate limiting и retry
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
@@ -58,7 +62,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from openai import OpenAIError, RateLimitError, APIConnectionError, APIError
 
 # Локальные импорты
-from engageai_core.ai.config import LLMConfig
+from ai.config import LLMConfig
 
 logger = logging.getLogger(__name__)
 

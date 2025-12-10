@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, Dict, Any
 
-from engageai_core.users.models import StudyProfile
+from users.models import StudyProfile
 
 
 class UserRepository:

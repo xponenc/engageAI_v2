@@ -5,8 +5,8 @@ from typing import Dict, Any
 from openai import AsyncOpenAI
 
 from ai.llm.llm_factory import llm_factory
-from engageai_core.ai.state_manager import UserStateManager
-from engageai_core.ai.agent_factory import AgentFactory
+from ai.state_manager import UserStateManager
+from ai.agent_factory import AgentFactory
 
 
 class Orchestrator:

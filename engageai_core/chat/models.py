@@ -5,6 +5,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from ai_assistant.models import AIAssistant
@@ -171,17 +172,48 @@ class MessageType(models.TextChoices):
 
 
 class MediaFile(models.Model):
+    def media_upload_path(instance, filename):
+        """Динамический путь для медиафайлов"""
+        return f'chat_media/{instance.message.chat.id}/{timezone.now().strftime("%Y/%m/%d")}/{filename}'
+
+    def thumbnail_upload_path(instance, filename):
+        """Динамический путь для миниатюр"""
+        return f'chat_media/thumbnails/{instance.message.chat.id}/{timezone.now().strftime("%Y/%m/%d")}/{filename}'
+
     message = models.ForeignKey('Message', related_name='media_files', on_delete=models.CASCADE)
-    file = models.FileField(upload_to='chat_media/%Y/%m/%d/')
+    file = models.FileField(upload_to=media_upload_path)
+    thumbnail = models.ImageField(
+        upload_to=thumbnail_upload_path,
+        null=True,
+        blank=True,
+        verbose_name=_('Миниатюра')
+    )
+    external_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name=_('Внешний ID файла в Telegram')
+    )
     file_type = models.CharField(max_length=20)  # image, audio, video, document
     mime_type = models.CharField(max_length=50)  # MIME type файла
     size = models.PositiveIntegerField()  # Размер в байтах
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    ai_generated = models.BooleanField(default=False)  # Флаг для файлов, сгенерированных AI
+    ai_generated = models.BooleanField(default=False)
 
     def get_absolute_url(self):
         return self.file.url
+
+
+
+    class Meta:
+        # Добавляем уникальность для предотвращения дубликатов
+        constraints = [
+            models.UniqueConstraint(
+                fields=['message', 'external_id'],
+                name='unique_media_per_message'
+            )
+        ]
 
 
 class Message(models.Model):

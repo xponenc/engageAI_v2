@@ -85,6 +85,7 @@ def process_telegram_media(self, message_id, file_data, bot_token):
 
 def generate_thumbnail(media_file, original_content):
     """Генерация миниатюры для изображения с валидацией"""
+    print("Генерация миниатюр")
     try:
         img = Image.open(BytesIO(original_content))
 
@@ -111,6 +112,7 @@ def generate_thumbnail(media_file, original_content):
 
         # Сохраняем миниатюру
         media_file.thumbnail.save(thumb_name, File(thumb_io), save=False)
+        print("SAVED")
 
         return True
     except Exception as e:

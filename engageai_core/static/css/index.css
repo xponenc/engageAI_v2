@@ -788,7 +788,7 @@
 }
 
 /* Поддержка темной темы */
-@media (prefers-color-scheme: dark) {
+[data-theme="dark"] {
     .hero {
         background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
     }

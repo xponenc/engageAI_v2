@@ -10,7 +10,7 @@
     --color-border: #e2e8f0;
     /* neutral, low-contrast border for visual separation without harshness */
 
-    --color-text: #0f172a;
+    --color-text: #213a76;
     /* primary text — improved contrast ratio (AAA on white) */
     --color-text-muted: #64748b;
     /* secondary text — readable but subdued */

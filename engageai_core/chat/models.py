@@ -1,3 +1,6 @@
+import os
+import re
+import uuid
 from typing import Optional
 
 from django.contrib.postgres.indexes import GinIndex
@@ -171,14 +174,100 @@ class MessageType(models.TextChoices):
     DOCUMENT = 'document', 'Документ'
 
 
+def sanitize_filename(filename: str) -> str:
+    """
+    Очищает имя файла от недопустимых символов и ограничивает длину
+    """
+    # Удаляем недопустимые символы
+    cleaned = re.sub(r'[<>:"/\\|?*]', '', filename)
+    # Заменяем пробелы и специальные символы на подчёркивания
+    cleaned = re.sub(r'[\s\W]+', '_', cleaned)
+    # Ограничиваем длину имени файла (максимум 100 символов для имени + расширение)
+    max_name_length = 100
+    if len(cleaned) > max_name_length:
+        name, ext = os.path.splitext(cleaned)
+        cleaned = name[:max_name_length - len(ext) - 10] + "..." + ext
+    # Приводим к нижнему регистру
+    return cleaned.lower()
+
+
 class MediaFile(models.Model):
+    # def media_upload_path(instance, filename):
+    #     """Динамический путь для медиафайлов"""
+    #     return f'chat_media/{instance.message.chat.id}/{timezone.now().strftime("%Y/%m/%d")}/{filename}'
+    #
+    # def thumbnail_upload_path(instance, filename):
+    #     """Динамический путь для миниатюр"""
+    #     return f'chat_media/thumbnails/{instance.message.chat.id}/{timezone.now().strftime("%Y/%m/%d")}/{filename}'
+
     def media_upload_path(instance, filename):
-        """Динамический путь для медиафайлов"""
-        return f'chat_media/{instance.message.chat.id}/{timezone.now().strftime("%Y/%m/%d")}/{filename}'
+        """Динамический путь для медиафайлов с сохранением оригинального имени"""
+        # Извлекаем расширение файла
+        ext = os.path.splitext(filename)[1].lower()
+
+        # Генерируем временные метки и уникальный идентификатор
+        timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+        unique_id = uuid.uuid4().hex[:6]  # Короткий уникальный ID
+
+        # Получаем оригинальное имя файла из метаданных сообщения или используем filename
+        original_name = "file"
+
+        if hasattr(instance, 'message') and instance.message:
+            # Пытаемся получить оригинальное имя из метаданных сообщения
+            telegram_data = instance.message.get_telegram_data()
+            raw_data = telegram_data.get('raw', {})
+
+            # Ищем оригинальное имя в разных полях в зависимости от типа медиа
+            if document := raw_data.get('document'):
+                original_name = document.get('file_name', 'document')
+            elif photo := raw_data.get('photo'):
+                # Для фото берем caption или стандартное имя
+                original_name = raw_data.get('caption', 'photo')
+            elif video := raw_data.get('video'):
+                original_name = video.get('file_name', 'video')
+            elif audio := raw_data.get('audio'):
+                original_name = audio.get('file_name', 'audio')
+            elif voice := raw_data.get('voice'):
+                original_name = 'voice_message'
+            elif animation := raw_data.get('animation'):
+                original_name = animation.get('file_name', 'animation')
+            elif sticker := raw_data.get('sticker'):
+                original_name = 'sticker'
+
+        # Очищаем оригинальное имя файла
+        clean_original_name = sanitize_filename(original_name)
+
+        # Формируем окончательное имя файла
+        # Формат: timestamp_uniqueid_originalname.ext
+        file_name = f"{timestamp}_{unique_id}_{clean_original_name}{ext}"
+
+        # Дополнительная защита от слишком длинных имён
+        max_path_length = 255
+        if len(file_name) > max_path_length:
+            # Обрезаем оригинальную часть имени
+            max_original_length = max_path_length - len(f"{timestamp}_{unique_id}__{ext}") - 1
+            clean_original_name = clean_original_name[:max_original_length]
+            file_name = f"{timestamp}_{unique_id}_{clean_original_name}{ext}"
+
+        return f'chat_media/{instance.message.chat_id}/{timezone.now().strftime("%Y/%m/%d")}/{file_name}'
 
     def thumbnail_upload_path(instance, filename):
-        """Динамический путь для миниатюр"""
-        return f'chat_media/thumbnails/{instance.message.chat.id}/{timezone.now().strftime("%Y/%m/%d")}/{filename}'
+        """Динамический путь для миниатюр с сохранением связи с оригиналом"""
+        # Аналогичная логика, но с пометкой "thumb"
+        timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+        unique_id = uuid.uuid4().hex[:6]
+
+        # Получаем оригинальное имя из связанного файла
+        original_name = "image"
+        if hasattr(instance, 'file') and instance.file:
+            original_name = os.path.splitext(os.path.basename(instance.file.name))[0]
+
+        clean_original_name = sanitize_filename(original_name)
+
+        # Для миниатюр используем расширение jpg
+        file_name = f"{timestamp}_{unique_id}_{clean_original_name}_thumb.jpg"
+
+        return f'chat_media/thumbnails/{instance.message.chat_id}/{timezone.now().strftime("%Y/%m/%d")}/{file_name}'
 
     message = models.ForeignKey('Message', related_name='media_files', on_delete=models.CASCADE)
     file = models.FileField(upload_to=media_upload_path)
@@ -300,6 +389,13 @@ class Message(models.Model):
         blank=True,
         verbose_name=_('Метаданные'),
         help_text=_('Дополнительные данные от источника в формате JSON')
+    )
+
+    message_type = models.CharField(
+        max_length=20,
+        choices=MessageType.choices,
+        default=MessageType.TEXT,
+        verbose_name=_('Тип сообщения')
     )
 
     class Meta:

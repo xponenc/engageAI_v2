@@ -84,49 +84,53 @@
                                 </td>
                                 <td>
                                     <div class="message-preview">
-                                        <div class="message-preview__text">{{ message.content|truncatechars:200 }}</div>
-                                        {{ message.media_files.all }}
-                                        {% if message.message_type == 'image' %}
-                                            <p>{{ message.content|linebreaks }}</p>
-                                            {% for media in message.media_files.all %}
-                                                <div class="media-container">
-                                                <img src="{{ media.thumbnail.url }}" class="chat-image" alt="Изображение в чате" loading="lazy">
-                                                </div>
-                                            {% endfor %}
-                                        {% elif message.message_type == 'audio' %}
-                                            <p>{{ message.content|linebreaks }}</p>
-                                            {% for media in message.media_files.all %}
-                                                <div class="media-container">
-                                                <audio controls class="chat-audio">
-                                                    <source src="{{ media.file.url }}" type="{{ media.mime_type }}">
-                                                    Ваш браузер не поддерживает аудио элемент.
-                                                </audio>
-                                                </div>
-                                            {% endfor %}
-                                        {% elif message.message_type == 'video' %}
-                                            <p>{{ message.content|linebreaks }}</p>
-                                            {% for media in message.media_files.all %}
-                                                <div class="media-container">
-                                                <video controls class="chat-video">
-                                                    <source src="{{ media.file.url }}" type="{{ media.mime_type }}">
-                                                    Ваш браузер не поддерживает видео элемент.
-                                                </video>
-                                                </div>
-                                            {% endfor %}
-                                        {% else %}
-                                            <!-- Документы и другие типы -->
-                                            <p>{{ message.content|linebreaks }}</p>
-                                            {% for media in message.media_files.all %}
-                                                {% if media.file %}
-                                                <div class="document-container">
-                                                    <img src="{{ media.thumbnail.url }}" class="chat-image" alt="Изображение в чате" loading="lazy">
-                                                    <a href="{{ media.file.url }}" class="document-link" download>
-                                                        <i class="fas fa-file-{{ media.file_type }}"></i>
-                                                        {{ media.file.name }}
-                                                    </a>
-                                                </div>
-                                                {% endif %}
-                                            {% endfor %}
+                                        {% if message.content %}
+                                            <div class="message-preview__text">
+                                                {{ message.content|truncatechars:200 }}
+                                            </div>
+                                        {% endif %}
+
+                                        {% if message.media_files.exists %}
+                                            <div class="message-preview__media">
+
+                                                {% for media in message.media_files.all %}
+                                                    {% if media.file_type == 'image' %}
+                                                        <div class="media-item media-item--image">
+                                                            <a href="{{ media.file.url }}" target="_blank">
+                                                                <img src="{{ media.thumbnail.url|default:media.file.url }}"
+                                                                    class="chat-image"
+                                                                    alt="Изображение"
+                                                                    loading="lazy">
+                                                            </a>
+                                                        </div>
+
+                                                    {% elif media.file_type == 'video' %}
+                                                        <div class="media-item media-item--video">
+                                                            <video controls class="chat-video">
+                                                                <source src="{{ media.file.url }}" type="{{ media.mime_type }}">
+                                                            </video>
+                                                        </div>
+
+                                                    {% elif media.file_type == 'audio' %}
+                                                        <div class="media-item media-item--audio">
+                                                            <audio controls class="chat-audio">
+                                                                <source src="{{ media.file.url }}" type="{{ media.mime_type }}">
+                                                            </audio>
+                                                        </div>
+
+                                                    {% else %}
+                                                        <div class="media-item media-item--document">
+                                                            <a href="{{ media.file.url }}" class="document-link" download>
+                                                                <div class="document-icon">📄</div>
+                                                                <div class="document-name">
+                                                                    {{ media.file.name|basename }}
+                                                                </div>
+                                                            </a>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+
+                                            </div>
                                         {% endif %}
                                     </div>
                                 </td>

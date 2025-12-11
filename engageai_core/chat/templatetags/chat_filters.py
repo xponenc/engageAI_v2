@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime
 
 from django import template
@@ -70,3 +71,9 @@ def initials(user, default="—"):
 
     # Вообще нет ни имени ни фамилии
     return default
+
+
+@register.filter
+def basename(path):
+    """Имя файла"""
+    return os.path.basename(path)

@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta
 from typing import Optional, Dict, Any, Tuple, Union
 
 import django
@@ -10,7 +11,7 @@ from django.utils import timezone
 from rest_framework import status
 
 from ai_assistant.models import AIAssistant
-from chat.models import Message, MessageSource, Chat, ChatPlatform
+from chat.models import Message, MessageSource, Chat, ChatPlatform, MessageType
 from utils.setup_logger import setup_logger
 from .telegram_bot_services import get_bot_by_tag
 
@@ -159,41 +160,69 @@ class TelegramUpdateService:
 
     def _process_message(self, message_data: dict, update_id: int, bot_tag: str, assistant_slug: str, user: User):
         """Обработка обычного сообщения"""
+        """Обработка обычного сообщения с поддержкой альбомов"""
         try:
-            message_id = message_data.get("message_id")
-            text = message_data.get("text", "")
+            media_group_id = message_data.get("media_group_id")
 
             chat = self._get_or_create_chat(user, assistant_slug, bot_tag)
             if isinstance(chat, dict):
                 return chat
 
-            message = self._create_message_from_update(
-                chat=chat,
-                sender=user,
-                content=text,
-                update_id=update_id,
-                message_id=message_id,
-                extra_metadata=message_data
-            )
+            # 1. Проверяем, является ли сообщение частью альбома
+            message = None
+            if media_group_id:
+                # Пытаемся найти уже созданное сообщение для этого альбома
+                message = self._find_or_create_album_message(
+                    chat=chat,
+                    user=user,
+                    media_group_id=media_group_id,
+                    update_id=update_id,
+                    message_data=message_data
+                )
+            else:
 
-            self._process_media_files(message, message_data, bot_tag)
+                message_id = message_data.get("message_id")
+                text = message_data.get("text", "")
+                media_type = self._determine_message_type(message_data)
 
-            core_api_logger.info(f"{bot_tag} Создано сообщение ID {message.pk} из апдейта {update_id}")
+                # Если есть медиа, но нет текста - установить содержимое по умолчанию
+                if not text and media_type != MessageType.TEXT:
+                    text = self._get_default_content_for_media(media_type, message_data)
+
+                # Обычное сообщение (не альбом)
+                message = self._create_message_from_update(
+                    chat=chat,
+                    sender=user,
+                    content=text,
+                    update_id=update_id,
+                    message_id=message_id,
+                    extra_metadata=message_data,
+                    message_type=media_type
+                )
+
+            if not message:
+                return {
+                    "payload": {"detail": "Failed to create/find message"},
+                    "response_status": status.HTTP_500_INTERNAL_SERVER_ERROR
+                }
+
+            # 2. Обрабатываем медиафайлы (добавляем к существующему сообщению)
+            self._process_media_files(message, message_data, bot_tag, is_album=bool(media_group_id))
+
+            core_api_logger.info(f"{bot_tag} Обработано сообщение ID {message.pk} из апдейта {update_id}")
             return {
-                "payload": {
-                    "core_message_id": message.pk,
-                },
+                "payload": {"core_message_id": message.pk},
                 "response_status": status.HTTP_201_CREATED,
             }
 
         except Exception as e:
-            core_api_logger.exception(f"{bot_tag} Ошибка создания сообщения: {str(e)}")
-            return {
-                "payload": {
-                    "detail": f"Error creating message: {str(e)}"
-                },
-                "response_status": status.HTTP_500_INTERNAL_SERVER_ERROR,
-            }
+                core_api_logger.exception(f"{bot_tag} Ошибка создания сообщения: {str(e)}")
+                return {
+                    "payload": {
+                        "detail": f"Error creating message: {str(e)}"
+                    },
+                    "response_status": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                }
 
     def _process_edited_message(self, edited_data: dict, bot_tag: str, assistant_slug: str, user: User):
         """Обработка отредактированного сообщения"""
@@ -353,6 +382,82 @@ class TelegramUpdateService:
                 "response_status": status.HTTP_500_INTERNAL_SERVER_ERROR,
             }
 
+    def _find_or_create_album_message(self, chat, user, media_group_id, update_id, message_data: dict):
+        """
+        Находит существующее сообщение для альбома или создаёт новое.
+        Важно: подпись (caption) обычно есть только в первом сообщении альбома!
+        """
+        # 1. Пытаемся найти существующее сообщение для этого альбома
+        try:
+            # Ищем по media_group_id в метаданных
+            album_message = Message.objects.filter(
+                chat=chat,
+                source_type=MessageSource.TELEGRAM,
+                metadata__telegram__media_group_id=str(media_group_id)
+            ).first()
+
+            if album_message:
+                # Если сообщение найдено, проверяем, нужно ли обновить подпись
+                # (если текущее сообщение содержит caption, а найденное - нет)
+                current_caption = message_data.get("caption") or message_data.get("text", "")
+                stored_caption = album_message.content
+
+                if current_caption and not stored_caption:
+                    # Обновляем подпись для всего альбома
+                    album_message.content = current_caption
+                    album_message.save()
+                    core_api_logger.info(f"Обновлена подпись для альбома {media_group_id}")
+
+                return album_message
+
+        except Exception as e:
+            core_api_logger.warning(f"Ошибка поиска сообщения альбома: {str(e)}")
+
+        # 2. Если не найдено - создаём новое сообщение для альбома
+        # ВАЖНО: подпись может быть только в первом сообщении альбома!
+        caption = message_data.get("caption") or message_data.get("text", "")
+
+        # Определяем тип сообщения на основе первого медиа в альбоме
+        message_type = self._determine_message_type(message_data)
+
+        # Создаём уникальный external_id для всего альбома
+        album_external_id = f"album_{media_group_id}"
+
+        # Формируем метаданные с информацией об альбоме
+        telegram_metadata = {
+            "message_id": str(message_data.get("message_id")),
+            "update_id": str(update_id),
+            "media_group_id": str(media_group_id),
+            "is_album": True,
+            "album_created_at": timezone.now().isoformat(),
+            "first_update_id": update_id,  # ID первого update для этого альбома
+            "raw": message_data  # Сохраняем сырые данные первого сообщения
+        }
+
+        try:
+            message = Message.objects.create(
+                chat=chat,
+                content=caption,  # Подпись ко всему альбому
+                sender=user,
+                source_type=MessageSource.TELEGRAM,
+                external_id=album_external_id,
+                message_type=message_type,
+                metadata={"telegram": telegram_metadata}
+            )
+            core_api_logger.info(f"Создано новое сообщение для альбома media_group_id={media_group_id}")
+            return message
+
+        except django.db.utils.IntegrityError as e:
+            # Обработка гонки условий (race condition) при одновременном создании
+            if "duplicate key" in str(e).lower() or "UNIQUE constraint" in str(e):
+                # Повторяем поиск сообщения
+                return Message.objects.filter(
+                    chat=chat,
+                    external_id=album_external_id,
+                    source_type=MessageSource.TELEGRAM
+                ).first()
+            raise
+
     def _get_or_create_chat(self, user: User, assistant_slug: str, bot_tag: str) -> Union[Chat, dict]:
         """Получение или создание чата для пользователя"""
         try:
@@ -388,83 +493,171 @@ class TelegramUpdateService:
                 "response_status": status.HTTP_500_INTERNAL_SERVER_ERROR,
             }
 
-    def _process_media_files(self, message: Message, message_data: dict, bot_tag: str):
+    def _determine_message_type(self, message_data: dict) -> str:
+        """Определяет тип сообщения на основе данных из Telegram API"""
+        if message_data.get("photo"):
+            return MessageType.IMAGE
+        elif message_data.get("document"):
+            mime_type = message_data["document"].get("mime_type", "")
+            if mime_type.startswith("image/"):
+                return MessageType.IMAGE
+            return MessageType.DOCUMENT
+        elif message_data.get("audio") or message_data.get("voice"):
+            return MessageType.AUDIO
+        elif message_data.get("video"):
+            return MessageType.VIDEO
+        elif message_data.get("animation"):
+            return MessageType.VIDEO  # Анимации в Telegram это GIF/mp4
+        elif message_data.get("sticker"):
+            return MessageType.IMAGE  # Стикеры обрабатываются как изображения
+        return MessageType.TEXT
+
+    def _get_default_content_for_media(self, media_type: str, message_data: dict) -> str:
+        """Возвращает содержимое по умолчанию для сообщений с медиа"""
+        captions = {
+            MessageType.IMAGE: "📷 Изображение",
+            MessageType.AUDIO: "🎵 Аудио",
+            MessageType.VIDEO: "🎬 Видео",
+            MessageType.DOCUMENT: "📎 Документ"
+        }
+
+        # Если есть подпись к медиа, используем ее
+        if caption := message_data.get("caption"):
+            return caption
+
+        return captions.get(media_type, "Медиафайл")
+
+    def _process_media_files(self, message: Message, message_data: dict, bot_tag: str, is_album: bool = False):
         """Анализирует update и запускает фоновые задачи для медиа"""
         media_tasks = []
 
-        # 1. Проверяем наличие медиа в сообщении
+        # Проверяем наличие всех типов медиа (не elif, а if для поддержки альбомов)
         if photo := message_data.get("photo"):
-            media_tasks.append(self._prepare_photo_task(photo[-1]))  # Берем самый большой размер
+            media_tasks.append(self._prepare_photo_task(photo[-1], message_data.get("caption", "")))
 
-        elif document := message_data.get("document"):
-            media_tasks.append(self._prepare_document_task(document))
+        if document := message_data.get("document"):
+            media_tasks.append(self._prepare_document_task(document, message_data.get("caption", "")))
 
-        elif audio := message_data.get("audio"):
-            media_tasks.append(self._prepare_audio_task(audio))
+        if audio := message_data.get("audio"):
+            media_tasks.append(self._prepare_audio_task(audio, message_data.get("caption", "")))
 
-        elif video := message_data.get("video"):
-            media_tasks.append(self._prepare_video_task(video))
+        if video := message_data.get("video"):
+            media_tasks.append(self._prepare_video_task(video, message_data.get("caption", "")))
 
-        elif voice := message_data.get("voice"):
+        if voice := message_data.get("voice"):
             media_tasks.append(self._prepare_voice_task(voice))
 
-        # 2. Запускаем задачи для всех найденных медиа
+        if animation := message_data.get("animation"):
+            media_tasks.append(self._prepare_animation_task(animation, message_data.get("caption", "")))
+
+        if sticker := message_data.get("sticker"):
+            media_tasks.append(self._prepare_sticker_task(sticker))
+
+        if is_album and not message.media_files.exists() and media_tasks:
+            first_task = media_tasks[0]
+            album_type = "image" if first_task["file_type"] in ["image", "photo"] else "mixed"
+
+            # Обновляем метаданные сообщения
+            metadata = message.metadata or {}
+            metadata.setdefault("telegram", {})["album_type"] = album_type
+            metadata["telegram"]["media_count"] = len(media_tasks)
+
+            Message.objects.filter(pk=message.pk).update(
+                message_type=MessageType.IMAGE if album_type == "image" else MessageType.DOCUMENT,
+                metadata=metadata
+            )
+            message.refresh_from_db()
+
+        # Запускаем задачи для всех найденных медиа
         for task_data in media_tasks:
             transaction.on_commit(
                 lambda td=task_data: self._enqueue_media_task(message, td, bot_tag)
             )
 
-    def _prepare_photo_task(self, photo_size: dict) -> dict:
+    def _prepare_photo_task(self, photo_size: dict, caption: str = "") -> dict:
         """Подготавливает данные для обработки фото"""
         return {
             "file_id": photo_size["file_id"],
             "file_type": "image",
             "width": photo_size.get("width"),
-            "height": photo_size.get("height")
+            "height": photo_size.get("height"),
+            "caption": caption
         }
 
-    def _prepare_document_task(self, document: dict) -> dict:
-        """Подготавливает данные для обработки аудио"""
+    def _prepare_document_task(self, document: dict, caption: str = "") -> dict:
+        """Подготавливает данные для обработки документа"""
         mime_type = document.get("mime_type", "")
-        file_type = "image" if mime_type.startswith("image/") else "document"
+        file_name = document.get("file_name", "document")
+
+        # Для определения типа файла используем как mime_type, так и расширение
+        file_type = "document"
+        if mime_type.startswith("image/") or file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')):
+            file_type = "image"
+
         return {
             "file_id": document["file_id"],
             "file_type": file_type,
             "mime_type": mime_type,
-            "file_name": document.get("file_name", "document")
+            "file_name": file_name,
+            "caption": caption
         }
 
-    def _prepare_audio_task(self, audio: dict) -> dict:
-        """Подготавливает данные для обработки видео"""
-        mime_type = audio.get("mime_type", "")
-        file_type = "image" if mime_type.startswith("image/") else "document"
+    def _prepare_audio_task(self, audio: dict, caption: str = "") -> dict:
+        """Подготавливает данные для обработки аудио"""
         return {
             "file_id": audio["file_id"],
-            "file_type": file_type,
-            "mime_type": mime_type,
-            "file_name": audio.get("file_name", "audio")
+            "file_type": "audio",
+            "mime_type": audio.get("mime_type", "audio/mpeg"),
+            "file_name": audio.get("file_name", "audio"),
+            "duration": audio.get("duration", 0),
+            "caption": caption
         }
 
-    def _prepare_video_task(self, video: dict) -> dict:
-        """Подготавливает данные для обработки документа"""
-        mime_type = video.get("mime_type", "")
-        file_type = "image" if mime_type.startswith("image/") else "document"
+    def _prepare_video_task(self, video: dict, caption: str = "") -> dict:
+        """Подготавливает данные для обработки видео"""
         return {
             "file_id": video["file_id"],
-            "file_type": file_type,
-            "mime_type": mime_type,
-            "file_name": video.get("file_name", "video")
+            "file_type": "video",
+            "mime_type": video.get("mime_type", "video/mp4"),
+            "file_name": video.get("file_name", "video"),
+            "duration": video.get("duration", 0),
+            "width": video.get("width"),
+            "height": video.get("height"),
+            "caption": caption
         }
 
     def _prepare_voice_task(self, voice: dict) -> dict:
-        """Подготавливает данные для обработки документа"""
-        mime_type = voice.get("mime_type", "")
-        file_type = "image" if mime_type.startswith("image/") else "document"
+        """Подготавливает данные для обработки голосового сообщения"""
         return {
             "file_id": voice["file_id"],
-            "file_type": file_type,
-            "mime_type": mime_type,
-            "file_name": voice.get("file_name", "audio")
+            "file_type": "audio",
+            "mime_type": voice.get("mime_type", "audio/ogg"),
+            "file_name": "voice_message.ogg",
+            "duration": voice.get("duration", 0)
+        }
+
+    def _prepare_animation_task(self, animation: dict, caption: str = "") -> dict:
+        """Подготавливает данные для обработки анимации (GIF/mp4)"""
+        return {
+            "file_id": animation["file_id"],
+            "file_type": "video",
+            "mime_type": animation.get("mime_type", "video/mp4"),
+            "file_name": animation.get("file_name", "animation"),
+            "duration": animation.get("duration", 0),
+            "width": animation.get("width"),
+            "height": animation.get("height"),
+            "caption": caption
+        }
+
+    def _prepare_sticker_task(self, sticker: dict) -> dict:
+        """Подготавливает данные для обработки стикера"""
+        return {
+            "file_id": sticker["file_id"],
+            "file_type": "image",
+            "mime_type": "image/webp",
+            "file_name": "sticker.webp",
+            "width": sticker.get("width"),
+            "height": sticker.get("height")
         }
 
     def _enqueue_media_task(self, message: Message, task_data: dict, bot_tag: str):
@@ -502,6 +695,7 @@ class TelegramUpdateService:
             message_id: Union[str, int],
             extra_metadata: Dict[str, Any],
             reply_to: Optional[Message] = None,
+            message_type: str = MessageType.TEXT
     ) -> str | Any:
         """
         Создаёт объект chat.models.Message из Telegram-апдейта, полученного по webhook.
@@ -530,6 +724,7 @@ class TelegramUpdateService:
                 source_type=MessageSource.TELEGRAM,
                 external_id=update_id,
                 reply_to=None,  # Сохраняются Update от пользователя - они не считаются ответами
+                message_type=message_type,
                 metadata={
                     "telegram": telegram_metadata
                 }

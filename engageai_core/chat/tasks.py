@@ -55,13 +55,18 @@ def process_telegram_media(self, message_id, file_data, bot_token):
         )
 
         # 5. Сохраняем основной файл
-        with tempfile.NamedTemporaryFile() as temp_file:  # стандартный tempfile
+        with tempfile.NamedTemporaryFile() as temp_file:
             temp_file.write(file_content)
             temp_file.flush()
             media_file.file.save(file_name, File(temp_file), save=False)
 
-        # 6. Генерируем миниатюру для изображений
-        if file_data['file_type'] == 'image':
+        should_generate_thumbnail = (
+                file_data['file_type'] == 'image' or
+                mime_type.startswith('image/') or
+                file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'))
+        )
+
+        if should_generate_thumbnail:
             try:
                 generate_thumbnail(media_file, file_content)
             except Exception as e:
@@ -79,24 +84,35 @@ def process_telegram_media(self, message_id, file_data, bot_token):
 
 
 def generate_thumbnail(media_file, original_content):
-    """Генерация миниатюры для изображения"""
-    img = Image.open(BytesIO(original_content))
+    """Генерация миниатюры для изображения с валидацией"""
+    try:
+        img = Image.open(BytesIO(original_content))
 
-    # Конвертируем в RGB если необходимо
-    if img.mode in ('RGBA', 'LA', 'P'):
-        img = img.convert('RGB')
+        # Проверяем, что это действительно изображение
+        if img.format not in ['JPEG', 'PNG', 'GIF', 'BMP', 'WEBP']:
+            logger.warning(f"Формат изображения {img.format} не поддерживается для миниатюр")
+            return
 
-    # Создаем миниатюру
-    img.thumbnail(THUMBNAIL_SIZE)
+        # Конвертируем в RGB если необходимо
+        if img.mode in ('RGBA', 'LA', 'P'):
+            img = img.convert('RGB')
 
-    # Сохраняем в буфер
-    thumb_io = BytesIO()
-    img.save(thumb_io, format='JPEG', quality=85)
-    thumb_io.seek(0)
+        # Создаем миниатюру
+        img.thumbnail(THUMBNAIL_SIZE)
 
-    # Формируем имя файла для миниатюры
-    original_name = os.path.splitext(os.path.basename(media_file.file.name))[0]
-    thumb_name = f"{original_name}_thumb.jpg"
+        # Сохраняем в буфер
+        thumb_io = BytesIO()
+        img.save(thumb_io, format='JPEG', quality=85)
+        thumb_io.seek(0)
 
-    # Сохраняем миниатюру
-    media_file.thumbnail.save(thumb_name, File(thumb_io), save=False)
+        # Формируем имя файла для миниатюры
+        original_name = os.path.splitext(os.path.basename(media_file.file.name))[0]
+        thumb_name = f"{original_name}_thumb.jpg"
+
+        # Сохраняем миниатюру
+        media_file.thumbnail.save(thumb_name, File(thumb_io), save=False)
+
+        return True
+    except Exception as e:
+        logger.error(f"Ошибка при генерации миниатюры: {str(e)}")
+        return False

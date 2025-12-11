@@ -129,7 +129,7 @@
                                     <div class="chat-message__text">
                                         {{ message.content|safe }}
                                     </div>
-                                    {{ message.media_files.all }}
+                                    {{ message.type }}
                                     {% elif message.message_type == 'image' %}
                                         <p>{{ message.content|linebreaks }}</p>
                                         {% for media in message.media_files.all %}

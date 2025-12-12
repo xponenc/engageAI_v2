@@ -80,12 +80,14 @@
                                     <span class="message-type message-type--{% if message.is_ai %}ai{% else %}user{% endif %}">
                                         {% if message.is_ai %}AI{% else %}{{ user_initials }}{% endif %}
                                     </span>
-                                    {{ message.answer }}
                                 </td>
                                 <td>
                                     <div class="message-preview">
                                         {% if message.content %}
                                             <div class="message-preview__text">
+                                                {% if message.reply_to %}
+                                                <p class="message-preview__replyto">ответ на >> {{ message.reply_to.content|default:message.timestamp }}</p> 
+                                                {% endif %}
                                                 {{ message.content|truncatechars:200 }}
                                             </div>
                                         {% endif %}
@@ -182,7 +184,7 @@
                                     </div>
                                 </td>
                             </tr>
-                            {% if message.answers.all %}
+                            {% comment %} {% if message.answers.all %}
                                 {% for answer in message.answers.all %}
                                     {% with message=answer %}
                                         <tr data-message-id="{{ message.id }}">
@@ -302,7 +304,7 @@
                                         </tr>
                                     {% endwith %}
                                 {% endfor %}
-                            {% endif %}
+                            {% endif %} {% endcomment %}
                         {% empty %}
                             <tr>
                                 <td colspan="6" style="text-align: center; padding: 40px; color: #666;">

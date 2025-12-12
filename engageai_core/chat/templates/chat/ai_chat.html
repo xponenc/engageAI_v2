@@ -377,7 +377,7 @@
 </section>
 {% endblock content %}
 
-{% block script %}
+{% comment %} {% block script %}
 <script>
 // Авто-скролл к последнему сообщению
 function scrollChatToBottom() {
@@ -475,6 +475,15 @@ document.addEventListener("DOMContentLoaded", function () {
     fileUpload.addEventListener('change', function(e) {
         if (e.target.files.length > 0) {
             currentFile = e.target.files[0];
+            
+            // Валидация размера файла
+            if (currentFile.size > MAX_FILE_SIZE_BYTES) {
+                showNotification(`Размер файла не должен превышать ${MAX_FILE_SIZE_MB}MB`, "error");
+                fileUpload.value = '';
+                currentFile = null;
+                return;
+            }
+            
             fileNameElement.textContent = currentFile.name;
             filePreviewContainer.style.display = 'block';
         }
@@ -535,6 +544,14 @@ document.addEventListener("DOMContentLoaded", function () {
             mediaRecorder.stop();
             isRecording = false;
             voiceRecordBtn.innerHTML = '🎤';
+
+             // Валидация размера голосового сообщения
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            if (audioBlob.size > MAX_FILE_SIZE_BYTES) {
+                showNotification(`Голосовое сообщение слишком длинное. Максимум ${MAX_FILE_SIZE_MB}MB`, "error");
+                stream.getTracks().forEach(track => track.stop());
+                return;
+            }
         }
     }
 
@@ -611,6 +628,13 @@ document.addEventListener("DOMContentLoaded", function () {
         chatHistory.insertAdjacentHTML('beforeend', userMessageHTML + botMessageHTML);
         scrollChatToBottom();
         messageInput.value = '';
+
+        if (currentFile && currentFile.size > MAX_FILE_SIZE_BYTES) {
+            showNotification(`Размер файла не должен превышать ${MAX_FILE_SIZE_MB}MB`, "error");
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span class="btn__icon">✈️</span>Отправить';
+            return;
+        }
 
         // Создаем FormData для отправки
         const formData = new FormData();
@@ -785,6 +809,545 @@ document.addEventListener("DOMContentLoaded", function () {
     // Обработка закрытия страницы для остановки записи
     window.addEventListener('beforeunload', function() {
         if (isRecording) stopRecording();
+    });
+});
+</script>
+{% endblock script %} {% endcomment %}
+
+{% block script %}
+<script>
+// Получаем настройки из контекста Django
+const MAX_FILE_SIZE_MB = {{ max_file_size_mb }};
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const ALLOWED_FILE_TYPES = {{ allowed_file_types|safe }};
+
+// Авто-скролл к последнему сообщению
+function scrollChatToBottom() {
+    const msgBox = document.querySelector('.chat-window__messages');
+    if (!msgBox) return;
+    msgBox.scrollTop = msgBox.scrollHeight;
+}
+
+// Экранирование HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Проверка типа файла
+function isValidFileType(file) {
+    const fileType = file.type.split('/')[0];
+    const fileExt = file.name.split('.').pop().toLowerCase();
+    
+    // Проверяем по MIME-типу
+    if (ALLOWED_FILE_TYPES.includes(fileType)) {
+        return true;
+    }
+    
+    // Дополнительная проверка по расширению для случаев, когда MIME-тип не определен
+    const allowedExtensions = {
+        'image': ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'],
+        'audio': ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'],
+        'video': ['mp4', 'avi', 'mov', 'wmv', 'mkv', 'webm'],
+        'document': ['pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx', 'ppt', 'pptx']
+    };
+    
+    for (const [type, extensions] of Object.entries(allowedExtensions)) {
+        if (ALLOWED_FILE_TYPES.includes(type) && extensions.includes(fileExt)) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+// Показать уведомление
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification--${type === 'success' ? 'success' : 'error'} notification--show`;
+    notification.innerHTML = `
+        <div class="notification__icon">${type === 'success' ? '✅' : '❌'}</div>
+        <div class="notification__text">${message}</div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.remove('notification--show');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    const chatForm = document.getElementById("chat-form");
+    const chatHistory = document.getElementById("chat-history");
+    const messageInput = document.getElementById("message-input");
+    const submitBtn = document.getElementById("submit-btn");
+    const clearChatBtn = document.getElementById("clear-chat");
+    const fileUpload = document.getElementById("file-upload");
+    const filePreviewContainer = document.getElementById("file-preview-container");
+    const fileNameElement = document.getElementById("file-name");
+    const removeFileBtn = document.getElementById("remove-file");
+    const voiceRecordBtn = document.getElementById("voice-record-btn");
+    
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+    let currentFile = null;
+    let audioStream = null; // Для хранения потока микрофона
+
+    // Инициализация звезд рейтинга
+    function initStarRating() {
+        document.querySelectorAll('.rating-stars').forEach(stars => {
+            stars.addEventListener('click', function (e) {
+                if (!e.target.classList.contains('star-btn')) return;
+                
+                const clickedValue = parseInt(e.target.dataset.value, 10);
+                const messageId = this.dataset.messageId;
+                const starsList = this.querySelectorAll('.star-btn');
+                
+                // Обновляем визуальное состояние звезд
+                starsList.forEach(btn => {
+                    const val = parseInt(btn.dataset.value, 10);
+                    btn.classList.toggle('star-btn--active', val <= clickedValue);
+                });
+                
+                // Отправляем оценку на сервер
+                fetch(this.closest('[data-url]').dataset.url, {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ score: clickedValue })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        showNotification("Спасибо за оценку!", "success");
+                    } else {
+                        showNotification("Ошибка при сохранении оценки", "error");
+                    }
+                })
+                .catch(error => {
+                    console.error("Ошибка:", error);
+                    showNotification("Ошибка при сохранении оценки", "error");
+                });
+            });
+        });
+    }
+
+    // Обработка прикрепленного файла
+    fileUpload.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            currentFile = e.target.files[0];
+            
+            // Валидация размера файла
+            if (currentFile.size > MAX_FILE_SIZE_BYTES) {
+                showNotification(`Размер файла не должен превышать ${MAX_FILE_SIZE_MB}MB`, "error");
+                fileUpload.value = '';
+                currentFile = null;
+                return;
+            }
+            
+            // Валидация типа файла
+            if (!isValidFileType(currentFile)) {
+                const allowedTypes = ALLOWED_FILE_TYPES.map(type => {
+                    const readable = {
+                        'image': 'изображения',
+                        'audio': 'аудио',
+                        'video': 'видео',
+                        'document': 'документы'
+                    };
+                    return readable[type] || type;
+                }).join(', ');
+                showNotification(`Недопустимый тип файла. Разрешены: ${allowedTypes}`, "error");
+                fileUpload.value = '';
+                currentFile = null;
+                return;
+            }
+            
+            fileNameElement.textContent = currentFile.name;
+            filePreviewContainer.style.display = 'block';
+        }
+    });
+
+    // Удаление прикрепленного файла
+    removeFileBtn.addEventListener('click', function() {
+        filePreviewContainer.style.display = 'none';
+        fileUpload.value = '';
+        currentFile = null;
+    });
+
+    // Голосовая запись
+    voiceRecordBtn.addEventListener('click', function() {
+        if (isRecording) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
+    });
+
+    function startRecording() {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                audioStream = stream; // Сохраняем поток для последующей очистки
+                isRecording = true;
+                audioChunks = [];
+                mediaRecorder = new MediaRecorder(stream);
+                
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = () => {
+                    // Создаем Blob из чанков
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    
+                    // Валидация размера голосового сообщения
+                    if (audioBlob.size > MAX_FILE_SIZE_BYTES) {
+                        showNotification(`Голосовое сообщение слишком длинное. Максимум ${MAX_FILE_SIZE_MB}MB`, "error");
+                        cleanupRecording();
+                        return;
+                    }
+                    
+                    // Создаем File объект
+                    currentFile = new File([audioBlob], `recording-${Date.now()}.webm`, {
+                        type: 'audio/webm',
+                        lastModified: Date.now()
+                    });
+                    
+                    fileNameElement.textContent = 'Голосовое сообщение';
+                    filePreviewContainer.style.display = 'block';
+                    cleanupRecording();
+                };
+                
+                mediaRecorder.start();
+                voiceRecordBtn.innerHTML = '<span class="recording-indicator"></span> Остановить';
+            })
+            .catch(error => {
+                console.error('Ошибка доступа к микрофону:', error);
+                showNotification("Не удалось получить доступ к микрофону", "error");
+                isRecording = false;
+            });
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+            isRecording = false;
+            voiceRecordBtn.innerHTML = '🎤';
+        }
+    }
+
+    function cleanupRecording() {
+        // Останавливаем все треки микрофона
+        if (audioStream) {
+            audioStream.getTracks().forEach(track => track.stop());
+            audioStream = null;
+        }
+    }
+
+    // Отправка формы
+    chatForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        
+        const message = messageInput.value.trim();
+        if (!message && !currentFile) {
+            showNotification("Введите сообщение или прикрепите файл", "error");
+            return;
+        }
+
+        // Дополнительная валидация перед отправкой
+        if (currentFile) {
+            if (currentFile.size > MAX_FILE_SIZE_BYTES) {
+                showNotification(`Размер файла не должен превышать ${MAX_FILE_SIZE_MB}MB`, "error");
+                return;
+            }
+            
+            if (!isValidFileType(currentFile)) {
+                showNotification("Недопустимый тип файла", "error");
+                return;
+            }
+        }
+
+        // Блокируем кнопку
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="btn__icon">⏳</span>Отправка...';
+
+        // Создаем временные сообщения
+        const tempId = Date.now();
+        const userMessageHTML = `
+            <div class="chat-message chat-message--user" id="temp-user-${tempId}">
+                <div class="chat-message__avatar">
+                    <div class="avatar avatar--user">
+                        <img src="{{ user.profile.avatar.url|default:'/static/images/default-avatar.png' }}" alt="Аватар пользователя">
+                    </div>
+                </div>
+                <div class="chat-message__content">
+                    ${message ? `<div class="chat-message__text">${escapeHtml(message)}</div>` : ''}
+                    ${currentFile ? `
+                        <div class="message-preview__media">
+                            <div class="media-item media-item--${currentFile.type.startsWith('audio/') ? 'audio' : 
+                                currentFile.type.startsWith('video/') ? 'video' : 
+                                currentFile.type.startsWith('image/') ? 'image' : 'document'}">
+                                ${currentFile.type.startsWith('audio/') ? `
+                                    <audio controls class="chat-audio">
+                                        <source src="${URL.createObjectURL(currentFile)}" type="${currentFile.type}">
+                                    </audio>
+                                ` : currentFile.type.startsWith('video/') ? `
+                                    <video controls class="chat-video">
+                                        <source src="${URL.createObjectURL(currentFile)}" type="${currentFile.type}">
+                                    </video>
+                                ` : currentFile.type.startsWith('image/') ? `
+                                    <img src="${URL.createObjectURL(currentFile)}" class="chat-image" alt="Изображение">
+                                ` : `
+                                    <a href="#" class="document-link">
+                                        <div class="document-icon">📄</div>
+                                        <div class="document-name">${escapeHtml(currentFile.name)}</div>
+                                    </a>
+                                `}
+                            </div>
+                        </div>
+                    ` : ''}
+                    <div class="chat-message__meta">
+                        <span class="chat-message__time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const botMessageHTML = `
+            <div class="chat-message chat-message--ai" id="temp-bot-${tempId}">
+                <div class="chat-message__avatar">
+                    <div class="avatar avatar--ai">🤖</div>
+                </div>
+                <div class="chat-message__content">
+                    <div class="chat-message__text">
+                        <div class="typing-indicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Убираем пустое состояние
+        const emptyState = document.querySelector('.chat-empty');
+        if (emptyState) emptyState.remove();
+
+        // Добавляем сообщения
+        chatHistory.insertAdjacentHTML('beforeend', userMessageHTML + botMessageHTML);
+        scrollChatToBottom();
+        messageInput.value = '';
+
+        // Создаем FormData для отправки
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        if (message) formData.append('message', message);
+        if (currentFile) formData.append('file', currentFile);
+
+        // Отправляем запрос
+        fetch("", {
+            method: "POST",
+            body: formData,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'Ошибка сервера');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            const botMessage = document.getElementById(`temp-bot-${tempId}`);
+            if (botMessage && data.ai_response) {
+                // Удаляем временное сообщение
+                botMessage.remove();
+                
+                // Создаем полное сообщение с возможными медиа
+                let mediaContent = '';
+                if (data.ai_response.media_files && data.ai_response.media_files.length > 0) {
+                    mediaContent = '<div class="message-preview__media">';
+                    data.ai_response.media_files.forEach(media => {
+                        if (media.type === 'image') {
+                            mediaContent += `
+                                <div class="media-item media-item--image">
+                                    <a href="${media.url}" target="_blank">
+                                        <img src="${media.thumbnail || media.url}" class="chat-image" alt="Изображение">
+                                    </a>
+                                </div>
+                            `;
+                        } else if (media.type === 'audio') {
+                            mediaContent += `
+                                <div class="media-item media-item--audio">
+                                    <audio controls class="chat-audio">
+                                        <source src="${media.url}" type="${media.mime_type}">
+                                    </audio>
+                                </div>
+                            `;
+                        } else if (media.type === 'video') {
+                            mediaContent += `
+                                <div class="media-item media-item--video">
+                                    <video controls class="chat-video">
+                                        <source src="${media.url}" type="${media.mime_type}">
+                                    </video>
+                                </div>
+                            `;
+                        } else {
+                            mediaContent += `
+                                <div class="media-item media-item--document">
+                                    <a href="${media.url}" class="document-link" download>
+                                        <div class="document-icon">📄</div>
+                                        <div class="document-name">${media.name}</div>
+                                    </a>
+                                </div>
+                            `;
+                        }
+                    });
+                    mediaContent += '</div>';
+                }
+                
+                // Вставляем новое сообщение
+                const newMessageHTML = `
+                    <div class="chat-message chat-message--ai" data-message-id="${data.ai_response.id}" data-url="${data.ai_response.request_url}">
+                        <div class="chat-message__avatar">
+                            <div class="avatar avatar--ai">🤖</div>
+                        </div>
+                        <div class="chat-message__content">
+                            <div class="chat-message__text">${data.ai_response.text}</div>
+                            ${mediaContent}
+                            <div class="chat-message__meta">
+                                <span class="chat-message__time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                <div class="chat-message__rating">
+                                    <div class="rating-stars" data-message-id="${data.ai_response.id}">
+                                        <button class="star-btn" data-value="2">★</button>
+                                        <button class="star-btn" data-value="1">★</button>
+                                        <button class="star-btn" data-value="0">★</button>
+                                        <button class="star-btn" data-value="-1">★</button>
+                                        <button class="star-btn" data-value="-2">★</button>
+                                    </div>
+                                    <span class="rating-hint">Оцените ответ</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                chatHistory.insertAdjacentHTML('beforeend', newMessageHTML);
+                initStarRating();
+            }
+            scrollChatToBottom();
+            
+            // Сбрасываем состояние после успешной отправки
+            filePreviewContainer.style.display = 'none';
+            fileUpload.value = '';
+            currentFile = null;
+            if (isRecording) stopRecording();
+        })
+        .catch(error => {
+            console.error("Ошибка:", error);
+            showNotification(error.message || "Ошибка при отправке сообщения", "error");
+            
+            // Удаляем временные сообщения при ошибке
+            const tempUser = document.getElementById(`temp-user-${tempId}`);
+            const tempBot = document.getElementById(`temp-bot-${tempId}`);
+            if (tempUser) tempUser.remove();
+            if (tempBot) tempBot.remove();
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span class="btn__icon">✈️</span>Отправить';
+            messageInput.focus();
+        });
+    });
+
+    // Очистка чата
+    clearChatBtn.addEventListener("click", function() {
+        if (confirm("Вы уверены, что хотите очистить историю чата?")) {
+            fetch("{% url 'chat:web-chat-clear' chat.pk %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    chatHistory.innerHTML = `
+                        <div class="chat-empty">
+                            <div class="chat-empty__icon">🤔</div>
+                            <h4 class="chat-empty__title">Начните диалог</h4>
+                            <p class="chat-empty__text">
+                                Задайте вопрос AI-репетитору о материале курса, 
+                                и он поможет вам разобраться в сложных темах
+                            </p>
+                        </div>
+                    `;
+                    showNotification("История чата очищена", "success");
+                } else {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Ошибка при очистке чата');
+                    });
+                }
+            })
+            .catch(error => {
+                console.error("Ошибка:", error);
+                showNotification(error.message || "Ошибка при очистке чата", "error");
+            });
+        }
+    });
+
+    // Управление вводом: Enter отправляет, Shift+Enter новая строка
+    messageInput.addEventListener("keydown", function(e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            chatForm.requestSubmit();
+        }
+    });
+
+    // Обновление атрибута accept для input файла на основе разрешенных типов
+    function updateFileInputAccept() {
+        const acceptTypes = [];
+        
+        if (ALLOWED_FILE_TYPES.includes('image')) {
+            acceptTypes.push('image/*');
+        }
+        if (ALLOWED_FILE_TYPES.includes('audio')) {
+            acceptTypes.push('audio/*');
+        }
+        if (ALLOWED_FILE_TYPES.includes('video')) {
+            acceptTypes.push('video/*');
+        }
+        if (ALLOWED_FILE_TYPES.includes('document')) {
+            acceptTypes.push('.pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx');
+        }
+        
+        if (acceptTypes.length > 0) {
+            fileUpload.setAttribute('accept', acceptTypes.join(','));
+        }
+    }
+
+    // Инициализация при загрузке
+    updateFileInputAccept();
+    initStarRating();
+    scrollChatToBottom();
+    messageInput.focus();
+    
+    // Обработка закрытия страницы для остановки записи и очистки ресурсов
+    window.addEventListener('beforeunload', function() {
+        if (isRecording) stopRecording();
+        cleanupRecording();
     });
 });
 </script>

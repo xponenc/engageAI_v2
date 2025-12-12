@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import uuid
@@ -8,12 +9,16 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from ai_assistant.models import AIAssistant
 
+
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class ChatPlatform(models.TextChoices):
@@ -192,6 +197,11 @@ def sanitize_filename(filename: str) -> str:
 
 
 class MediaFile(models.Model):
+    """Модель медиа-файла прикрепленного к сообщению Message"""
+
+    THUMBNAIL_SIZE = 150, 150 # Размер миниатюр
+    MAX_PROCESSING_SIZE = (4096, 4096) # Ограничиваем размеры для обработки больших изображений
+
     # def media_upload_path(instance, filename):
     #     """Динамический путь для медиафайлов"""
     #     return f'chat_media/{instance.message.chat.id}/{timezone.now().strftime("%Y/%m/%d")}/{filename}'
@@ -289,9 +299,35 @@ class MediaFile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     ai_generated = models.BooleanField(default=False)
+    thumbnail_generated = models.BooleanField(default=False, verbose_name=_('Миниатюра сгенерирована'))
+
 
     def get_absolute_url(self):
         return self.file.url
+
+    def should_generate_thumbnail(self):
+        """Проверяет, нужно ли генерировать миниатюру для этого файла"""
+        supported_types = ['image', 'photo']
+        supported_mime_types = [
+            'image/jpeg', 'image/png', 'image/gif', 'image/bmp',
+            'image/webp', 'image/tiff', 'image/svg+xml'
+        ]
+        supported_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.svg']
+
+        # Проверяем по типу файла
+        if self.file_type in supported_types:
+            return True
+
+        # Проверяем по MIME-типу
+        if any(mime in self.mime_type.lower() for mime in supported_mime_types):
+            return True
+
+        # Проверяем по расширению файла
+        file_extension = os.path.splitext(self.file.name.lower())[1]
+        if file_extension in supported_extensions:
+            return True
+
+        return False
 
 
 
@@ -303,6 +339,70 @@ class MediaFile(models.Model):
                 name='unique_media_per_message'
             )
         ]
+        indexes = [
+            models.Index(fields=['thumbnail_generated']),
+            models.Index(fields=['file_type', 'mime_type']),
+        ]
+        verbose_name = _('Медиафайл')
+        verbose_name_plural = _('Медиафайлы')
+
+
+@receiver(post_save, sender=MediaFile)
+def handle_thumbnail_generation(sender, instance, created, **kwargs):
+    """
+    Обрабатывает генерацию миниатюр асинхронно через Celery
+    """
+    from .tasks import generate_thumbnail_async
+    # Пропускаем если:
+    # 1. Это не новое создание и миниатюра уже есть
+    # 2. Модель уже имеет флаг thumbnail_generated
+    if not created and (instance.thumbnail_generated or instance.thumbnail):
+        return
+
+    # Проверяем, нужно ли генерировать миниатюру
+    if not instance.should_generate_thumbnail():
+        # Атомарно обновляем флаг
+        MediaFile.objects.filter(pk=instance.pk).update(thumbnail_generated=True)
+        return
+
+    # Ставим задачу в очередь Celery
+    try:
+        generate_thumbnail_async.delay(instance.pk)
+        logger.info(f"Задача генерации миниатюры поставлена в очередь для MediaFile ID {instance.pk}")
+    except Exception as e:
+        logger.error(f"Ошибка постановки задачи генерации миниатюры для MediaFile ID {instance.pk}: {str(e)}")
+        # В случае ошибки ставим задачу синхронно (fallback)
+        try:
+
+            generate_thumbnail_async(instance.pk)
+        except Exception as sync_e:
+            logger.error(f"Синхронная генерация миниатюры также не удалась: {str(sync_e)}")
+
+
+@receiver(post_delete, sender=MediaFile)
+def delete_media_files_on_delete(sender, instance, **kwargs):
+    """
+    Удаляет физические файлы при удалении объекта MediaFile
+    """
+
+    def safe_delete(file_field):
+        """Безопасное удаление файла"""
+        if not file_field:
+            return
+
+        file_path = file_field.path
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+                logger.info(f"Файл удален: {file_path}")
+            except Exception as e:
+                logger.error(f"Ошибка удаления файла {file_path}: {str(e)}")
+
+    # Удаляем основной файл
+    safe_delete(instance.file)
+
+    # Удаляем миниатюру
+    safe_delete(instance.thumbnail)
 
 
 class Message(models.Model):

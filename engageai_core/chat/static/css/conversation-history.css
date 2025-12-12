@@ -101,6 +101,12 @@
 
 .message-preview__text { color: var(--color-text); }
 
+.message-preview__replyto {
+    font-size: 0.8rem;
+    opacity: 0.8;
+    font-style: italic;
+}
+
 .message-preview__keyboard {
     display: flex;
     flex-direction: column;

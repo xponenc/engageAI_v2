@@ -4,6 +4,8 @@ from pathlib import Path
 from celery import Celery, signals
 import os
 
+from celery.schedules import crontab
+
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'engageai_core.settings')
@@ -22,3 +24,10 @@ app.autodiscover_tasks()
 #     # from app_chunks.splitters.init_registry import initialize_splitter_registry
 #     # initialize_splitter_registry()
 #     pass
+
+app.conf.beat_schedule = {
+    'cleanup-stale-thumbnail-tasks': {
+        'task': 'chat.tasks.cleanup_stale_thumbnail_tasks',
+        'schedule': crontab(minute='*/720'),  # Каждые 720 минут
+    },
+}

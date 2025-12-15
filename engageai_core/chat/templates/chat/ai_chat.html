@@ -127,7 +127,10 @@
         background: #fed7d7;
         color: #9b2c2c;
     }
-    .media-item { margin-bottom: 8px; }
+    .media-item { 
+        margin-bottom: 8px;
+        min-width: 250px;
+    }
 </style>
 {% endblock css %}
 
@@ -344,6 +347,7 @@
                                         <button type="button" class="chat-input__action" id="voice-record-btn" title="Отправить голосовое сообщение">
                                             🎤
                                         </button>
+                                        <div class="recording-timer" id="recording-timer" style="display: none;">00:00</div>
                                         <label for="file-upload" class="chat-input__action" title="Прикрепить файл">
                                             📎
                                             <input type="file" id="file-upload" name="file" style="display: none;" 
@@ -822,10 +826,76 @@ const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const ALLOWED_FILE_TYPES = {{ allowed_file_types|safe }};
 
 // Авто-скролл к последнему сообщению
-function scrollChatToBottom() {
+function scrollChatToBottom(smooth = false) {
     const msgBox = document.querySelector('.chat-window__messages');
     if (!msgBox) return;
-    msgBox.scrollTop = msgBox.scrollHeight;
+    
+    // Функция для фактического скролла
+    const doScroll = () => {
+        if (smooth) {
+            msgBox.scrollTo({
+                top: msgBox.scrollHeight,
+                behavior: 'smooth'
+            });
+        } else {
+            msgBox.scrollTop = msgBox.scrollHeight;
+        }
+        
+        // Дополнительная проверка через маленькую задержку
+        setTimeout(() => {
+            // Если после скролла мы все еще не внизу - повторяем
+            const remainingSpace = msgBox.scrollHeight - msgBox.scrollTop - msgBox.clientHeight;
+            if (remainingSpace > 10) { // Если осталось больше 10px до низа
+                msgBox.scrollTop = msgBox.scrollHeight;
+            }
+        }, 100);
+    };
+    
+    // Запускаем скролл после небольшой задержки, чтобы дать время на рендеринг
+    setTimeout(doScroll, 50);
+    
+    // Дополнительный скролл после загрузки всех изображений
+    const images = msgBox.querySelectorAll('img:not([data-loaded])');
+    if (images.length > 0) {
+        let loadedCount = 0;
+        
+        images.forEach(img => {
+            // Помечаем изображение как обработанное
+            img.dataset.loaded = 'true';
+            
+            if (img.complete) {
+                loadedCount++;
+            } else {
+                img.addEventListener('load', () => {
+                    loadedCount++;
+                    if (loadedCount === images.length) {
+                        setTimeout(doScroll, 100);
+                    }
+                }, { once: true });
+                
+                img.addEventListener('error', () => {
+                    loadedCount++;
+                    if (loadedCount === images.length) {
+                        setTimeout(doScroll, 100);
+                    }
+                }, { once: true });
+            }
+        });
+        
+        // Если все изображения уже загружены
+        if (loadedCount === images.length) {
+            setTimeout(doScroll, 150);
+        }
+    }
+}
+
+// Функция для скролла после добавления сообщений
+function scrollAfterMessage() {
+    // Сначала обычный скролл
+    scrollChatToBottom();
+    
+    // Затем дополнительный скролл через большую задержку для медиа
+    setTimeout(scrollChatToBottom, 500);
 }
 
 // Экранирование HTML
@@ -894,12 +964,18 @@ document.addEventListener("DOMContentLoaded", function () {
     const fileNameElement = document.getElementById("file-name");
     const removeFileBtn = document.getElementById("remove-file");
     const voiceRecordBtn = document.getElementById("voice-record-btn");
+    const recordingTimerElement = document.getElementById('recording-timer');
+    
     
     let mediaRecorder = null;
     let audioChunks = [];
     let isRecording = false;
     let currentFile = null;
     let audioStream = null; // Для хранения потока микрофона
+
+    let recordingTimer = null; // Таймер для записи
+    let recordingStartTime = 0; // Время начала записи
+    const MAX_RECORDING_TIME = 300; // Максимальное время записи в секундах (5 минут)
 
     // Инициализация звезд рейтинга
     function initStarRating() {
@@ -984,6 +1060,8 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // Голосовая запись
+    
+
     voiceRecordBtn.addEventListener('click', function() {
         if (isRecording) {
             stopRecording();
@@ -995,62 +1073,164 @@ document.addEventListener("DOMContentLoaded", function () {
     function startRecording() {
         navigator.mediaDevices.getUserMedia({ audio: true })
             .then(stream => {
-                audioStream = stream; // Сохраняем поток для последующей очистки
+                audioStream = stream;
                 isRecording = true;
                 audioChunks = [];
-                mediaRecorder = new MediaRecorder(stream);
+                recordingStartTime = Date.now();
+                
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'audio/webm;codecs=opus'
+                });
                 
                 mediaRecorder.ondataavailable = event => {
-                    audioChunks.push(event.data);
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
                 };
                 
                 mediaRecorder.onstop = () => {
-                    // Создаем Blob из чанков
+                    stopRecordingTimer();
+                    
                     const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                     
-                    // Валидация размера голосового сообщения
                     if (audioBlob.size > MAX_FILE_SIZE_BYTES) {
-                        showNotification(`Голосовое сообщение слишком длинное. Максимум ${MAX_FILE_SIZE_MB}MB`, "error");
+                        showNotification(`Голосовое сообщение слишком большое. Максимум ${MAX_FILE_SIZE_MB}MB`, "error");
                         cleanupRecording();
                         return;
                     }
                     
-                    // Создаем File объект
-                    currentFile = new File([audioBlob], `recording-${Date.now()}.webm`, {
+                    const recordingDuration = (Date.now() - recordingStartTime) / 1000;
+                    if (recordingDuration < 1) {
+                        showNotification("Запись слишком короткая. Минимум 1 секунда", "error");
+                        cleanupRecording();
+                        return;
+                    }
+                    
+                    currentFile = new File([audioBlob], `voice-message-${new Date().toISOString().replace(/[:.]/g, '-')}.webm`, {
                         type: 'audio/webm',
                         lastModified: Date.now()
                     });
                     
-                    fileNameElement.textContent = 'Голосовое сообщение';
+                    fileNameElement.textContent = `Голосовое сообщение (${formatTime(recordingDuration)})`;
                     filePreviewContainer.style.display = 'block';
                     cleanupRecording();
                 };
                 
-                mediaRecorder.start();
-                voiceRecordBtn.innerHTML = '<span class="recording-indicator"></span> Остановить';
+                mediaRecorder.start(1000); // Собирать данные каждую секунду
+                
+                // Обновляем интерфейс
+                voiceRecordBtn.innerHTML = '<span class="recording-indicator"></span> Закончить запись';
+                voiceRecordBtn.classList.add('recording');
+                
+                // Запускаем таймер
+                startRecordingTimer();
+                
+                // Автоматическая остановка по истечении максимального времени
+                setTimeout(() => {
+                    if (isRecording) {
+                        showNotification(`Достигнуто максимальное время записи (${formatTime(MAX_RECORDING_TIME)})`, "info");
+                        stopRecording();
+                    }
+                }, MAX_RECORDING_TIME * 1000);
             })
             .catch(error => {
                 console.error('Ошибка доступа к микрофону:', error);
-                showNotification("Не удалось получить доступ к микрофону", "error");
-                isRecording = false;
+                let errorMessage = "Не удалось получить доступ к микрофону";
+                
+                if (error.name === 'NotAllowedError') {
+                    errorMessage = "Доступ к микрофону запрещен. Разрешите доступ в настройках браузера.";
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage = "Микрофон не найден. Подключите микрофон и попробуйте снова.";
+                } else if (error.name === 'NotReadableError') {
+                    errorMessage = "Микрофон занят другим приложением. Закройте другие приложения, использующие микрофон.";
+                }
+                
+                showNotification(errorMessage, "error");
+                cleanupRecording();
             });
     }
+
 
     function stopRecording() {
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
             mediaRecorder.stop();
-            isRecording = false;
-            voiceRecordBtn.innerHTML = '🎤';
+            
+            // Останавливаем все треки потока
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+            }
+        }
+        stopRecordingTimer();
+        voiceRecordBtn.innerHTML = '🎤';
+        voiceRecordBtn.classList.remove('recording');
+        isRecording = false;
+    }
+
+    function startRecordingTimer() {
+        stopRecordingTimer(); // На всякий случай останавливаем предыдущий таймер
+        
+        recordingTimer = setInterval(() => {
+            const elapsedTime = Math.floor((Date.now() - recordingStartTime) / 1000);
+            
+            // Проверяем максимальное время записи
+            if (elapsedTime >= MAX_RECORDING_TIME) {
+                stopRecording();
+                return;
+            }
+            
+            // Обновляем отображение таймера
+            if (recordingTimerElement) {
+                recordingTimerElement.style.display = 'inline-block';
+                recordingTimerElement.textContent = formatTime(elapsedTime);
+                
+                // Визуальное предупреждение за 10 секунд до окончания
+                if (elapsedTime > MAX_RECORDING_TIME - 10) {
+                    recordingTimerElement.style.color = '#e53e3e';
+                    recordingTimerElement.style.fontWeight = 'bold';
+                } else {
+                    recordingTimerElement.style.color = '';
+                    recordingTimerElement.style.fontWeight = '';
+                }
+            }
+        }, 1000);
+    }
+
+    function stopRecordingTimer() {
+        if (recordingTimer) {
+            clearInterval(recordingTimer);
+            recordingTimer = null;
+        }
+        
+        if (recordingTimerElement) {
+            recordingTimerElement.style.display = 'none';
+            recordingTimerElement.textContent = '00:00';
+            recordingTimerElement.style.color = '';
+            recordingTimerElement.style.fontWeight = '';
         }
     }
 
     function cleanupRecording() {
-        // Останавливаем все треки микрофона
+        stopRecording();
+        
         if (audioStream) {
             audioStream.getTracks().forEach(track => track.stop());
             audioStream = null;
         }
+        
+        audioChunks = [];
     }
+
+    function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    
+    // Обработчик закрытия страницы для очистки ресурсов
+    window.addEventListener('beforeunload', function() {
+        cleanupRecording();
+    });
+
 
     // Отправка формы
     chatForm.addEventListener("submit", function (e) {
@@ -1144,7 +1324,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Добавляем сообщения
         chatHistory.insertAdjacentHTML('beforeend', userMessageHTML + botMessageHTML);
-        scrollChatToBottom();
+        scrollAfterMessage(); 
         messageInput.value = '';
 
         // Создаем FormData для отправки
@@ -1246,8 +1426,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 
                 chatHistory.insertAdjacentHTML('beforeend', newMessageHTML);
                 initStarRating();
+                scrollAfterMessage();
             }
-            scrollChatToBottom();
             
             // Сбрасываем состояние после успешной отправки
             filePreviewContainer.style.display = 'none';
@@ -1295,6 +1475,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         </div>
                     `;
                     showNotification("История чата очищена", "success");
+                    scrollChatToBottom(true);
                 } else {
                     return response.json().then(data => {
                         throw new Error(data.error || 'Ошибка при очистке чата');

@@ -2,7 +2,11 @@ import time
 from datetime import datetime
 from typing import Dict, Any, List
 
+from django.contrib.auth import get_user_model
+
 from ai.repositories import UserRepository
+
+User = get_user_model()
 
 
 class UserStateManager:
@@ -38,7 +42,8 @@ class UserStateManager:
             if time.time() - cached_state['timestamp'] < 60:  # Кэш живет 60 секунд
                 return cached_state['state']
 
-        # Получаем из БД
+        # user = User.objects.get(pk=self.user_id)
+
         user_profile = self.user_repo.get_profile(self.user_id)
 
         if not user_profile:

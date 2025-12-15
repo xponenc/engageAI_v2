@@ -12,8 +12,7 @@ from ..models import MediaFile, MessageType
 from ..tasks import process_ai_generated_media_async
 
 
-
-
+logger = logging.getLogger(__name__)
 
 
 class UserMediaService:
@@ -22,7 +21,7 @@ class UserMediaService:
     MAX_FILE_SIZE = 25 * 1024 * 1024  # 25MB
     ALLOWED_MIME_TYPES = {
         'image': ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'],
-        'audio': ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'],
+        'audio': ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a', "audio/webm"],
         'video': ['video/mp4', 'video/webm', 'video/quicktime'],
         'document': [
             'application/pdf', 'application/msword',
@@ -31,7 +30,7 @@ class UserMediaService:
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'application/vnd.ms-powerpoint',
             'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-            'application/zip', 'application/x-rar-compressed'
+            'application/zip', 'application/x-rar-compressed', 'text/plain'
         ]
     }
 
@@ -47,6 +46,7 @@ class UserMediaService:
 
         # Проверка типа файла
         mime_type = uploaded_file.content_type.lower()
+        print(mime_type)
         file_ext = os.path.splitext(uploaded_file.name)[1].lower()
 
         # Определяем тип файла

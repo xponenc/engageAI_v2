@@ -19,6 +19,8 @@ from ai.orchestrator import Orchestrator
 from ai_assistant.models import AIAssistant
 from .models import Chat, Message, MessageSource, ChatPlatform, MessageType, MediaFile
 from .services.ai_message_service import AiMediaService
+from .services.chat_process import ChatService
+from .services.interfaces.message_service import MessageService
 from .services.user_media_service import UserMediaService
 
 logger = logging.getLogger(__name__)
@@ -575,6 +577,237 @@ logger = logging.getLogger(__name__)
 #
 #         return redirect('chat:ai-chat', slug=slug)
 
+#
+# class AiChatView(LoginRequiredMixin, View):
+#     """Чат с AI с полной поддержкой медиафайлов"""
+#     template_name = "chat/ai_chat.html"
+#
+#     def setup(self, request, *args, **kwargs):
+#         """Инициализация сервисов перед обработкой запроса"""
+#         super().setup(request, *args, **kwargs)
+#         self.user_media_service = UserMediaService(request.user)
+#
+#     @staticmethod
+#     def _get_assistant_and_chat(request, slug):
+#         """Получает AI-ассистента и чат с обработкой ошибок"""
+#         try:
+#             assistant = AIAssistant.objects.get(slug=slug, is_active=True)
+#         except AIAssistant.DoesNotExist:
+#             raise Http404("AI-ассистент не найден или неактивен")
+#
+#         try:
+#             chat, created = Chat.get_or_create_ai_chat(
+#                 user=request.user,
+#                 ai_assistant=assistant,
+#                 platform=ChatPlatform.WEB,
+#                 title=f"Чат с {assistant.name}"
+#             )
+#             if created:
+#                 logger.info(
+#                     f"Создан новый чат {chat.pk} для пользователя {request.user.pk} и ассистента {assistant.slug}")
+#
+#             return assistant, chat
+#         except Exception as e:
+#             logger.error(f"Ошибка при создании чата: {str(e)}")
+#             raise Http404("Не удалось создать чат с AI-ассистентом")
+#
+#     @staticmethod
+#     def _get_chat_history(chat):
+#         """Получает историю сообщений с предзагрузкой медиа"""
+#         return chat.messages.filter(
+#             is_user_deleted=False
+#         ).select_related('sender').prefetch_related(
+#             'media_files'
+#         ).order_by("created_at")
+#
+#     @staticmethod
+#     def _get_ajax_response(user_message, ai_message):
+#         """Формирует AJAX-ответ для чата с поддержкой медиа"""
+#
+#         def serialize_media(media_files):
+#             return [{
+#                 "id": media.pk,
+#                 "url": media.get_absolute_url(),
+#                 "type": media.file_type,
+#                 "mime_type": media.mime_type,
+#                 "name": os.path.basename(media.file.name),
+#                 "thumbnail": media.thumbnail.url if media.thumbnail else None,
+#                 "size": media.size
+#             } for media in media_files.all()]
+#
+#         response_data = {
+#             'user_message': {
+#                 "id": user_message.pk,
+#                 "text": user_message.content,
+#                 "message_type": user_message.message_type,
+#                 "media_files": serialize_media(user_message.media_files)
+#             },
+#             'ai_response': {
+#                 "id": ai_message.pk,
+#                 "score": ai_message.score,
+#                 "request_url": reverse_lazy("chat:ai-message-score", kwargs={"message_pk": ai_message.pk}),
+#                 "text": ai_message.content,
+#                 "message_type": ai_message.message_type,
+#                 "media_files": serialize_media(ai_message.media_files)
+#             },
+#         }
+#         return JsonResponse(response_data)
+#
+#     @staticmethod
+#     def _process_ai_response(user_id, user_context):
+#         """Обрабатывает запрос к AI и возвращает ответ"""
+#         try:
+#             orchestrator = Orchestrator(user_id=user_id, user_context=user_context)
+#             ai_response = orchestrator.process_message(user_context)
+#
+#             if not ai_response.get('success', False):
+#                 logger.warning(f"AI вернул неуспешный ответ: {ai_response}")
+#                 return {
+#                     'text': "Извините, произошла ошибка при генерации ответа.",
+#                     'media': []
+#                 }
+#
+#             return {
+#                 'text': ai_response.get('response_message', "Извините, я пока не могу ответить на ваш вопрос."),
+#                 'media': ai_response.get('media_files', [])
+#             }
+#
+#         except Exception as e:
+#             logger.exception(f"Ошибка при работе с AI: {str(e)}")
+#             return {
+#                 'text': "Извините, сейчас не могу обработать ваш запрос.",
+#                 'media': []
+#             }
+#
+#     def get(self, request, slug, *args, **kwargs):
+#         """Отображает интерфейс чата с историей сообщений"""
+#         try:
+#             assistant, chat = self._get_assistant_and_chat(request, slug)
+#             chat_history = self._get_chat_history(chat)
+#         except Http404 as e:
+#             return render(request, "chat/assistant_not_found.html", {"error": str(e)}, status=404)
+#
+#         context = {
+#             'chat': chat,
+#             'chat_history': chat_history,
+#             'assistant': assistant,
+#             # Передаем настройки для фронтенда
+#             'max_file_size_mb': UserMediaService.MAX_FILE_SIZE // 1024 // 1024,
+#             'allowed_file_types': list(UserMediaService.ALLOWED_MIME_TYPES.keys()),
+#         }
+#         return render(request, self.template_name, context)
+#
+#     def post(self, request, slug, *args, **kwargs):
+#         """Обрабатывает отправку сообщения в чат с поддержкой медиа"""
+#         user_message_text = request.POST.get('message', '').strip()
+#         has_file = 'file' in request.FILES
+#
+#         print(request.POST)
+#         print(request.FILES)
+#
+#         # Валидация: должно быть либо текст, либо файл
+#         if not user_message_text and not has_file:
+#             error_msg = "Сообщение или файл отсутствуют"
+#             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+#                 return JsonResponse({"error": error_msg}, status=400)
+#             messages.error(request, error_msg)
+#             return redirect('chat:ai-chat', slug=slug)
+#
+#         # Получаем ассистента и чат
+#         try:
+#             assistant, chat = self._get_assistant_and_chat(request, slug)
+#         except Http404 as e:
+#             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+#                 return JsonResponse({"error": str(e)}, status=404)
+#             return render(request, "chat/assistant_not_found.html", {"error": str(e)}, status=404)
+#
+#         try:
+#             with transaction.atomic():
+#                 # Создаем сообщение пользователя
+#                 user_message = Message.objects.create(
+#                     chat=chat,
+#                     content=user_message_text,
+#                     source_type=MessageSource.WEB,
+#                     sender=request.user,
+#                     message_type=MessageType.TEXT if not has_file else MessageType.DOCUMENT
+#                 )
+#
+#                 # Обрабатываем загруженный файл
+#                 if has_file:
+#                     try:
+#                         self.user_media_service.handle_uploaded_file(
+#                             request.FILES['file'],
+#                             user_message
+#                         )
+#                         # Если файл успешно загружен, обновляем тип сообщения
+#                         if user_message.media_files.exists():
+#                             file_type = user_message.media_files.first().file_type
+#                             type_mapping = {
+#                                 'image': MessageType.IMAGE,
+#                                 'audio': MessageType.AUDIO,
+#                                 'video': MessageType.VIDEO,
+#                                 'document': MessageType.DOCUMENT
+#                             }
+#                             user_message.message_type = type_mapping.get(file_type, MessageType.TEXT)
+#                             user_message.save(update_fields=['message_type'])
+#                     except ValueError as e:
+#                         raise
+#                     except Exception as e:
+#                         logger.error(f"Ошибка при обработке файла: {str(e)}")
+#                         raise ValueError("Ошибка при загрузке файла. Попробуйте еще раз.")
+#
+#                 # Подготавливаем контекст для AI
+#                 user_context = {
+#                     'text': user_message_text,
+#                     'media': [{
+#                         'url': media.get_absolute_url(),
+#                         'type': media.file_type,
+#                         'mime_type': media.mime_type,
+#                         'path': media.file.path if hasattr(media.file, 'path') else None
+#                     } for media in user_message.media_files.all()]
+#                 }
+#
+#                 # Получаем ответ от AI
+#                 ai_response = self._process_ai_response(request.user.id, user_context)
+#                 ai_message_text = ai_response['text']
+#                 ai_media_data = ai_response['media']
+#
+#                 # Создаем сообщение AI
+#                 ai_message = Message.objects.create(
+#                     chat=chat,
+#                     reply_to=user_message,
+#                     content=ai_message_text,
+#                     is_ai=True,
+#                     source_type=MessageSource.WEB,
+#                     sender=None,
+#                     message_type=MessageType.TEXT
+#                 )
+#
+#                 # Асинхронно обрабатываем AI-сгенерированные медиа
+#                 if ai_media_data:
+#                     ai_media_service = AiMediaService(chat)
+#                     ai_media_service.process_ai_media(ai_media_data, ai_message)
+#
+#         except ValueError as e:
+#             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+#                 return JsonResponse({"error": str(e)}, status=400)
+#             messages.error(request, str(e))
+#             return redirect('chat:ai-chat', slug=slug)
+#         except Exception as e:
+#             logger.exception(f"Критическая ошибка при обработке сообщения: {str(e)}")
+#             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+#                 return JsonResponse({
+#                     "error": "Произошла внутренняя ошибка сервера. Попробуйте позже."
+#                 }, status=500)
+#             messages.error(request, "Произошла ошибка при обработке вашего сообщения. Попробуйте позже.")
+#             return redirect('chat:ai-chat', slug=slug)
+#
+#         # Обрабатываем AJAX-запрос
+#         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+#             return self._get_ajax_response(user_message, ai_message)
+#
+#         return redirect('chat:ai-chat', slug=slug)
+
 
 class AiChatView(LoginRequiredMixin, View):
     """Чат с AI с полной поддержкой медиафайлов"""
@@ -584,33 +817,37 @@ class AiChatView(LoginRequiredMixin, View):
         """Инициализация сервисов перед обработкой запроса"""
         super().setup(request, *args, **kwargs)
         self.user_media_service = UserMediaService(request.user)
+        self.chat_service = ChatService()
+        self.message_service = MessageService()
 
-    @staticmethod
-    def _get_assistant_and_chat(request, slug):
-        """Получает AI-ассистента и чат с обработкой ошибок"""
+    def _get_assistant_and_chat(self, request, slug):
+        """Получает AI-ассистента и чат через ChatService"""
         try:
-            assistant = AIAssistant.objects.get(slug=slug, is_active=True)
-        except AIAssistant.DoesNotExist:
-            raise Http404("AI-ассистент не найден или неактивен")
-
-        try:
-            chat, created = Chat.get_or_create_ai_chat(
+            # Используем ChatService для получения/создания чата
+            result = self.chat_service.get_or_create_assistant_chat(
                 user=request.user,
-                ai_assistant=assistant,
-                platform=ChatPlatform.WEB,
-                title=f"Чат с {assistant.name}"
+                assistant_slug=slug,
+                chat_platform=ChatPlatform.WEB,
+                api_tag=f"[web:user_{request.user.id}]"
             )
-            if created:
-                logger.info(
-                    f"Создан новый чат {chat.pk} для пользователя {request.user.pk} и ассистента {assistant.slug}")
 
+            # Обработка результатов от сервиса
+            if isinstance(result, dict):
+                # Это ошибка от сервиса
+                error_detail = result["payload"]["detail"]
+                logger.error(f"Ошибка получения чата: {error_detail}")
+                raise Http404(error_detail)
+
+            assistant, chat = result
             return assistant, chat
+
+        except Http404:
+            raise
         except Exception as e:
-            logger.error(f"Ошибка при создании чата: {str(e)}")
+            logger.error(f"Критическая ошибка при получении чата: {str(e)}")
             raise Http404("Не удалось создать чат с AI-ассистентом")
 
-    @staticmethod
-    def _get_chat_history(chat):
+    def _get_chat_history(self, chat):
         """Получает историю сообщений с предзагрузкой медиа"""
         return chat.messages.filter(
             is_user_deleted=False
@@ -618,44 +855,14 @@ class AiChatView(LoginRequiredMixin, View):
             'media_files'
         ).order_by("created_at")
 
-    @staticmethod
-    def _get_ajax_response(user_message, ai_message):
+    def _get_ajax_response(self, user_message, ai_message):
         """Формирует AJAX-ответ для чата с поддержкой медиа"""
+        return self.message_service.get_ajax_response(user_message, ai_message)
 
-        def serialize_media(media_files):
-            return [{
-                "id": media.pk,
-                "url": media.get_absolute_url(),
-                "type": media.file_type,
-                "mime_type": media.mime_type,
-                "name": os.path.basename(media.file.name),
-                "thumbnail": media.thumbnail.url if media.thumbnail else None,
-                "size": media.size
-            } for media in media_files.all()]
-
-        response_data = {
-            'user_message': {
-                "id": user_message.pk,
-                "text": user_message.content,
-                "message_type": user_message.message_type,
-                "media_files": serialize_media(user_message.media_files)
-            },
-            'ai_response': {
-                "id": ai_message.pk,
-                "score": ai_message.score,
-                "request_url": reverse_lazy("chat:ai-message-score", kwargs={"message_pk": ai_message.pk}),
-                "text": ai_message.content,
-                "message_type": ai_message.message_type,
-                "media_files": serialize_media(ai_message.media_files)
-            },
-        }
-        return JsonResponse(response_data)
-
-    @staticmethod
-    def _process_ai_response(chat, user_context):
+    def _process_ai_response(self, user_id, user_context):
         """Обрабатывает запрос к AI и возвращает ответ"""
         try:
-            orchestrator = Orchestrator(chat=chat)
+            orchestrator = Orchestrator(user_id=user_id, user_context=user_context)
             ai_response = orchestrator.process_message(user_context)
 
             if not ai_response.get('success', False):
@@ -718,13 +925,13 @@ class AiChatView(LoginRequiredMixin, View):
 
         try:
             with transaction.atomic():
-                # Создаем сообщение пользователя
-                user_message = Message.objects.create(
+                # Создаем сообщение пользователя через MessageService
+                user_message = self.message_service.create_user_message(
                     chat=chat,
-                    content=user_message_text,
-                    source_type=MessageSource.WEB,
                     sender=request.user,
-                    message_type=MessageType.TEXT if not has_file else MessageType.DOCUMENT
+                    content=user_message_text,
+                    message_type=MessageType.TEXT,
+                    source_type=MessageSource.WEB
                 )
 
                 # Обрабатываем загруженный файл
@@ -734,17 +941,10 @@ class AiChatView(LoginRequiredMixin, View):
                             request.FILES['file'],
                             user_message
                         )
-                        # Если файл успешно загружен, обновляем тип сообщения
-                        if user_message.media_files.exists():
-                            file_type = user_message.media_files.first().file_type
-                            type_mapping = {
-                                'image': MessageType.IMAGE,
-                                'audio': MessageType.AUDIO,
-                                'video': MessageType.VIDEO,
-                                'document': MessageType.DOCUMENT
-                            }
-                            user_message.message_type = type_mapping.get(file_type, MessageType.TEXT)
-                            user_message.save(update_fields=['message_type'])
+
+                        # Обновляем тип сообщения на основе медиафайлов
+                        self.message_service.update_message_type_from_media(user_message)
+
                     except ValueError as e:
                         raise
                     except Exception as e:
@@ -763,19 +963,16 @@ class AiChatView(LoginRequiredMixin, View):
                 }
 
                 # Получаем ответ от AI
-                ai_response = self._process_ai_response(chat, user_context)
+                ai_response = self._process_ai_response(request.user.id, user_context)
                 ai_message_text = ai_response['text']
                 ai_media_data = ai_response['media']
 
-                # Создаем сообщение AI
-                ai_message = Message.objects.create(
+                # Создаем сообщение AI через MessageService
+                ai_message = self.message_service.create_ai_message(
                     chat=chat,
-                    reply_to=user_message,
                     content=ai_message_text,
-                    is_ai=True,
-                    source_type=MessageSource.WEB,
-                    sender=None,
-                    message_type=MessageType.TEXT
+                    reply_to=user_message,
+                    source_type=MessageSource.WEB
                 )
 
                 # Асинхронно обрабатываем AI-сгенерированные медиа

@@ -2,11 +2,14 @@
 import json
 import os
 from typing import Dict, Any
+
+from django.contrib.auth import get_user_model
 from openai import AsyncOpenAI
 
 from ai.llm.llm_factory import llm_factory
 from ai.state_manager import UserStateManager
 from ai.agent_factory import AgentFactory
+
 
 
 class Orchestrator:
@@ -23,7 +26,7 @@ class Orchestrator:
             user_context: Контекст пользователя из состояния
             platform: Платформа (web, telegram, etc.)
         """
-        self.user_id = str(user_id)  # Универсальный user_id вместо telegram_id
+        self.user_id = str(user_id)
         self.user_context = user_context or {}
         self.platform = platform
         self.state_manager = UserStateManager(self.user_id)

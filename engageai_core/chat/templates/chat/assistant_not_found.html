@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+
+{% load static %}
+
+
+{% block css %}
+<link href="{% static 'css/chat.css' %}" rel="stylesheet">
+{% endblock css %}
+
+{% block title %}Ассистент не найден 🤖{% endblock %}
+
+{% block content %}
+<section class="assistant-not-found">
+    <div class="container assistant-not-found__container">
+        
+        <div class="assistant-not-found__icon">🤖💨</div>
+
+        <h1 class="assistant-not-found__title">
+            Этот ассистент ушёл думать
+        </h1>
+
+        <p class="assistant-not-found__text">
+            Мы не смогли найти нужного AI-ассистента.<br>
+            Возможно, он был удалён, переименован или временно недоступен.
+        </p>
+
+        <div class="assistant-not-found__actions">
+            <a href="/" class="btn btn_ghost">
+                На главную
+            </a>
+        </div>
+
+    </div>
+</section>
+{% endblock %}

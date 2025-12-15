@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from ai_assistant.models import AIAssistant
 from chat.models import ChatPlatform, Chat
-from chat.services.chat_process import ChatService
+from chat.services.interfaces.chat_service import ChatService
 from utils.setup_logger import setup_logger
 
 User = get_user_model()

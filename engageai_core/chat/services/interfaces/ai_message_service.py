@@ -27,7 +27,7 @@ class AiMediaService:
         """
         Асинхронно обрабатывает медиафайлы, сгенерированные AI
         """
-        from ..tasks import process_ai_generated_media_async
+        from ...tasks import process_ai_generated_media_async
 
         if not ai_media_data:
             return

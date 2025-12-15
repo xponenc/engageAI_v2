@@ -1,6 +1,8 @@
 import json
+import os
 from typing import Optional
 
+from django.db import transaction
 from django.http import JsonResponse
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -13,6 +15,7 @@ from chat.services.interfaces.base_service import BaseService
 class MessageService(BaseService):
     """Сервис для работы с сообщениями"""
 
+    @transaction.atomic
     def create_user_message(
             self,
             chat: Chat,
@@ -39,6 +42,7 @@ class MessageService(BaseService):
             self.logger.exception(f"Ошибка создания сообщения пользователя: {str(e)}")
             raise
 
+    @transaction.atomic
     def create_ai_message(
             self,
             chat: Chat,
@@ -65,7 +69,9 @@ class MessageService(BaseService):
             raise
 
     def update_message_type_from_media(self, message: Message) -> None:
-        """Обновляет тип сообщения на основе прикрепленных медиафайлов"""
+        """
+        Обновляет тип сообщения на основе прикрепленных медиафайлов
+        """
         if message.media_files.exists():
             first_media = message.media_files.first()
             file_type = first_media.file_type
@@ -82,7 +88,9 @@ class MessageService(BaseService):
             self.logger.debug(f"Обновлен тип сообщения {message.id} на {message.message_type}")
 
     def get_ajax_response(self, user_message: Message, ai_message: Message) -> JsonResponse:
-        """Формирует AJAX-ответ для чата с поддержкой медиа"""
+        """
+        Формирует AJAX-ответ для чата с поддержкой медиа
+        """
 
         def serialize_media(media_files):
             return [{

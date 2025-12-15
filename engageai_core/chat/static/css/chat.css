@@ -877,3 +877,34 @@
     70% { box-shadow: 0 0 0 8px rgba(254, 178, 178, 0); }
     100% { box-shadow: 0 0 0 0 rgba(254, 178, 178, 0); }
 }
+
+
+.assistant-not-found {
+    min-height: 70vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.assistant-not-found__icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+}
+
+.assistant-not-found__title {
+    font-size: 28px;
+    margin-bottom: 12px;
+}
+
+.assistant-not-found__text {
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+.assistant-not-found__actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}

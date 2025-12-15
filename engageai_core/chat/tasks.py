@@ -9,7 +9,7 @@ from requests.exceptions import RequestException
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from .models import MediaFile
-from .services.ai_message_service import AiMediaService
+from chat.services.interfaces.ai_message_service import AiMediaService
 from .services.telegram_bot_services import TelegramBotService
 
 logger = get_task_logger(__name__)

@@ -41,11 +41,11 @@ class Chat(models.Model):
     objects = models.Manager()
 
     # Основные характеристики
-    title = models.CharField(
-        max_length=255,
-        blank=True,
-        verbose_name=_('Название чата')
-    )
+    # title = models.CharField(
+    #     max_length=255,
+    #     blank=True,
+    #     verbose_name=_('Название чата')
+    # )
 
     # 1. Платформа/источник
     platform = models.CharField(
@@ -126,7 +126,7 @@ class Chat(models.Model):
         ]
 
     def __str__(self):
-        return self.title or f"Chat #{self.id} ({self.get_platform_display()}/{self.get_scope_display()})"
+        return f"Chat #{self.id} ({self.get_platform_display()}/{self.get_scope_display()})"
 
     def save(self, *args, **kwargs):
         """Автоматическая логика при сохранении"""

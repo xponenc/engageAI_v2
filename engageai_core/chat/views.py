@@ -13,7 +13,7 @@ from django.views.generic import ListView
 
 from ai.orchestrator import Orchestrator
 from ai_assistant.models import AIAssistant
-from .models import Chat, Message, MessageSource, ChatPlatform, MessageType
+from .models import Chat, Message, MessageSource, ChatPlatform, MessageType, ChatScope
 from chat.services.interfaces.ai_message_service import AiMediaService
 from .services.interfaces.chat_service import ChatService
 from .services.interfaces.exceptions import AssistantNotFoundError, ChatCreationError, MediaProcessingError
@@ -836,7 +836,7 @@ class AiChatView(LoginRequiredMixin, View):
                 platform=ChatPlatform.WEB,
                 assistant_slug=slug,
                 title=f"Чат с {assistant.name}",
-                scope="private"
+                scope=ChatScope.PRIVATE,
             )
             return assistant, chat
         except AssistantNotFoundError as e:

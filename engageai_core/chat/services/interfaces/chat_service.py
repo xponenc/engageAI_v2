@@ -102,13 +102,12 @@ class ChatService(BaseService):
             platform: ChatPlatform,
             scope: ChatScope = ChatScope.PRIVATE,
             assistant_slug: Optional[str] = None,
-            title: Optional[str] = None,
+            # title: Optional[str] = None,
             external_chat_id: Optional[str] = None,
             api_tag: Optional[str] = None
     ) -> Chat:
         """
         Получает или создает чат для пользователя
-        Бросает исключения вместо возврата словарей с ошибками
         """
         context = f"{api_tag} " if api_tag else ""
         context += f"user={user.id}, platform={platform.value}"
@@ -138,18 +137,11 @@ class ChatService(BaseService):
                 self.logger.debug(f"{context} Найден существующий чат {chat.id}")
                 return chat
 
-            # Создание нового чата
-            if not title:
-                if assistant:
-                    title = f"{'Telegram' if platform == ChatPlatform.TELEGRAM else 'Веб'} чат с {assistant.name}"
-                else:
-                    title = f"{'Telegram' if platform == ChatPlatform.TELEGRAM else 'Веб'} чат"
-
             chat_params = {
                 "owner": user,
                 "platform": platform,
                 "scope": scope,
-                "title": title,
+                # "title": title,
                 "is_ai_enabled": bool(assistant),
                 "external_chat_id": external_chat_id
             }
@@ -175,6 +167,7 @@ class ChatService(BaseService):
                 "assistant_slug": assistant_slug
             }
             raise ChatCreationError(str(e), chat_data) from e
+
 
     def get_chat_history(
             self,

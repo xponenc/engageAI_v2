@@ -6,7 +6,8 @@ from .models import Chat, Message
 
 @admin.register(Chat)
 class ChatAdmin(admin.ModelAdmin):
-    list_display = ('title', 'platform', 'scope', 'owner_display', 'ai_assistant_display', 'is_active', 'created_at')
+    list_display = ('title_display', 'platform', 'scope', 'owner_display', 'ai_assistant_display',
+                    'is_active', 'created_at')
     list_filter = ('platform', 'scope', 'is_active', 'ai_assistant__assistant_type')
     search_fields = ('title', 'owner__username', 'owner__email', 'ai_assistant__name', 'external_chat_id')
     filter_horizontal = ('participants',)
@@ -31,6 +32,9 @@ class ChatAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+    def title_display(self, obj):
+        return _(f"Chat #{obj.id} ({obj.get_platform_display()}/{obj.get_scope_display()})")
 
     def owner_display(self, obj):
         if obj.owner:

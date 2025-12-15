@@ -30,12 +30,7 @@ class BotAuthenticationMixin:
             core_api_logger.warning(
                 f"[AUTH FAIL] Missing X-Internal-Key | IP={ip} | PATH={path}"
             )
-            return {
-                "payload": {
-                    "detail": f"Missing bot authentication key"
-                },
-                "response_status": status.HTTP_401_UNAUTHORIZED,
-            }
+            raise AuthenticationError("Missing bot authentication key", status_code=status.HTTP_401_UNAUTHORIZED)
 
         # Поиск бота по ключу
         bot_id = None
@@ -53,12 +48,7 @@ class BotAuthenticationMixin:
             core_api_logger.error(
                 f"[AUTH FAIL] Invalid key | KEY={key[:4]}... | IP={ip} | PATH={path}"
             )
-            return {
-                "payload": {
-                    "detail": "Invalid bot authentication key"
-                },
-                "response_status": status.HTTP_403_FORBIDDEN,
-            }
+            raise AuthenticationError("Invalid bot authentication key", status_code=status.HTTP_403_FORBIDDEN)
 
         # Успешная аутентификация
         request.internal_bot = bot_id
@@ -106,10 +96,7 @@ class TelegramUserResolverMixin:
 
         if not telegram_id:
             core_api_logger.warning(f"{bot_tag} Missing telegram_id in request | PATH={request.path}")
-            return Response(
-                data={"detail": f"Missing 'user_telegram_id' in request"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            raise UserNotFoundError("Missing 'user_telegram_id' in request", status_code=status.HTTP_400_BAD_REQUEST)
 
         try:
             # Поиск активного пользователя по telegram_id
@@ -131,7 +118,5 @@ class TelegramUserResolverMixin:
             core_api_logger.warning(
                 f"{bot_tag} User NOT found for telegram_id={telegram_id} | PATH={request.path}"
             )
-            return Response(
-                data={"detail": f"No active user found for telegram_id={telegram_id}"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            raise UserNotFoundError(f"No active user found for telegram_id={telegram_id}",
+                                    status_code=status.HTTP_404_NOT_FOUND)

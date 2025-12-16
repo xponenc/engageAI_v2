@@ -113,7 +113,7 @@ async def set_menu_button(bot: Bot):
 @auto_context()
 async def start(message: Message, state: FSMContext, **kwargs):
     """start"""
-    await state.clear()  # TODO временная заглушка сносящая все состояния при старте
+    # await state.clear()  # TODO временная заглушка сносящая все состояния при старте
     await state.set_state(None)
 
     data = await state.get_data()

@@ -1,5 +1,5 @@
 import os
-from typing import Optional, Union
+from typing import Optional, Union, Dict
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -25,7 +25,9 @@ class MessageService(BaseService):
             content: str = "",
             message_type: str = MessageType.TEXT,
             source_type: str = MessageSource.WEB,
-            reply_to: Optional[Message] = None
+            reply_to: Optional[Message] = None,
+            external_id: Optional[str] = None,
+            metadata: Optional[Dict] =None,
     ) -> Message:
         """Создает сообщение пользователя"""
         try:
@@ -37,7 +39,9 @@ class MessageService(BaseService):
                 source_type=source_type,
                 reply_to=reply_to,
                 timestamp=timezone.now(),
-                is_ai=False
+                is_ai=False,
+                external_id=external_id,
+                metadata=metadata,
             )
             return message
         except Exception as e:
@@ -63,7 +67,6 @@ class MessageService(BaseService):
                 message_type=message_type,
                 source_type=source_type,
                 reply_to=reply_to,
-                timestamp=timezone.now()
             )
             return message
         except Exception as e:

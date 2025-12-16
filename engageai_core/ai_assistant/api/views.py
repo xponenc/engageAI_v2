@@ -20,32 +20,72 @@ core_api_logger = setup_logger(name=__file__, log_dir="logs/core_api", log_file=
 
 class OrchestratorProcessAPIView(BotAuthenticationMixin, TelegramUserResolverMixin, APIView):
     """
-    Обрабатывает запросы от Telegram-бота к AI-оркестратору
+    Обрабатывает запросы
 
-    Ожидает POST запрос с JSON payload:
+    Формат запроса:
     {
-        "platform": "telegram",
-        "message_text": "Текст сообщения",
-        "message_type": "text",  // "text", "photo", "document", etc.
-        "user_context": {...},
-        "callback_data": "optional_callback_data",
-        "assistant_slug": "english_teacher"  // опционально
+        "user_id": 12345,           # ID пользователя в Core
+        "source": "telegram",       # Источник: telegram/web/api/system
+        "content": "Текст сообщения",  # Обязательно для text
+        "message_type": "text|image|audio|video|document|callback|media_group",
+        "reply_to_external_id": 67890,  # Опционально: ID сообщения в Telegram, на которое отвечает пользователь
+        "media_files": [            # Опционально: массив медиафайлов
+            {
+                "external_id": "AgACAgIAAxkBAAMjZ...",  # file_id в Telegram
+                "file_type": "image",  # image/audio/video/document
+                "mime_type": "image/jpeg",  # MIME type
+                "caption": "Подпись к фото"  # Опционально
+            }
+        ],
+        "metadata": {               # Опционально: дополнительные данные
+            "chat_id": 123456789,   # ID чата в Telegram
+            "message_id": 987654,   # ID сообщения в Telegram
+            "from_user": {
+                "id": 432684977,
+                "username": "user_name",
+                "first_name": "Имя",
+                "last_name": "Фамилия"
+            }
+        }
     }
 
-    Возвращает JSON:
+    Формат ответа:
     {
-        "response_message": "Ответ от AI",
-        "response_type": "text",  // "text", "photo", "document", etc.
-        "keyboard": {...},  // опционально, inline-клавиатура
-        "core_message_id": 456,  // ID сообщения в базе данных
-        "metadata": {...}  // дополнительные метаданные
+        "success": true,
+        "response_type": "text|photo|document|voice|video|media_group|error",
+        "data": {
+            "text": "Ответ от AI",  # Для text
+            "parse_mode": "HTML",   # Опционально
+            "url": "https://...",   # Для одиночного медиа
+            "caption": "Подпись",   # Для одиночного медиа
+            "filename": "file.pdf", # Для документа
+            "media": [              # Для медиа-группы
+                {
+                    "type": "photo|video",
+                    "url": "https://...",
+                    "caption": "Подпись"
+                }
+            ],
+            "keyboard": {           # Опционально
+                "type": "inline|reply",
+                "buttons": [
+                    {"text": "Кнопка 1", "callback_data": "data1"},
+                    {"text": "Ссылка", "url": "https://example.com"}
+                ],
+                "layout": [2]       # 2 кнопки в ряду
+            }
+        },
+        "metadata": {
+            "core_message_id": 123, # ID сообщения в Core
+            "processing_time": 0.245 # время обработки в секундах
+        }
     }
     """
     chat_service = ChatService()
 
     def post(self, request, *args, **kwargs):
         # Получаем информацию о боте из аутентификации
-        bot = getattr(request, "internal_bot", None)
+        bot = getattr(request, "internal_bot", 'unknown')
         bot_tag = f"[bot:{bot}]"
 
         core_api_logger.info(f"{bot_tag} Получен запрос к AI-оркестратору")
@@ -135,27 +175,6 @@ class OrchestratorProcessAPIView(BotAuthenticationMixin, TelegramUserResolverMix
                     response_data.pop("keyboard_config")
                 )
 
-            # 6. Сохраняем сообщение в базу данных
-            # Входящее сообщение уже сохранено как Update
-            # core_message_id = None
-            # if response_data:
-            #     core_message_id = self._save_message_to_db(
-            #         user=user,
-            #         platform=platform,
-            #         assistant_slug=assistant_slug,
-            #         user_message={
-            #             "text": message_text or callback_data,
-            #             "type": message_type,
-            #             "callback_data": callback_data,
-            #             "file_id": file_id,
-            #             "caption": caption,
-            #             "media_data": media_data,
-            #             "raw_data": request.data
-            #         },
-            #         ai_response=response_data,
-            #         api_tag=bot_tag,
-            #     )
-            #     response_data["core_message_id"] = core_message_id
 
             # 7. Добавляем общие метаданные
             response_data["metadata"] = {

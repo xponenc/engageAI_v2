@@ -140,7 +140,7 @@ async def _save_update_to_drf(
         error: str = None,
         **kwargs):
     """Асинхронное сохранение в DRF API"""
-    core_drf_url = f"/chat/api/v1/chat/telegram/update/"
+    core_drf_url = f"/api/v1/chat/telegram/update/"
     bot_tag = f"[Bot:{bot_name}]"
     update_id = update_data.get('update_id')
 

@@ -5,8 +5,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from chat.services.interfaces.exceptions import ServiceError, AuthenticationError, UserNotFoundError
-from chat.services.telegram_message_service import TelegramMessageService, TelegramUpdateService
+# from chat.services.telegram_message_service import TelegramMessageService, TelegramUpdateService
 from engageai_core.mixins import BotAuthenticationMixin, TelegramUserResolverMixin
+
+from chat.services.interfaces.telegram_message_service import TelegramMessageService
+from chat.services.interfaces.telegram_update_service import TelegramUpdateService
 from utils.setup_logger import setup_logger
 
 User = get_user_model()

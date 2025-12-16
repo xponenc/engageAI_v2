@@ -8,7 +8,7 @@ from ..celery_app import celery_app
 
 @celery_app.task(bind=True, queue="drf_saves")
 def process_save_message(self, payload: dict):
-    url = "/chat/api/v1/chat/telegram/message/"
+    url = "/api/v1/chat/telegram/message/"
     if sys.platform == "win32":
         # Windows + solo → нужен nest_asyncio
         import nest_asyncio

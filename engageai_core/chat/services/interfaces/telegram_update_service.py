@@ -184,7 +184,7 @@ class TelegramUpdateService(BaseService):
                 content=text,
                 message_type=media_type,
                 source_type=MessageSource.TELEGRAM,
-                external_id=update_id,
+                external_id=str(update_id),
                 metadata={"telegram": {
                     "message_id": str(message_id) if message_id else None,
                     "update_id": str(update_id),
@@ -239,11 +239,12 @@ class TelegramUpdateService(BaseService):
                           user: 'User') -> dict:
         """Обработка callback query от inline-кнопок"""
         # Получаем чат через сервис
-        chat = self.chat_service.get_or_create_platform_chat(
+        chat = self.chat_service.get_or_create_chat(
             user=user,
-            assistant_slug=assistant_slug,
             platform=ChatPlatform.TELEGRAM,
-            bot_tag=bot_tag
+            scope = ChatScope.PRIVATE,
+            assistant_slug=assistant_slug,
+            api_tag=bot_tag
         )
 
         # Поиск исходного сообщения

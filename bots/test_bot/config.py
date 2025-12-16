@@ -23,6 +23,7 @@ WEBHOOK_FAST_API_IP = bot_config.get("CORE_FAST_API_IP")
 WEBHOOK_FAST_API_PORT = bot_config.get("CORE_FAST_API_PORT")
 # CORE_API = f"http://{CORE_FAST_API_IP}:{CORE_FAST_API_PORT}"
 CORE_API = f"http://127.0.0.1:8000"
+CORE_API_URL = f"http://127.0.0.1:8000/api/v1/"
 
 # """Иконки"""
 TASK_EMOJI = u'\U0001F6E0'

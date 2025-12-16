@@ -27,7 +27,7 @@ urlpatterns = [
     path('accounts/', include('users.urls')),
 
     path("assessment/", include("assessment.urls", namespace="assessment")),
-    path("chat/", include("chat.urls", namespace="chat")),
+    path("", include("chat.urls", namespace="chat")),
     path("", include("ai_assistant.urls", namespace="assistant"))
 ]
 

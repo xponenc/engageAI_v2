@@ -90,6 +90,17 @@
                                                 {% endif %}
                                                 {{ message.content|truncatechars:200 }}
                                             </div>
+                                            {% if message.source_type == 'telegram' and  message.metadata.telegram.raw.reply_markup.inline_keyboard %}
+                                                <div class="message-preview__keyboard"> 
+                                                    {% for row in message.metadata.telegram.raw.reply_markup.inline_keyboard %}
+                                                        <div class="message-preview__row">
+                                                            {% for btn in row %}
+                                                                <span class="message-preview__btn">{{  btn.text }}</span>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>  
+                                            {% endif %}
                                         {% endif %}
 
                                         {% if message.media_files.exists %}

@@ -4,35 +4,141 @@ from rest_framework import status
 from rest_framework.response import Response
 from django.conf import settings
 
+from chat.services.interfaces.exceptions import AuthenticationError, UserNotFoundError
 from utils.setup_logger import setup_logger
 
 core_api_logger = setup_logger(name=__file__, log_dir="logs/core_api", log_file="core_api.log")
 
+#
+# class BotAuthenticationMixin:
+#     """
+#     Миксин для аутентификации внутренних ботов через X-Internal-Key.
+#
+#     Добавляет в request:
+#     - internal_bot: имя бота (строка)
+#     - bot_config: конфигурация бота из settings.INTERNAL_BOTS
+#
+#     Возвращает dict 401/403 при неудачной аутентификации.
+#     """
+#
+#     def dispatch(self, request, *args, **kwargs):
+#         key = request.headers.get("X-Internal-Key")
+#         ip = request.META.get("REMOTE_ADDR")
+#         path = request.path
+#
+#         # Проверка наличия ключа
+#         if not key:
+#             core_api_logger.warning(
+#                 f"[AUTH FAIL] Missing X-Internal-Key | IP={ip} | PATH={path}"
+#             )
+#             raise AuthenticationError("Missing bot authentication key", status_code=status.HTTP_401_UNAUTHORIZED)
+#
+#         # Поиск бота по ключу
+#         bot_id = None
+#         bot_config = None
+#
+#         for name, config in settings.INTERNAL_BOTS.items():
+#             config_key = config.get("key") if isinstance(config, dict) else config
+#             if config_key == key:
+#                 bot_id = name
+#                 bot_config = config if isinstance(config, dict) else {"key": config}
+#                 break
+#
+#         # Обработка ошибок аутентификации
+#         if not bot_id:
+#             core_api_logger.error(
+#                 f"[AUTH FAIL] Invalid key | KEY={key[:4]}... | IP={ip} | PATH={path}"
+#             )
+#             raise AuthenticationError("Invalid bot authentication key", status_code=status.HTTP_403_FORBIDDEN)
+#
+#         # Успешная аутентификация
+#         request.internal_bot = bot_id
+#         request.bot_config = bot_config
+#
+#         core_api_logger.info(
+#             f"[AUTH SUCCESS] Bot {bot_id} authenticated | IP={ip} | PATH={path}"
+#         )
+#
+#         return super().dispatch(request, *args, **kwargs)
+
 
 class BotAuthenticationMixin:
     """
-    Миксин для аутентификации внутренних ботов через X-Internal-Key.
+    Миксин для аутентификации внутренних ботов.
+    Поддерживает два метода:
+    1. Старый: X-Internal-Key (для совместимости)
+    2. Новый: Bearer Token (стандарт)
 
     Добавляет в request:
     - internal_bot: имя бота (строка)
     - bot_config: конфигурация бота из settings.INTERNAL_BOTS
+    - auth_method: "x-internal" или "bearer"
 
-    Возвращает dict 401/403 при неудачной аутентификации.
+    Возвращает 401/403 при неудачной аутентификации.
     """
 
     def dispatch(self, request, *args, **kwargs):
-        key = request.headers.get("X-Internal-Key")
         ip = request.META.get("REMOTE_ADDR")
         path = request.path
 
-        # Проверка наличия ключа
-        if not key:
-            core_api_logger.warning(
-                f"[AUTH FAIL] Missing X-Internal-Key | IP={ip} | PATH={path}"
-            )
-            raise AuthenticationError("Missing bot authentication key", status_code=status.HTTP_401_UNAUTHORIZED)
+        # 1. Попытка аутентификации через Bearer Token (приоритет)
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header.split("Bearer ")[1].strip()
+            return self._authenticate_bearer(request, token, ip, path, *args, **kwargs)
 
-        # Поиск бота по ключу
+        # 2. Попытка аутентификации через X-Internal-Key (совместимость)
+        key = request.headers.get("X-Internal-Key")
+        if key:
+            return self._authenticate_x_internal(request, key, ip, path, *args, **kwargs)
+
+        # 3. Оба метода отсутствуют
+        core_api_logger.warning(
+            f"[AUTH FAIL] Missing authentication headers | IP={ip} | PATH={path}"
+        )
+        return self._handle_authentication_error(
+            "Missing bot authentication headers. Use 'Authorization: Bearer <token>' or 'X-Internal-Key: <key>'",
+            status_code=status.HTTP_401_UNAUTHORIZED
+        )
+
+    def _authenticate_bearer(self, request, token, ip, path, *args, **kwargs):
+        """Аутентификация через Bearer Token"""
+        bot_id = None
+        bot_config = None
+
+        for name, config in settings.INTERNAL_BOTS.items():
+            if isinstance(config, dict):
+                bot_token = config.get("token")
+                if bot_token == token:
+                    bot_id = name
+                    bot_config = config
+                    break
+            elif config == token:  # обратная совместимость
+                bot_id = name
+                bot_config = {"key": config, "token": config}
+                break
+
+        if not bot_id:
+            core_api_logger.error(
+                f"[AUTH FAIL] Invalid Bearer token | TOKEN={token[:4]}... | IP={ip} | PATH={path}"
+            )
+            return self._handle_authentication_error(
+                "Invalid bot authentication token",
+                status_code=status.HTTP_403_FORBIDDEN
+            )
+
+        # Успешная аутентификация
+        request.internal_bot = bot_id
+        request.bot_config = bot_config
+        request.auth_method = "bearer"
+
+        core_api_logger.info(
+            f"[AUTH SUCCESS] Bot {bot_id} authenticated via Bearer Token | IP={ip} | PATH={path}"
+        )
+        return super().dispatch(request, *args, **kwargs)
+
+    def _authenticate_x_internal(self, request, key, ip, path, *args, **kwargs):
+        """Аутентификация через X-Internal-Key (старый метод)"""
         bot_id = None
         bot_config = None
 
@@ -43,22 +149,31 @@ class BotAuthenticationMixin:
                 bot_config = config if isinstance(config, dict) else {"key": config}
                 break
 
-        # Обработка ошибок аутентификации
         if not bot_id:
             core_api_logger.error(
-                f"[AUTH FAIL] Invalid key | KEY={key[:4]}... | IP={ip} | PATH={path}"
+                f"[AUTH FAIL] Invalid X-Internal-Key | KEY={key[:4]}... | IP={ip} | PATH={path}"
             )
-            raise AuthenticationError("Invalid bot authentication key", status_code=status.HTTP_403_FORBIDDEN)
+            return self._handle_authentication_error(
+                "Invalid bot authentication key",
+                status_code=status.HTTP_403_FORBIDDEN
+            )
 
         # Успешная аутентификация
         request.internal_bot = bot_id
         request.bot_config = bot_config
+        request.auth_method = "x-internal"
 
         core_api_logger.info(
-            f"[AUTH SUCCESS] Bot {bot_id} authenticated | IP={ip} | PATH={path}"
+            f"[AUTH SUCCESS] Bot {bot_id} authenticated via X-Internal-Key | IP={ip} | PATH={path}"
         )
-
         return super().dispatch(request, *args, **kwargs)
+
+    def _handle_authentication_error(self, message, status_code):
+        """Унифицированная обработка ошибок аутентификации"""
+        return Response(
+            {"error": message},
+            status=status_code
+        )
 
 
 class TelegramUserResolverMixin:

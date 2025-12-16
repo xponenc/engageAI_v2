@@ -835,7 +835,6 @@ class AiChatView(LoginRequiredMixin, View):
                 user=request.user,
                 platform=ChatPlatform.WEB,
                 assistant_slug=slug,
-                title=f"Чат с {assistant.name}",
                 scope=ChatScope.PRIVATE,
             )
             return assistant, chat

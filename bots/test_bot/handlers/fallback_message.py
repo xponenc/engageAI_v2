@@ -8,6 +8,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
 
+from bots.services.utils import get_assistant_slug
 from bots.test_bot.filters.require_auth import AuthFilter
 from bots.test_bot.config import bot_logger, BOT_NAME
 from bots.test_bot.services.api_service import CoreAPIClient
@@ -270,6 +271,7 @@ async def process_media_group_after_timeout(state: FSMContext, bot: Bot):
 async def process_ai_request(event: Union[Message, CallbackQuery], state: FSMContext, bot: Bot):
     """Универсальная обработка запросов к Core API"""
     bot_tag = f"[{BOT_NAME}]"
+    assistant_slug = get_assistant_slug(event.bot)
 
     # Получаем данные пользователя из состояния
     state_data = await state.get_data()
@@ -284,19 +286,21 @@ async def process_ai_request(event: Union[Message, CallbackQuery], state: FSMCon
 
     # Формируем payload для Core
     payload = {
-        "user_id": core_user_id,
-        "source": "telegram",
+        "assistant_slug": assistant_slug,
+        "user_telegram_id": event.from_user.id,
+        "user_id": event.from_user.id,
+        "chat_id": event.chat.id,
+        "platform": "telegram",
+        "reply_to_message_id": event.message_id,
         "message_type": "text",
         "content": "",
         "media_files": [],
-        "metadata": {
-            "chat_id": event.message.chat.id if isinstance(event, CallbackQuery) else event.chat.id,
-            "message_id": event.message.message_id if isinstance(event, CallbackQuery) else event.message_id,
-        }
     }
 
     # Заполняем payload в зависимости от типа события
     if isinstance(event, CallbackQuery):
+        payload["user_telegram_id"] = str(event.from_user.id)
+        payload["reply_to_message_id"] = str(event.id)
         payload["message_type"] = "callback"
         payload["metadata"]["callback_data"] = event.data
 
@@ -349,6 +353,7 @@ async def process_ai_request(event: Union[Message, CallbackQuery], state: FSMCon
     if core_response:
         await render_content_from_core(
             bot=bot,
+            assistant_slug=assistant_slug,
             user_id=event.from_user.id,
             core_payload=core_response,
             state=state

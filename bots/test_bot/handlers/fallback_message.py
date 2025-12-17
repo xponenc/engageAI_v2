@@ -4,7 +4,7 @@ import json
 import time
 from typing import Union, Optional
 from aiogram import Router, Bot
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, ReplyKeyboardRemove
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.enums import ParseMode
@@ -277,9 +277,16 @@ async def process_ai_request(event: Union[Message, CallbackQuery], state: FSMCon
     bot_tag = f"[{BOT_NAME}]"
     assistant_slug = get_assistant_slug(event.bot)
 
+    await state.update_data(
+        core_answer={},
+        core_answer_meta={},
+        last_message_update_config={},
+    )
+
     # Получаем данные пользователя из состояния
     state_data = await state.get_data()
-    profile = state_data.get("profile", {})
+    bot_logger.warning(f"{bot_tag} process_ai_request: {state_data}")
+    profile = state_data.get("telegram_auth_cache", {})
     core_user_id = profile.get("core_user_id")
 
     if not core_user_id:
@@ -287,28 +294,30 @@ async def process_ai_request(event: Union[Message, CallbackQuery], state: FSMCon
         # TODO а почему отсутствует?
         await state.clear()
         return
-
-    # Формируем payload для Core
     payload = {
         "assistant_slug": assistant_slug,
-        "user_telegram_id": event.from_user.id,
-        "user_id": event.from_user.id,
-        "chat_id": event.chat.id,
         "platform": "telegram",
-        "reply_to_message_id": event.message_id,
-        "message_type": "text",
         "content": "",
         "media_files": [],
     }
 
     # Заполняем payload в зависимости от типа события
     if isinstance(event, CallbackQuery):
+        payload["chat_id"] = str(event.message.chat.id)
         payload["user_telegram_id"] = str(event.from_user.id)
+        payload["user_id"] = str(event.from_user.id)
         payload["reply_to_message_id"] = str(event.id)
         payload["message_type"] = "callback"
-        payload["metadata"]["callback_data"] = event.data
+        payload["user_response"] = event.data
 
     else:  # Message
+        payload["chat_id"] = str(event.chat.id)
+        payload["user_telegram_id"] = str(event.from_user.id)
+        payload["user_id"] = str(event.from_user.id)
+        payload["reply_to_message_id"] = str(event.message_id)
+        payload["message_type"] = "text"
+        payload["user_response"] = event.text
+
         # Обработка медиа-группы
         if hasattr(event, 'media_info'):
             payload["message_type"] = "media_group"
@@ -355,10 +364,14 @@ async def process_ai_request(event: Union[Message, CallbackQuery], state: FSMCon
         core_response = await client.receive_response(payload)
 
     if core_response:
+        await state.update_data(
+            core_answer=core_response.get("core_answer", {}),
+            core_answer_meta=core_response.get("core_answer_meta", {}),
+            last_message_update_config=core_response.get("last_message_update_config", {}),
+        )
         await process_core_response(
             event=event,
             assistant_slug=assistant_slug,
-            core_payload=core_response,
             state=state
         )
     else:
@@ -369,12 +382,13 @@ async def process_ai_request(event: Union[Message, CallbackQuery], state: FSMCon
 
     return
 
+
 async def process_core_response(
         event: Union[Message, CallbackQuery],
         assistant_slug: str,
-        core_payload: dict,
         state: FSMContext
-    ):
+):
+    bot_tag = f"[{BOT_NAME}]"
 
     if isinstance(event, CallbackQuery):
         bot = event.bot
@@ -391,11 +405,11 @@ async def process_core_response(
         chat_id = event.chat.id
         answer_text = event.text
 
-    data = await state.get_data()
-    last_message = data.get("last_message")
+    state_data = await state.get_data()
+    last_message = state_data.get("last_message")
 
     # 1. Изменение last_message от бота, т.е того сообщения на которое ответил пользователь
-    core_answer = data.get("core_answer", {})
+    core_answer_meta = state_data.get("core_answer_meta", {})
     # Пример
     # last_message_update_config = {
     #     "change_last_message": True, # Флаг изменять/не изменять last_message
@@ -408,8 +422,9 @@ async def process_core_response(
     #         "reset": True, # Удалить клавиатуру у редактируемого сообщения
     #     }
     # }
-    last_message_update_config = core_answer.get("last_message_update_config", {})
-    change_last_message = last_message_update_config.get("last_message_update_config", False)
+    last_message_update_config = core_answer_meta.get("last_message_update_config", {})
+
+    change_last_message = last_message_update_config.get("change_last_message", False)
 
     if last_message and change_last_message:
         text_config = last_message_update_config.get("text", {})
@@ -418,9 +433,9 @@ async def process_core_response(
         last_message_update_text = text_config.get("last_message_update_text", "")
 
         original_message_text = last_message.get('text')
-        if fix_user_answer:
+        if fix_user_answer and answer_text:
             escaped_answer_text = html.escape(answer_text)
-            last_message_update_text = f"\n\n<blockquote>{escaped_answer_text}</blockquote>" + last_message_update_text
+            last_message_update_text = f"<blockquote>{escaped_answer_text}</blockquote>\n" + last_message_update_text
 
         if text_method == "rewrite":
             new_message_text = last_message_update_text
@@ -457,15 +472,14 @@ async def process_core_response(
 
     answer_message = await render_content_from_core(
         reply_target=reply_target,
-        core_payload=core_payload,
         state=state
     )
     # 3. Отправка в core обновления по core_answer (обновление метаданных, привязка reply_to, отметка - отправлено)
-    cache = data.get("telegram_auth_cache", {})
+    cache = state_data.get("telegram_auth_cache", {})
     core_user_id = cache.get("core_user_id")
 
     if core_user_id and answer_message:
-        core_message_id = core_answer.get("core_message_id") if core_answer else None
+        core_message_id = core_answer_meta.get("core_message_id") if core_answer_meta else None
 
         # Определяем тип ответа
         if isinstance(answer_message, CallbackQuery):
@@ -481,7 +495,8 @@ async def process_core_response(
             answer_message_id = answer_message.message_id
 
         payload = {
-            "core_message_id": core_message_id,  # если не передано, то создастся новое engageai_core.chat.models.Message
+            "core_message_id": core_message_id,
+            # если не передано, то создастся новое engageai_core.chat.models.Message
             "reply_to_message_id": message_id,
             "message_id": answer_message_id,
             "telegram_message_id": answer_message_id,
@@ -490,5 +505,7 @@ async def process_core_response(
             "user_telegram_id": telegram_user_id,
             "metadata": answer_message.model_dump(),  # полный дамп сообщения telegram с клавиатурой
         }
+
+        bot_logger.info(f"{bot_tag} PLAYLOAD отправка обновления ответа CORE после ответа пользователю")
 
         process_save_message.delay(payload=payload)

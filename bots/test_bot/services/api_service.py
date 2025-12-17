@@ -43,6 +43,7 @@ class CoreAPIClient:
         url = f"{self.base_url}{endpoint}"
 
         try:
+            bot_logger.info(f"\nRequest to Core API {url}: {payload}\n")
             async with self.session.post(url, json=payload, timeout=15) as response:
                 # Не ретраить на 4xx ошибки — это ошибка валидации данных
                 if 400 <= response.status < 500:
@@ -60,13 +61,13 @@ class CoreAPIClient:
                         status=response.status,
                         message=error_text
                     )
-
-                return await response.json()
+                result = await response.json()
+                bot_logger.info(f"\nCore API response {url}: {result}\n")
+                return result
 
         except Exception as e:
             bot_logger.exception(f"Request to Core API failed: {str(e)}")
             raise  # tenacity перехватит и попробует снова
-
 
     async def receive_response(self, payload: dict) -> dict | None:
         """Отправка ответа студента в Core."""

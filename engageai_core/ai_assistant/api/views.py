@@ -111,7 +111,6 @@ class OrchestratorProcessAPIView(BotAuthenticationMixin, TelegramUserResolverMix
             )
 
         platform = ChatPlatform.__members__.get(platform_str.upper(), ChatPlatform.API)
-        core_api_logger.info(f"{bot_tag} platform: {platform}")
 
         chat = self.chat_service.get_or_create_chat(
             user=user,
@@ -120,7 +119,6 @@ class OrchestratorProcessAPIView(BotAuthenticationMixin, TelegramUserResolverMix
             assistant_slug=assistant_slug,
             api_tag=bot_tag,
         )
-        core_api_logger.info(f"{bot_tag} chat: {chat}")
         try:
 
             reply_to_msg = Message.objects.filter(
@@ -128,8 +126,6 @@ class OrchestratorProcessAPIView(BotAuthenticationMixin, TelegramUserResolverMix
                 metadata__telegram__message_id=str(reply_to_message_id),
                 chat=chat
             ).first()
-
-            core_api_logger.info(f"{bot_tag} reply_to_msg: {reply_to_msg}")
 
             """Выбор случайного вопроса из уровня"""
             qs = CEFRQuestion.objects.values_list("id", flat=True)
@@ -141,9 +137,10 @@ class OrchestratorProcessAPIView(BotAuthenticationMixin, TelegramUserResolverMix
             keyboard_config = None
             if task.options:
                 keyboard_config = {
-                    "type": "reply",
+                    "type": "inline",
                     "buttons": [{"text": opt} for opt in task.options],
-                    "layout": [1]
+                    "layout": [1] * len(task.options)  # одна кнопка в строке
+                    # "layout": [2] * ((len(task.options) + 1) // 2) #  две кнопки в строке
                 }
 
             text = ""
@@ -166,8 +163,8 @@ class OrchestratorProcessAPIView(BotAuthenticationMixin, TelegramUserResolverMix
 
             response_data = {
                 "response_type": "text",
-                "data": {
-                    "text": text ,
+                "core_answer": {
+                    "text": text,
                     "parse_mode": "HTML",  # Опционально
                     # "media": [              # Для медиа-группы
                     #     {
@@ -177,21 +174,29 @@ class OrchestratorProcessAPIView(BotAuthenticationMixin, TelegramUserResolverMix
                     #     }
                     # ],
                     "keyboard": keyboard_config,
-                    "message_effect_id": "" # Telegram message_effect_id - эффект телеграм в сообщении
+                    # Пример
+                    # keyboard_config = {
+                    #     "type": "inline", # inline | reply
+                    #     "buttons": [{"text": opt} for opt in task.options],
+                    #     "layout": [1]
+                    # }
+                    "message_effect_id": "",  # Telegram message_effect_id - эффект телеграм в сообщении
+                    "audio_answer": False,  # Ожидаем аудио ответ
                 },
-                "core_answer": {
+                "core_answer_meta": {
                     "task_id": task.pk,
                     "core_message_id": ai_message.pk,
                     "reply_to_message_id": reply_to_message_id,
                     "last_message_update_config": {
-                        "change_last_message": True, # Флаг изменять/не изменять last_message
+                        "change_last_message": True,  # Флаг изменять/не изменять last_message
                         "text": {
-                            "method": "append", # append добавить текст к сообщению, rewrite - изменить полностью
-                            "last_message_update_text": "u'\U00002705' Ответ принят",
-                            "fix_user_answer": False, # Зафиксировать в изменяемом сообщении цитатой ответ пользователя - протоколирование
+                            "method": "append",  # append добавить текст к сообщению, rewrite - изменить полностью
+                            "last_message_update_text": "\U00002705 Ответ принят",
+                            "fix_user_answer": True,
+                            # Зафиксировать в изменяемом сообщении цитатой ответ пользователя - протоколирование
                         },
                         "keyboard": {
-                            "reset": True, # Удалить клавиатуру у редактируемого сообщения
+                            "reset": True,  # Удалить клавиатуру у редактируемого сообщения
                         }
                     },
                 }

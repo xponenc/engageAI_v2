@@ -5,11 +5,13 @@
 """
 
 from aiogram.enums import ParseMode
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, Message, \
+    ReplyKeyboardRemove
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 
 from bots.test_bot.config import bot_logger, BOT_NAME
+
 
 #
 # async def render_content_from_core(
@@ -148,10 +150,8 @@ from bots.test_bot.config import bot_logger, BOT_NAME
 #         return answer_message
 
 
-
 async def render_content_from_core(
         reply_target: Message,
-        core_payload: dict,
         state: FSMContext
 ) -> Message:
     """
@@ -167,7 +167,10 @@ async def render_content_from_core(
     }
     """
     bot_tag = f"[{BOT_NAME}]"
-    bot_logger.debug(f"{bot_tag} CORE PAYLOAD\n{core_payload}")
+    state_data = await state.get_data()
+    bot_logger.debug(f"{bot_tag} STATE_DATA\n{state_data}")
+
+    core_answer = state_data.get("core_answer", {})
 
     answer_message: Message | None = None
     answer_text = "..."  # default
@@ -175,20 +178,11 @@ async def render_content_from_core(
     parse_mode = ParseMode.HTML
 
     try:
-        message_data = core_payload.get("data", {})
-        core_answer = core_payload.get("core_answer", {})
-
-        await state.update_data(
-            message_data=message_data,
-            core_answer=core_answer,
-            audio_answer=core_payload.get("audio_answer", False)
-        )
-        bot_logger.info(f"{bot_tag} RENDER STATE_DATA\n\n{await state.get_data()}")
 
         # -----------------------------
         # 1. Отправка медиа (best-effort)
         # -----------------------------
-        media_items = message_data.get("media", [])
+        media_items = core_answer.get("media", [])
         for item in media_items:
             media_type = item.get("type")
             url = item.get("url")
@@ -227,18 +221,18 @@ async def render_content_from_core(
         # 2. Отправка текста + клавиатура
         # -----------------------------
         parse_mode_map = {"Markdown": ParseMode.MARKDOWN, "HTML": ParseMode.HTML}
-        parse_mode = parse_mode_map.get(message_data.get("parse_mode"), ParseMode.HTML)
+        parse_mode = parse_mode_map.get(core_answer.get("parse_mode"), ParseMode.HTML)
 
-        message_effect_id = message_data.get("message_effect_id")
-        answer_text = message_data.get("text", "...")
-        answer_keyboard = build_keyboard(message_data.get("keyboard"))
+        message_effect_id = core_answer.get("message_effect_id")
+        answer_text = core_answer.get("text", "...")
+        answer_keyboard = build_keyboard(core_answer.get("keyboard"))
 
         try:
             if message_effect_id:
                 answer_message = await reply_target.answer(
                     text=answer_text,
                     parse_mode=ParseMode.HTML,
-                    reply_markup=answer_keyboard,
+                    reply_markup=answer_keyboard if answer_keyboard else ReplyKeyboardRemove(),
                     message_effect_id=message_effect_id
                 )
             else:
@@ -256,7 +250,7 @@ async def render_content_from_core(
             )
 
     except Exception as e:
-        bot_logger.exception(f"{bot_tag} Rendering failed for core_payload={core_payload} | {e}")
+        bot_logger.exception(f"{bot_tag} Rendering failed for core_payload={core_answer=} | {e}")
         try:
             answer_text = "⚠️ Произошла ошибка при отображении контента. Попробуйте позже."
             answer_message = await reply_target.answer(text=answer_text)
@@ -269,6 +263,7 @@ async def render_content_from_core(
         await save_last_message(state, answer_message, answer_text, answer_keyboard, parse_mode)
 
     return answer_message
+
 
 def build_keyboard(keyboard_config: dict | None):
     """
@@ -319,7 +314,7 @@ def build_keyboard(keyboard_config: dict | None):
     if kb_type == "inline":
         aiogram_buttons: list[InlineKeyboardButton] = []
 
-        for btn in buttons:
+        for index, btn in enumerate(buttons):
             text = btn.get("text")
 
             if not text:
@@ -349,7 +344,7 @@ def build_keyboard(keyboard_config: dict | None):
                 aiogram_buttons.append(
                     InlineKeyboardButton(
                         text=text,
-                        callback_data="noop"
+                        callback_data=text
                     )
                 )
 
@@ -423,12 +418,13 @@ def build_keyboard(keyboard_config: dict | None):
     )
     return None
 
+
 async def save_last_message(
-    state: FSMContext,
-    answer_message: Message | None,
-    answer_text: str,
-    answer_keyboard,
-    parse_mode: ParseMode,
+        state: FSMContext,
+        answer_message: Message | None,
+        answer_text: str,
+        answer_keyboard,
+        parse_mode: ParseMode,
 ):
     """
     Сохраняет snapshot последнего отправленного сообщения в state.

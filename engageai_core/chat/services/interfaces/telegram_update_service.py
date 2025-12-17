@@ -127,7 +127,23 @@ class TelegramUpdateService(BaseService):
                     bot_tag
                 )
 
-            return {"core_message_id": message.pk}
+            return {
+                "core_answer": {
+                    "core_message_id": message.pk,
+                    "last_message_update_config": {
+                        "change_last_message": True,  # Флаг изменять/не изменять last_message
+                        "text": {
+                            "method": "append",  # append добавить текст к сообщению, rewrite - изменить полностью
+                            "last_message_update_text": "",
+                            "fix_user_answer": False,
+                            # Зафиксировать в изменяемом сообщении цитатой ответ пользователя - протоколирование
+                        },
+                        "keyboard": {
+                            "reset": True,  # Удалить клавиатуру у редактируемого сообщения
+                        }
+                    },
+                }
+            }
 
         except Exception as e:
             self.logger.exception(f"{bot_tag} Ошибка обработки сообщения: {str(e)}")
@@ -221,7 +237,8 @@ class TelegramUpdateService(BaseService):
         message = self.message_service.find_message_by_telegram_id(chat, message_id)
         if not message:
             self.logger.warning(f"{bot_tag} Редактирование несуществующего сообщения {message_id}")
-            raise MessageNotFoundError(message_id=message_id)
+            raise MessageNotFoundError(message_id=message_id,
+                                       message=f"Редактирование несуществующего сообщения {message_id}")
 
         # Обновляем содержимое
         updated_message = self.message_service.update_message_content(
@@ -231,8 +248,22 @@ class TelegramUpdateService(BaseService):
         )
 
         return {
-            "core_message_id": updated_message.id,
-            "edit_count": updated_message.edit_count
+            "core_answer": {
+                "core_message_id": updated_message.pk,
+                "edit_count": updated_message.edit_count,
+                "last_message_update_config": {
+                    "change_last_message": True,  # Флаг изменять/не изменять last_message
+                    "text": {
+                        "method": "append",  # append добавить текст к сообщению, rewrite - изменить полностью
+                        "last_message_update_text": "",
+                        "fix_user_answer": False,
+                        # Зафиксировать в изменяемом сообщении цитатой ответ пользователя - протоколирование
+                    },
+                    "keyboard": {
+                        "reset": True,  # Удалить клавиатуру у редактируемого сообщения
+                    }
+                },
+            }
         }
 
     def _process_callback(self, callback_data: dict, update_id: int, bot_tag: str, assistant_slug: str,
@@ -242,7 +273,7 @@ class TelegramUpdateService(BaseService):
         chat = self.chat_service.get_or_create_chat(
             user=user,
             platform=ChatPlatform.TELEGRAM,
-            scope = ChatScope.PRIVATE,
+            scope=ChatScope.PRIVATE,
             assistant_slug=assistant_slug,
             api_tag=bot_tag
         )
@@ -267,6 +298,19 @@ class TelegramUpdateService(BaseService):
         )
 
         return {
-            "core_message_id": callback_message.pk,
-            "callback_id": callback_data.get("id")
+            "core_answer": {
+                "core_message_id": callback_message.pk,
+                "last_message_update_config": {
+                    "change_last_message": True,  # Флаг изменять/не изменять last_message
+                    "text": {
+                        "method": "append",  # append добавить текст к сообщению, rewrite - изменить полностью
+                        "last_message_update_text": "",
+                        "fix_user_answer": False,
+                        # Зафиксировать в изменяемом сообщении цитатой ответ пользователя - протоколирование
+                    },
+                    "keyboard": {
+                        "reset": True,  # Удалить клавиатуру у редактируемого сообщения
+                    }
+                },
+            }
         }

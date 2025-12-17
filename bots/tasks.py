@@ -98,18 +98,19 @@ async def _async_process_update(
 
     try:
         update = types.Update(**update_data)
-        await feed_update_with_retry(
-            bot=bot,
-            dispatcher=dispatcher,
-            update=update,
-            bot_name=bot_name
-        )
 
         await _save_update_to_drf(
             bot_name=bot_name,
             update_data=update_data,
             assistant_slug=assistant_slug,
             update_status="success")
+
+        await feed_update_with_retry(
+            bot=bot,
+            dispatcher=dispatcher,
+            update=update,
+            bot_name=bot_name
+        )
 
         return True
 

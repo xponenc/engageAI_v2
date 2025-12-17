@@ -60,19 +60,24 @@ class AuthFilter(BaseFilter):
         state_data = await state.get_data()
         cache = state_data.get("telegram_auth_cache", {})
 
+        bot_logger.error(f"\n\n\n Проверка авторизации: {cache=}")
+
         now = int(time.time())
         is_cached = (
                 cache.get("telegram_id") == user_telegram_id
                 and now - cache.get("checked_at", 0) < AUTH_CACHE_TTL_SECONDS
         )
+        bot_logger.error(f"\n\n\n Проверка авторизации: {is_cached=}")
 
         core_user_id = None
 
         if is_cached:
-            user_id = cache.get("user_id")
-            if user_id:
+            core_user_id = cache.get("core_user_id")
+            bot_logger.error(f"\n\n\n Проверка авторизации: {core_user_id=}")
+
+            if core_user_id:
                 bot_logger.debug(
-                    f"{bot_tag} Авторизация найдена в кэше: user_id={user_id}, Хендлер: {handler_info['full_name']}"
+                    f"{bot_tag} Авторизация найдена в кэше: user_id={core_user_id}, Хендлер: {handler_info['full_name']}"
                 )
 
         # Вызов API
@@ -100,6 +105,9 @@ class AuthFilter(BaseFilter):
                 context=context
             )
             if ok and isinstance(resp, dict) and resp.get("profile"):
+
+                bot_logger.error(f"\n\n\n Проверка авторизации: {resp=}")
+
                 profile = resp["profile"]
                 core_user_id = profile["core_user_id"]
 

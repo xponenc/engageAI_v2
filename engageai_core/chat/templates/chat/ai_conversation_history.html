@@ -78,7 +78,7 @@
                             <tr data-message-id="{{ message.id }}">
                                 <td>
                                     <span class="message-type message-type--{% if message.is_ai %}ai{% else %}user{% endif %}">
-                                        {% if message.is_ai %}AI{% else %}{{ user_initials }}{% endif %}
+                                        {% if message.is_ai %}AI{% else %}{{ user_initials }}{% endif %} (id:{{ message.id }})
                                     </span>
                                 </td>
                                 <td>
@@ -86,7 +86,7 @@
                                         {% if message.content %}
                                             <div class="message-preview__text">
                                                 {% if message.reply_to %}
-                                                <p class="message-preview__replyto">ответ на >> {{ message.reply_to.content|default:message.timestamp }}</p> 
+                                                    <p class="message-preview__replyto">ответ на >> {{ message.reply_to.content|default:message.timestamp }}</p> 
                                                 {% endif %}
                                                 {{ message.content|truncatechars:200 }}
                                             </div>

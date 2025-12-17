@@ -5,7 +5,7 @@ from typing import Optional, Dict, Union
 import yaml
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.types import Message, InlineKeyboardMarkup, CallbackQuery
+from aiogram.types import Message, InlineKeyboardMarkup, CallbackQuery, ReplyKeyboardRemove
 
 from ..config import bot_logger
 from ..tasks import process_save_message
@@ -75,13 +75,14 @@ async def reply_and_update_last_message(
             pass
 
     # Отправка нового сообщения
+
     try:
         if message_effect_id:
             answer_message = await reply_target.answer(
                 text=answer_text,
                 parse_mode=ParseMode.HTML,
                 reply_markup=answer_keyboard,
-                message_effect_id=message_effect_id
+                message_effect_id=message_effect_id,
             )
         else:
             answer_message = await reply_target.answer(

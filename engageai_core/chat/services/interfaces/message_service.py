@@ -27,9 +27,11 @@ class MessageService(BaseService):
             source_type: str = MessageSource.WEB,
             reply_to: Optional[Message] = None,
             external_id: Optional[str] = None,
-            metadata: Optional[Dict] =None,
+            metadata=None,
     ) -> Message:
         """Создает сообщение пользователя"""
+        if metadata is None:
+            metadata = dict()
         try:
             message = Message.objects.create(
                 chat=chat,

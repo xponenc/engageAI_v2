@@ -109,7 +109,7 @@ class TelegramUpdateSaveView(BotAuthenticationMixin, TelegramUserResolverMixin, 
                 )
 
             return Response(
-                {"core_message_id": result["core_message_id"]},
+                data=result,
                 status=status.HTTP_201_CREATED
             )
 

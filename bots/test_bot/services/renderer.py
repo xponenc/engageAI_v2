@@ -1,139 +1,306 @@
-# telegram_bot/renderer.py
 """
 Модуль рендеринга контента из Core в Telegram.
 Предназначен ТОЛЬКО для отображения: не содержит бизнес-логики, не управляет flow.
 Все решения (что показать, как оценить) принимает Core.
 """
-from pprint import pprint
 
-from aiogram import Bot
 from aiogram.enums import ParseMode
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
-from aiogram.exceptions import TelegramAPIError
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from aiogram.fsm.context import FSMContext
-import logging
 
-from bots.test_bot.config import bot_logger
+from bots.test_bot.config import bot_logger, BOT_NAME
+
+#
+# async def render_content_from_core(
+#         reply_target: Message,
+#         core_payload: dict,
+#         state: FSMContext
+# ) -> Message:
+#     """
+#     Отображает контент, полученный от Core, пользователю в Telegram.
+#
+#     :param reply_target: экземпляр Message
+#     :param core_payload: данные от Core (структура описана ниже)
+#     :param state: FSMContext для управления состоянием бота
+#     :return: отправленное Message
+#
+#     ОЖИДАЕМАЯ СТРУКТУРА core_payload:
+#     {
+#         "session_id": "строка",  # обязательно
+#         "step_id": "строка",     # обязательно
+#         "text": "строка",        # опционально
+#         "keyboards": [           # опционально
+#             ["Текст кнопки 1"],
+#             ["Текст кнопки 2"]
+#         ],
+#         "audio_answer": false,   # true → ожидать голосовое сообщение
+#         "media": [               # опционально
+#             {
+#                 "type": "audio|image|video|document",
+#                 "url": "https://...",
+#                 "caption": "Подпись (опционально)",
+#                 "filename": "имя_файла.pdf"  # только для document
+#             }
+#         ],
+#         "metadata": { ... }      # любые данные для последующей отправки в Core
+#     }
+#     """
+#     bot_tag = f"[{BOT_NAME}]"
+#
+#     bot_logger.debug(f"{bot_tag} CORE PAYLOAD\n{core_payload}")
+#
+#     answer_message = None
+#     try:
+#         message_data = core_payload.get("data", {})
+#         core_answer = core_payload.get("core_answer", {})
+#         await state.update_data(
+#             message_data=message_data,
+#             core_answer=core_answer,
+#             audio_answer=core_payload.get("audio_answer", False)
+#         )
+#         data = await state.get_data()
+#         bot_logger.info(f"{bot_tag} RENDER STATE_DATA\n\n{data}")
+#
+#         # 2. Отправляем медиа (если есть)
+#         media_items = message_data.get("media", [])
+#         for item in media_items:
+#             try:
+#                 media_type = item.get("type")
+#                 url = item.get("url")
+#                 caption = item.get("caption", "")
+#
+#                 if not url:
+#                     bot_logger.warning(f"{bot_tag} Media item missing URL: {item}")
+#                     continue
+#
+#                 if media_type == "audio":
+#                     answer_message = await reply_target.answer_audio(audio=url, caption=caption)
+#
+#                 elif media_type == "image":
+#                     answer_message = await reply_target.answer_photo(photo=url, caption=caption)
+#
+#                 elif media_type == "video":
+#                     answer_message = await reply_target.answer_video(video=url, caption=caption)
+#
+#                 elif media_type == "document":
+#                     answer_message = await reply_target.answer_document(document=url, caption=caption)
+#
+#                 else:
+#                     bot_logger.warning(f"{bot_tag} Unsupported media type: {media_type} | item={item}")
+#
+#             except TelegramAPIError as e:
+#                 bot_logger.error(
+#                     f"{bot_tag} Failed to send media | "
+#                     f"type={media_type} url={url} payload={item} error={e}",
+#                     exc_info=True,
+#                 )
+#                 answer_message = await reply_target.answer(
+#                     text=f"⚠️ Не удалось загрузить {media_type}-файл."
+#                 )
+#
+#         # 3. Отправляем текст с клавиатурой
+#         parse_mode_config = message_data.get("parse_mode")
+#         message_effect_id = message_data.get("message_effect_id")
+#
+#         parse_mode_map = {
+#             "Markdown": ParseMode.MARKDOWN,
+#             "HTML": ParseMode.HTML,
+#         }
+#
+#         parse_mode = parse_mode_map.get(parse_mode_config, ParseMode.HTML)
+#
+#         answer_text = message_data.get("text", "...")
+#
+#         keyboard_config = message_data.get("keyboard")
+#         answer_keyboard = build_keyboard(keyboard_config)
+#
+#         try:
+#             if message_effect_id:
+#                 answer_message = await reply_target.answer(
+#                     text=answer_text,
+#                     parse_mode=ParseMode.HTML,
+#                     reply_markup=answer_keyboard,
+#                     message_effect_id=message_effect_id
+#                 )
+#             else:
+#                 answer_message = await reply_target.answer(
+#                     text=answer_text,
+#                     parse_mode=parse_mode,
+#                     reply_markup=answer_keyboard
+#                 )
+#         except TelegramBadRequest:
+#             answer_message = await reply_target.answer(
+#                 text=answer_text,
+#                 parse_mode=ParseMode.HTML,
+#                 reply_markup=answer_keyboard,
+#             )
+#         return answer_message
+#
+#     except Exception as e:
+#         bot_logger.exception(f"{bot_tag} Rendering failed for {core_payload=}:\n {str(e)}")
+#         try:
+#             answer_message = await reply_target.answer(
+#                 text="⚠️ Произошла ошибка при отображении контента. Попробуйте позже."
+#             )
+#         except:
+#             pass
+#         return answer_message
+
 
 
 async def render_content_from_core(
-        bot: Bot,
-        assistant_slug: str,
-        user_id: int,
+        reply_target: Message,
         core_payload: dict,
         state: FSMContext
-) -> bool:
+) -> Message:
     """
-    Отображает контент, полученный от Core, пользователю в Telegram.
+    Отображает контент от Core пользователю и сохраняет snapshot сообщения.
+    Возвращает последнее отправленное сообщение (Message).
 
-    :param bot: экземпляр aiogram.Bot
-    :param assistant_slug: slug к ai_assistant.models.AIAssistant на который будет направлен запрос
-    :param user_id: Telegram ID пользователя
-    :param core_payload: данные от Core (структура описана ниже)
-    :param state: FSMContext для управления состоянием бота
-    :return: успешность операции (True/False)
-
-    ОЖИДАЕМАЯ СТРУКТУРА core_payload:
+    Snapshot last_message хранится в state в формате:
     {
-        "session_id": "строка",  # обязательно
-        "step_id": "строка",     # обязательно
-        "text": "строка",        # опционально
-        "keyboards": [           # опционально
-            ["Текст кнопки 1"],
-            ["Текст кнопки 2"]
-        ],
-        "audio_answer": false,   # true → ожидать голосовое сообщение
-        "media": [               # опционально
-            {
-                "type": "audio|image|video|document",
-                "url": "https://...",
-                "caption": "Подпись (опционально)",
-                "filename": "имя_файла.pdf"  # только для document
-            }
-        ],
-        "metadata": { ... }      # любые данные для последующей отправки в Core
+        "id": message_id,
+        "text": "...",
+        "keyboard": JSON или None,
+        "parse_mode": ParseMode.HTML/ParseMode.MARKDOWN
     }
     """
+    bot_tag = f"[{BOT_NAME}]"
+    bot_logger.debug(f"{bot_tag} CORE PAYLOAD\n{core_payload}")
+
+    answer_message: Message | None = None
+    answer_text = "..."  # default
+    answer_keyboard = None
+    parse_mode = ParseMode.HTML
 
     try:
         message_data = core_payload.get("data", {})
         core_answer = core_payload.get("core_answer", {})
+
         await state.update_data(
             message_data=message_data,
             core_answer=core_answer,
             audio_answer=core_payload.get("audio_answer", False)
         )
-        data = await state.get_data()
-        bot_logger.info(f"RENDER STATE_DATA\n\n{data}")
+        bot_logger.info(f"{bot_tag} RENDER STATE_DATA\n\n{await state.get_data()}")
 
-        # 2. Отправляем медиа (если есть)
+        # -----------------------------
+        # 1. Отправка медиа (best-effort)
+        # -----------------------------
         media_items = message_data.get("media", [])
         for item in media_items:
+            media_type = item.get("type")
+            url = item.get("url")
+            caption = item.get("caption", "...")
+
+            if not url:
+                bot_logger.warning(f"{bot_tag} Media item missing URL: {item}")
+                continue
+
             try:
-                media_type = item.get("type")
-                url = item.get("url")
-                caption = item.get("caption", "")
-
-                if not url:
-                    bot_logger.warning(f"Media item missing URL: {item}")
-                    continue
-
                 if media_type == "audio":
-                    await bot.send_audio(chat_id=user_id, audio=url, caption=caption)
+                    answer_message = await reply_target.answer_audio(audio=url, caption=caption)
                 elif media_type == "image":
-                    await bot.send_photo(chat_id=user_id, photo=url, caption=caption)
+                    answer_message = await reply_target.answer_photo(photo=url, caption=caption)
                 elif media_type == "video":
-                    await bot.send_video(chat_id=user_id, video=url, caption=caption)
+                    answer_message = await reply_target.answer_video(video=url, caption=caption)
                 elif media_type == "document":
-                    # filename = item.get("filename", url.split("/")[-1])
-                    await bot.send_document(
-                        chat_id=user_id,
-                        document=url,
-                        caption=caption,
-                        # filename=filename
-                    )
+                    answer_message = await reply_target.answer_document(document=url, caption=caption)
                 else:
-                    bot_logger.warning(f"Unsupported media type: {media_type}")
+                    bot_logger.warning(f"{bot_tag} Unsupported media type: {media_type} | item={item}")
+
             except TelegramAPIError as e:
-                bot_logger.error(f"Failed to send {item.get('type')} media: {str(e)}")
-                await bot.send_message(
-                    chat_id=user_id,
-                    text=f"⚠️ Не удалось загрузить {item.get('type')}-файл. Попробуйте позже."
+                bot_logger.error(
+                    f"{bot_tag} Failed to send media | type={media_type} url={url} payload={item} error={e}",
+                    exc_info=True,
                 )
+                # Сообщение пользователю о неудаче
+                try:
+                    answer_message = await reply_target.answer(
+                        text=f"⚠️ Не удалось загрузить {media_type}-файл."
+                    )
+                except Exception:
+                    bot_logger.exception(f"{bot_tag} Failed fallback message for media error")
 
-        # 3. Отправляем текст с клавиатурой
-        parse_mode_config = message_data.get("parse_mode")
-        if parse_mode_config == "Markdown":
-            parse_mode = ParseMode.MARKDOWN
-        else:
-            parse_mode = ParseMode.HTML
+        # -----------------------------
+        # 2. Отправка текста + клавиатура
+        # -----------------------------
+        parse_mode_map = {"Markdown": ParseMode.MARKDOWN, "HTML": ParseMode.HTML}
+        parse_mode = parse_mode_map.get(message_data.get("parse_mode"), ParseMode.HTML)
 
-        text = message_data.get("text", "...")
+        message_effect_id = message_data.get("message_effect_id")
+        answer_text = message_data.get("text", "...")
+        answer_keyboard = build_keyboard(message_data.get("keyboard"))
 
-        keyboard_config = message_data.get("keyboard")
-        keyboard = build_keyboard(keyboard_config)
-
-        await bot.send_message(
-            chat_id=user_id,
-            text=text,
-            reply_markup=keyboard,
-            parse_mode=parse_mode
-        )
-        return True
+        try:
+            if message_effect_id:
+                answer_message = await reply_target.answer(
+                    text=answer_text,
+                    parse_mode=ParseMode.HTML,
+                    reply_markup=answer_keyboard,
+                    message_effect_id=message_effect_id
+                )
+            else:
+                answer_message = await reply_target.answer(
+                    text=answer_text,
+                    parse_mode=parse_mode,
+                    reply_markup=answer_keyboard
+                )
+        except TelegramBadRequest:
+            # fallback
+            answer_message = await reply_target.answer(
+                text=answer_text,
+                parse_mode=ParseMode.HTML,
+                reply_markup=answer_keyboard,
+            )
 
     except Exception as e:
-        bot_logger.exception(f"Rendering failed: {str(e)}")
+        bot_logger.exception(f"{bot_tag} Rendering failed for core_payload={core_payload} | {e}")
         try:
-            await bot.send_message(
-                chat_id=user_id,
-                text="⚠️ Произошла ошибка при отображении контента. Попробуйте позже."
-            )
-        except:
-            pass
-        return False
+            answer_text = "⚠️ Произошла ошибка при отображении контента. Попробуйте позже."
+            answer_message = await reply_target.answer(text=answer_text)
+            parse_mode = ParseMode.HTML
+        except Exception:
+            bot_logger.exception(f"{bot_tag} Failed to send fallback error message")
 
+    finally:
+        # Сохраняем snapshot
+        await save_last_message(state, answer_message, answer_text, answer_keyboard, parse_mode)
 
-def build_keyboard(keyboard_config):
+    return answer_message
+
+def build_keyboard(keyboard_config: dict | None):
+    """
+    Строит Telegram-клавиатуру (inline или reply) на основе конфигурации,
+    полученной от Core.
+
+    Функция работает в режиме best-effort rendering:
+    - не выбрасывает исключений
+    - не прерывает рендеринг при неконсистентных данных
+    - логирует все аномалии с уровнем WARNING
+    - всегда пытается отрендерить максимум возможного
+
+    :param keyboard_config: конфигурация клавиатуры от Core или None
+        Ожидаемый формат:
+        {
+            "type": "inline" | "reply",          # опционально, default="reply"
+            "buttons": [                          # опционально
+                {
+                    "text": "Кнопка",
+                    "callback_data": "DATA" | None,
+                    "url": "https://..." | None
+                }
+            ],
+            "layout": [1, 2, 2]                   # опционально, default=[1]
+        }
+
+    :return:
+        InlineKeyboardMarkup | ReplyKeyboardMarkup | None
+    """
+
+    bot_tag = f"[{BOT_NAME}]"
+
     if not keyboard_config:
         return None
 
@@ -141,47 +308,139 @@ def build_keyboard(keyboard_config):
     buttons = keyboard_config.get("buttons", [])
     layout = keyboard_config.get("layout", [1])
 
+    # Защита от мусорного layout
+    if not isinstance(layout, list) or not all(isinstance(x, int) and x > 0 for x in layout):
+        bot_logger.warning(
+            f"{bot_tag} Invalid keyboard layout, fallback to [1] | layout={layout}"
+        )
+        layout = [1]
+
+    # INLINE KEYBOARD
     if kb_type == "inline":
-        # Создаём плоский список кнопок
-        aiogram_buttons = []
+        aiogram_buttons: list[InlineKeyboardButton] = []
+
         for btn in buttons:
-            if "callback_data" in btn:
-                aiogram_buttons.append(
-                    InlineKeyboardButton(text=btn["text"], callback_data=btn["callback_data"])
+            text = btn.get("text")
+
+            if not text:
+                bot_logger.warning(
+                    f"{bot_tag} Inline button without text skipped | btn={btn}"
                 )
-            elif "url" in btn:
+                continue
+
+            if btn.get("callback_data"):
                 aiogram_buttons.append(
-                    InlineKeyboardButton(text=btn["text"], url=btn["url"].strip())
+                    InlineKeyboardButton(
+                        text=text,
+                        callback_data=btn["callback_data"]
+                    )
+                )
+            elif btn.get("url"):
+                aiogram_buttons.append(
+                    InlineKeyboardButton(
+                        text=text,
+                        url=str(btn["url"]).strip()
+                    )
                 )
             else:
-                # Без действия — не рекомендуется, но можно опустить или использовать пустой callback
+                bot_logger.warning(
+                    f"{bot_tag} Inline button without action rendered as noop | btn={btn}"
+                )
                 aiogram_buttons.append(
-                    InlineKeyboardButton(text=btn["text"], callback_data="")
+                    InlineKeyboardButton(
+                        text=text,
+                        callback_data="noop"
+                    )
                 )
 
-        # Группируем по layout
-        rows = []
+        if not aiogram_buttons:
+            bot_logger.warning(f"{bot_tag} Inline keyboard has no valid buttons")
+            return None
+
+        total_capacity = sum(layout)
+        if total_capacity < len(aiogram_buttons):
+            bot_logger.warning(
+                f"{bot_tag} Inline keyboard layout smaller than buttons count | "
+                f"layout={layout} capacity={total_capacity} buttons={len(aiogram_buttons)}"
+            )
+
+        rows: list[list[InlineKeyboardButton]] = []
         idx = 0
+
         for row_size in layout:
             rows.append(aiogram_buttons[idx:idx + row_size])
             idx += row_size
+
+        # best-effort: остаток кнопок добавляем последней строкой
         if idx < len(aiogram_buttons):
             rows.append(aiogram_buttons[idx:])
 
         return InlineKeyboardMarkup(inline_keyboard=rows)
 
-    elif kb_type == "reply":
-        # Только текстовые кнопки
-        aiogram_buttons = [KeyboardButton(text=btn["text"]) for btn in buttons if "text" in btn]
+    # REPLY KEYBOARD
+    if kb_type == "reply":
+        aiogram_buttons: list[KeyboardButton] = []
 
-        rows = []
+        for btn in buttons:
+            text = btn.get("text")
+            if not text:
+                bot_logger.warning(
+                    f"{bot_tag} Reply button without text skipped | btn={btn}"
+                )
+                continue
+            aiogram_buttons.append(KeyboardButton(text=text))
+
+        if not aiogram_buttons:
+            bot_logger.warning(f"{bot_tag} Reply keyboard has no valid buttons")
+            return None
+
+        total_capacity = sum(layout)
+        if total_capacity < len(aiogram_buttons):
+            bot_logger.warning(
+                f"{bot_tag} Reply keyboard layout smaller than buttons count | "
+                f"layout={layout} capacity={total_capacity} buttons={len(aiogram_buttons)}"
+            )
+
+        rows: list[list[KeyboardButton]] = []
         idx = 0
+
         for row_size in layout:
             rows.append(aiogram_buttons[idx:idx + row_size])
             idx += row_size
+
         if idx < len(aiogram_buttons):
             rows.append(aiogram_buttons[idx:])
 
-        return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True, one_time_keyboard=True)
+        return ReplyKeyboardMarkup(
+            keyboard=rows,
+            resize_keyboard=True,
+            one_time_keyboard=True,
+        )
 
+    # UNKNOWN TYPE
+    bot_logger.warning(
+        f"{bot_tag} Unknown keyboard type, skipped | type={kb_type} config={keyboard_config}"
+    )
     return None
+
+async def save_last_message(
+    state: FSMContext,
+    answer_message: Message | None,
+    answer_text: str,
+    answer_keyboard,
+    parse_mode: ParseMode,
+):
+    """
+    Сохраняет snapshot последнего отправленного сообщения в state.
+    Формат единообразен: id, text, keyboard (JSON), parse_mode.
+    """
+    if not answer_message:
+        return
+    await state.update_data(
+        last_message={
+            "id": answer_message.message_id,
+            "text": answer_text,
+            "keyboard": answer_keyboard.model_dump_json() if answer_keyboard else None,
+            "parse_mode": parse_mode,
+        }
+    )

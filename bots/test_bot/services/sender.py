@@ -93,7 +93,7 @@ async def reply_and_update_last_message(
         answer_message = await reply_target.answer(
             text=answer_text,
             parse_mode=ParseMode.HTML,
-            reply_markup=answer_keyboard
+            reply_markup=answer_keyboard,
         )
 
     # Сохранение ai_message_id
@@ -141,5 +141,6 @@ async def reply_and_update_last_message(
     await state.update_data(last_message={
         "id": answer_message.message_id,
         "text": answer_text,
-        "keyboard": answer_keyboard.model_dump_json() if answer_keyboard else None
+        "keyboard": answer_keyboard.model_dump_json() if answer_keyboard else None,
+        "parse_mode": ParseMode.HTML,
     })

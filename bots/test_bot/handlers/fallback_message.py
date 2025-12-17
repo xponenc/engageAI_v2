@@ -1,8 +1,10 @@
 import asyncio
+import html
+import json
 import time
 from typing import Union, Optional
 from aiogram import Router, Bot
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.enums import ParseMode
@@ -14,6 +16,8 @@ from bots.test_bot.config import bot_logger, BOT_NAME
 from bots.test_bot.services.api_service import CoreAPIClient
 from bots.test_bot.services.utils import is_user_authorized
 from bots.test_bot.services.renderer import render_content_from_core
+
+from bots.test_bot.tasks import process_save_message
 
 fallback_router = Router()
 
@@ -351,10 +355,9 @@ async def process_ai_request(event: Union[Message, CallbackQuery], state: FSMCon
         core_response = await client.receive_response(payload)
 
     if core_response:
-        await render_content_from_core(
-            bot=bot,
+        await process_core_response(
+            event=event,
             assistant_slug=assistant_slug,
-            user_id=event.from_user.id,
             core_payload=core_response,
             state=state
         )
@@ -365,3 +368,127 @@ async def process_ai_request(event: Union[Message, CallbackQuery], state: FSMCon
             await event.answer("⚠️ Сервер временно недоступен. Попробуйте позже.")
 
     return
+
+async def process_core_response(
+        event: Union[Message, CallbackQuery],
+        assistant_slug: str,
+        core_payload: dict,
+        state: FSMContext
+    ):
+
+    if isinstance(event, CallbackQuery):
+        bot = event.bot
+        user_id = event.from_user.id
+        reply_target = event.message
+        message_id = event.id
+        chat_id = event.message.chat.id
+        answer_text = event.data
+    else:  # Message
+        bot = event.bot
+        user_id = event.from_user.id
+        reply_target = event
+        message_id = event.message_id
+        chat_id = event.chat.id
+        answer_text = event.text
+
+    data = await state.get_data()
+    last_message = data.get("last_message")
+
+    # 1. Изменение last_message от бота, т.е того сообщения на которое ответил пользователь
+    core_answer = data.get("core_answer", {})
+    # Пример
+    # last_message_update_config = {
+    #     "change_last_message": True, # Флаг изменять/не изменять last_message
+    #     "text": {
+    #         "method": "append", # append добавить текст к сообщению, rewrite - изменить полностью
+    #         "last_message_update_text": "текст для добавления к сообщению или новый текст",
+    #         "fix_user_answer": True, # Зафиксировать в изменяемом сообщении цитатой ответ пользователя - протоколирование
+    #     },
+    #     "keyboard": {
+    #         "reset": True, # Удалить клавиатуру у редактируемого сообщения
+    #     }
+    # }
+    last_message_update_config = core_answer.get("last_message_update_config", {})
+    change_last_message = last_message_update_config.get("last_message_update_config", False)
+
+    if last_message and change_last_message:
+        text_config = last_message_update_config.get("text", {})
+        text_method = text_config.get("method", "append")
+        fix_user_answer = text_config.get("fix_user_answer", False)
+        last_message_update_text = text_config.get("last_message_update_text", "")
+
+        original_message_text = last_message.get('text')
+        if fix_user_answer:
+            escaped_answer_text = html.escape(answer_text)
+            last_message_update_text = f"\n\n<blockquote>{escaped_answer_text}</blockquote>" + last_message_update_text
+
+        if text_method == "rewrite":
+            new_message_text = last_message_update_text
+        else:
+            new_message_text = (original_message_text +
+                                f"\n\n{last_message_update_text}") if last_message_update_text else ""
+
+        keyboard_config = last_message_update_config.get("keyboard", {})
+        keyboard_reset = keyboard_config.get("reset", True)
+        keyboard = None
+        if not keyboard_reset:
+            original_message_keyboard_json = last_message.get("keyboard")
+
+            if original_message_keyboard_json:
+                try:
+                    keyboard_dict = json.loads(original_message_keyboard_json)
+                    keyboard = InlineKeyboardMarkup.model_validate(keyboard_dict)
+                except Exception:
+                    keyboard = None
+
+        original_message_parse_mode = last_message.get("parse_mode", ParseMode.HTML)
+        try:
+            await reply_target.bot.edit_message_text(
+                text=new_message_text,
+                chat_id=chat_id,
+                message_id=last_message.get("id"),
+                reply_markup=keyboard,
+                parse_mode=original_message_parse_mode
+            )
+        except TelegramBadRequest:
+            pass
+
+    # 2. Отправка core_answer пользователю
+
+    answer_message = await render_content_from_core(
+        reply_target=reply_target,
+        core_payload=core_payload,
+        state=state
+    )
+    # 3. Отправка в core обновления по core_answer (обновление метаданных, привязка reply_to, отметка - отправлено)
+    cache = data.get("telegram_auth_cache", {})
+    core_user_id = cache.get("core_user_id")
+
+    if core_user_id and answer_message:
+        core_message_id = core_answer.get("core_message_id") if core_answer else None
+
+        # Определяем тип ответа
+        if isinstance(answer_message, CallbackQuery):
+            telegram_user_id = answer_message.from_user.id
+
+            if answer_message.message:
+                answer_message_id = answer_message.message.message_id
+            #
+            else:
+                answer_message_id = None
+        else:  # Message
+            telegram_user_id = answer_message.chat.id
+            answer_message_id = answer_message.message_id
+
+        payload = {
+            "core_message_id": core_message_id,  # если не передано, то создастся новое engageai_core.chat.models.Message
+            "reply_to_message_id": message_id,
+            "message_id": answer_message_id,
+            "telegram_message_id": answer_message_id,
+            "text": answer_text,
+            "assistant_slug": assistant_slug,
+            "user_telegram_id": telegram_user_id,
+            "metadata": answer_message.model_dump(),  # полный дамп сообщения telegram с клавиатурой
+        }
+
+        process_save_message.delay(payload=payload)

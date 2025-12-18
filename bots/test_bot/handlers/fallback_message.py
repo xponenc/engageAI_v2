@@ -285,7 +285,6 @@ async def process_ai_request(event: Union[Message, CallbackQuery], state: FSMCon
 
     # Получаем данные пользователя из состояния
     state_data = await state.get_data()
-    bot_logger.warning(f"{bot_tag} process_ai_request: {state_data}")
     profile = state_data.get("telegram_auth_cache", {})
     core_user_id = profile.get("core_user_id")
 

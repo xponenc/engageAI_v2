@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
 
+from curriculum.validators import validate_skill_focus, validate_task_content_schema
 from users.models import CEFRLevel
 
 
@@ -21,6 +22,7 @@ class TaskType(models.TextChoices):
 
 class ResponseFormat(models.TextChoices):
     """Типы ответов"""
+
     MULTIPLE_CHOICE =('multiple_choice', _('Multiple Choice – выбор одного или нескольких вариантов'))
     SINGLE_CHOICE =('single_choice', _('Single Choice – выбор одного варианта'))
     SHORT_TEXT =('short_text', _('Short Text – краткий текстовый ответ, 1–3 слова'))
@@ -29,11 +31,28 @@ class ResponseFormat(models.TextChoices):
 
 
 class MediaType(models.TextChoices):
+    """Тип медиа файла"""
+
     TEXT = ('text', _('Raw text snippet or prompt'))
     AUDIO = ('audio', _('Audio file (e.g., MP3, WAV)'))
     VIDEO = ('video', _('Video file (e.g AVI, MP4)'))
     IMAGE = ('image', _('Image (e.g., diagram, screenshot)'))
     DOC = ('document', _('PDF, DOC, or other document'))
+
+class SkillDomain(models.TextChoices):
+    """Области языковых навыков (Skill Domains)."""
+
+    GRAMMAR = ("grammar", _("Грамматика"))
+    VOCABULARY = ("vocabulary", _("Лексика"))
+    READING = ("reading", _("Чтение"))
+    LISTENING = ("listening", _("Аудирование"))
+    WRITING = ("writing", _("Письмо"))
+    SPEAKING = ("speaking", _("Говорение"))
+    PRONUNCIATION = ("pronunciation", _("Произношение"))
+    USE_OF_ENGLISH = ("use_of_english", _("Использование языка"))
+    DISCOURSE = ("discourse", _("Связность и логика речи"))
+    INTERACTION = ("interaction", _("Коммуникативное взаимодействие"))
+    FLUENCY = ("fluency", _("Беглость речи"))
 
 
 class ProfessionalTag(models.Model):
@@ -384,7 +403,6 @@ class Lesson(models.Model):
     - Содержит задания (Tasks).
 
     Поля:
-    - lesson_type: тип урока (грамматика, аудирование и т.д.)
     - duration_minutes: сколько времени займёт
     - skill_focus: навыки, на которые направлен (["listening", "vocabulary"])
     - adaptive_parameters: правила адаптации (например, пороги для усложнения)
@@ -392,7 +410,6 @@ class Lesson(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='lessons', verbose_name=_("Course"))
     title = models.CharField(max_length=200, verbose_name=_("Title"))
     description = models.TextField(verbose_name=_("Description"))
-    lesson_type = models.CharField(max_length=20, choices=TaskType, verbose_name=_("Lesson Type"))
     order = models.PositiveIntegerField(verbose_name=_("Order"))
     content = models.JSONField(
         verbose_name=_("Content"),
@@ -406,6 +423,7 @@ class Lesson(models.Model):
     learning_objectives = models.ManyToManyField(LearningObjective, verbose_name=_("Learning Objectives"))
     skill_focus = models.JSONField(
         default=list,
+        validators=[validate_skill_focus],
         verbose_name=_("Skill Focus"),
         help_text=_("e.g., ['listening', 'vocabulary']")
     )
@@ -479,6 +497,8 @@ class Task(models.Model):
     task_type = models.CharField(max_length=20, choices=TaskType, verbose_name=_("Task Type"))
     response_format = models.CharField(max_length=20, choices=ResponseFormat, verbose_name=_("Response Format"))
     content = models.JSONField(verbose_name=_("Content"))
+    # схема задается в engageai_core/curriculum/schemas.py:TASK_CONTENT_SCHEMAS
+    content_schema_version = models.CharField(default="v1", verbose_name=_("Content Schema"))
     difficulty_cefr = models.CharField(max_length=2, choices=CEFRLevel, verbose_name=_("Difficulty CEFR"))
     is_diagnostic = models.BooleanField(default=False, verbose_name=_("Used in Diagnostic"))
     professional_tags = models.ManyToManyField(ProfessionalTag, blank=True, verbose_name=_("Professional Tags"))
@@ -496,6 +516,12 @@ class Task(models.Model):
 
     def __str__(self):
         return f"{self.get_task_type_display()} ({self.get_response_format_display()}) — {self.difficulty_cefr}"
+
+    def clean(self):
+        validate_task_content_schema(
+            self.content,
+            self.content_schema_version
+        )
 
 
 class TaskMedia(models.Model):

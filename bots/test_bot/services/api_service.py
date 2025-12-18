@@ -71,4 +71,4 @@ class CoreAPIClient:
 
     async def receive_response(self, payload: dict) -> dict | None:
         """Отправка ответа студента в Core."""
-        return await self._make_request("ai/orchestrator/process/", payload)
+        return await self._make_request("chat/orchestrator/process/", payload)

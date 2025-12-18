@@ -339,7 +339,7 @@ def build_keyboard(keyboard_config: dict | None):
                 )
             else:
                 bot_logger.warning(
-                    f"{bot_tag} Inline button without action rendered as noop | btn={btn}"
+                    f"{bot_tag} Inline button without action rendered as | btn={btn}"
                 )
                 aiogram_buttons.append(
                     InlineKeyboardButton(

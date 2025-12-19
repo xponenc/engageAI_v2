@@ -446,6 +446,55 @@ class Lesson(models.Model):
     def __str__(self):
         return f"{self.course.title} → {self.title}"
 
+class LessonTransition(models.Model):
+    """
+    Defines possible transitions between lessons based on outcomes.
+    """
+
+    from_lesson = models.ForeignKey(
+        Lesson,
+        on_delete=models.CASCADE,
+        related_name="transitions",
+        verbose_name=_("From Lesson")
+    )
+
+    outcome = models.CharField(
+        max_length=20,
+        choices=[
+            ("advance", "Advance"),
+            ("repeat", "Repeat"),
+            ("simplify", "Simplify"),
+            ("branch", "Branch"),
+        ],
+        verbose_name=_("Outcome")
+    )
+
+    to_lesson = models.ForeignKey(
+        Lesson,
+        on_delete=models.CASCADE,
+        related_name="incoming_transitions",
+        verbose_name=_("To Lesson")
+    )
+
+    priority = models.PositiveSmallIntegerField(
+        default=0,
+        verbose_name=_("Priority"),
+        help_text=_("Lower number = higher priority")
+    )
+
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = _("Lesson Transition")
+        verbose_name_plural = _("Lesson Transitions")
+        indexes = [
+            models.Index(fields=["from_lesson", "outcome"]),
+        ]
+        unique_together = [
+            ("from_lesson", "outcome", "to_lesson")
+        ]
+
+
 
 class Task(models.Model):
     """
@@ -592,38 +641,144 @@ class Student(models.Model):
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} ({self.cefr_level or '–'})"
 
+# заменен на CurrentSkill + SkillSnapshot
+# class SkillProfile(models.Model):
+#     """
+#     Текущий уровень владения конкретным навыком.
+#
+#     Назначение:
+#     - Хранит актуальное состояние навыка студента.
+#     - Обновляется после каждого Assessment.
+#     - Используется для адаптации курса и принятия решений.
+#
+#     Один объект = один навык.
+#     """
+#
+#     student = models.ForeignKey(
+#         Student,
+#         on_delete=models.CASCADE,
+#         related_name="skill_profiles"
+#     )
+#
+#     skill = models.CharField(
+#         max_length=32,
+#         choices=SkillDomain.choices
+#     )
+#
+#     score = models.FloatField(
+#         default=0.0,
+#         help_text="Текущий уровень навыка (0.0–1.0)"
+#     )
+#
+#     confidence = models.FloatField(
+#         default=0.0,
+#         help_text="Устойчивость навыка"
+#     )
+#
+#     updated_at = models.DateTimeField(auto_now=True)
+#
+#     class Meta:
+#         unique_together = ("student", "skill")
 
-class SkillProfile(models.Model):
+class CurrentSkill(models.Model):
     """
-    Профиль навыков — результат диагностики или промежуточной оценки.
+    Текущее состояние конкретного навыка студента.
 
-    Назначение:
-    - Соответствует цели №2 из плана: «Сформировать первичный профиль навыков».
-    - Используется для Goal Setting и подбора курсов.
-
-    Поля:
-    - grammar, vocabulary, listening, reading, writing, speaking: float от 0.0 до 1.0
-    - snapshot_at: момент оценки (можно хранить историю прогресса)
+    Используется для:
+    - адаптивных решений
+    - выбора сложности
+    - маршрутизации по курсу
     """
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, verbose_name=_("Student"))
-    grammar = models.FloatField(default=0.0, verbose_name=_("Grammar Score"))
-    vocabulary = models.FloatField(default=0.0, verbose_name=_("Vocabulary Score"))
-    listening = models.FloatField(default=0.0, verbose_name=_("Listening Score"))
-    reading = models.FloatField(default=0.0, verbose_name=_("Reading Score"))
-    writing = models.FloatField(default=0.0, verbose_name=_("Writing Score"))
-    speaking = models.FloatField(default=0.0, verbose_name=_("Speaking Score"))
-    snapshot_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Snapshot Timestamp"))
+
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="current_skills"
+    )
+
+    skill = models.CharField(
+        max_length=32,
+        choices=SkillDomain.choices
+    )
+
+    score = models.FloatField(default=0.0)
+    confidence = models.FloatField(default=0.0)
+
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = _("Skill Profile")
-        verbose_name_plural = _("Skill Profiles")
+        unique_together = ("student", "skill")
+
+class SkillSnapshot(models.Model):
+    """
+    Исторический снимок навыков студента.
+
+    Append-only.
+    Используется для:
+    - трендов
+    - траекторий
+    - аналитики
+    """
+
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+
+    grammar = models.FloatField(default=0.0)
+    vocabulary = models.FloatField(default=0.0)
+    listening = models.FloatField(default=0.0)
+    reading = models.FloatField(default=0.0)
+    writing = models.FloatField(default=0.0)
+    speaking = models.FloatField(default=0.0)
+
+    snapshot_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
         indexes = [
-            models.Index(fields=['student']),
-            models.Index(fields=['snapshot_at']),
+            models.Index(fields=["student", "snapshot_at"])
         ]
 
+
+class SkillTrajectory(models.Model):
+    """
+    Долгосрочная траектория развития одного навыка студента.
+
+    Агрегирует историю SkillProfile и Assessment
+    и используется для стратегических решений.
+
+    Task → Response
+    ↓
+    Assessment
+    ↓
+    SkillProfile (snapshot)
+    ↓
+    SkillTrajectory (trend over time)
+    ↓
+    AdaptiveDecisionEngine
+    ↓
+    Lesson / Course Strategy
+    """
+
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    skill = models.CharField(max_length=30, choices=SkillDomain.choices)
+
+    current_level = models.FloatField(default=0.0)
+    trend = models.FloatField(
+        default=0.0,
+        help_text="Средняя скорость изменения навыка (Δ за N уроков)"
+    )
+
+    stability = models.FloatField(
+        default=0.0,
+        help_text="Насколько навык устойчив (низкий разброс)"
+    )
+
+    plateau_detected = models.BooleanField(default=False)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ["student", "skill"]
+
     def __str__(self):
-        return f"Skill Profile for {self.student} at {self.snapshot_at.date()}"
+        return f"{self.student} → {self.skill}"
 
 
 class ErrorLog(models.Model):

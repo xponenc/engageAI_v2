@@ -6,9 +6,9 @@ from curriculum.models import Task, StudentTaskResponse, Student, Enrollment, Le
 
 class LearningAgent:
     """
-    MVP orchestrator.
+    MVP agent.
     Controls linear learning flow:
-    Course → Lesson → Task → Assessment → Next Task
+    Course → Lesson → Task → Response → Assessment → Next Action
     """
 
     def __init__(self, student: Student):

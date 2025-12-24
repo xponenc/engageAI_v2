@@ -83,6 +83,7 @@ class CourseDetailView(LoginRequiredMixin, DetailView):
         factory = CurriculumServiceFactory()
         self.learning_service = factory.create_learning_service()
         self.enrollment_service = self.learning_service.enrollment_service
+        self.curriculum_query = self.learning_service.curriculum_query
 
     def get_queryset(self):
         return Course.objects.filter(is_active=True).prefetch_related(
@@ -116,7 +117,7 @@ class CourseDetailView(LoginRequiredMixin, DetailView):
             context['current_lesson'] = enrollment.current_lesson
 
             # Получаем следующее задание
-            context['next_task'] = self.learning_service.get_next_task(enrollment.id)
+            context['next_task'] = self.curriculum_query.get_next_task(enrollment)
         pprint(context)
         return context
 

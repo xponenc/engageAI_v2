@@ -71,8 +71,8 @@ class TransitionRecorder:
         teacher_override = (
             TeacherOverride.objects
             .filter(
-                enrollment=enrollment,
-                is_active=True
+                lesson=enrollment.current_lesson,
+                student=enrollment.student
             )
             .order_by("-created_at")
             .first()
@@ -86,7 +86,7 @@ class TransitionRecorder:
             decision_code=decision.code,
             assessment=assessment_result,
             skill_snapshot=skill_update_result,
-            teacher_override=teacher_override,
+            teacher_override=True if teacher_override else False,
         )
 
         return transition

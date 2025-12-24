@@ -70,8 +70,10 @@ class DecisionService:
         3. Анализ skill deltas
         """
 
-        # 1️⃣ Teacher override — абсолютный приоритет
+        # Teacher override — абсолютный приоритет
         override = self._get_active_teacher_override(enrollment)
+        print(f"ОБРАБОТКА ОТВЕТА 9. DecisionService # override:\n{override}\n\n", )
+
         if override:
             return Decision(
                 code=override.decision_code,
@@ -129,7 +131,6 @@ class DecisionService:
             TeacherOverride.objects.filter(
                 student=enrollment.student,
                 lesson=enrollment.current_lesson,
-                is_active=True
             ).order_by("-created_at").first()
         )
 

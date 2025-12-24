@@ -151,7 +151,7 @@ class LearningService:
             .order_by('order')
             .first()
         )
-        print(f"{current_task=}")
+
         if current_task:
             task_data = {
                 "id": current_task.id,
@@ -243,35 +243,58 @@ class LearningService:
             SkillUpdateError: При ошибках обновления навыков
         """
 
-        print(f"{enrollment_id=}")
-        print(f"{task_id=}")
-        print(f"{response_payload=}")
+        print(f"ОБРАБОТКА ОТВЕТА 2. принято в learning_service:\n{response_payload}\n\n")
+
         try:
             # 1. Валидация и получение данных
-            enrollment = self._get_enrollment_with_prefetch(enrollment_id)
-            task = self._get_task_with_validation(task_id, enrollment)
+            enrollment = Enrollment.objects.select_related(
+                'student',
+                'course',
+                'current_lesson'
+            ).get(id=enrollment_id, is_active=True)
 
+            print(f"ОБРАБОТКА ОТВЕТА 3. learning_service # получен enrollment:\n{enrollment}\n\n", )
+            task = (Task.objects
+                    .select_related('lesson')
+                    .prefetch_related('professional_tags')
+                    .get(id=task_id))
+            print(f"ОБРАБОТКА ОТВЕТА 4. learning_service # получен task:\n{task}\n\n", )
+
+            if task.lesson_id != enrollment.current_lesson_id:
+                raise InvalidTaskError(
+                    f"Task {task} does not belong to current lesson {enrollment.current_lesson_id}",
+                    task_id=task_id,
+                    enrollment_id=enrollment_id,
+                    lesson_id=task.lesson.id
+                )
+            print(f"ОБРАБОТКА ОТВЕТА 5. learning_service # task валидирован:\n{task}\n\n", )
             # 2. Фиксируем ответ студента (event)
+            print(f"ОБРАБОТКА ОТВЕТА 6. learning_service # создание ответ на task- student_response\n\n", )
             student_response = self._create_student_response(
                 enrollment=enrollment,
                 task=task,
                 response_payload=response_payload
             )
+            print(f"ОБРАБОТКА ОТВЕТА 6. learning_service # создан ответ на task- student_response:\n{student_response}\n\n", )
 
             # 3. Assessment с детальным логированием
+            print(f"ОБРАБОТКА ОТВЕТА 7. learning_service # создание assessment\n\n", )
             assessment_result = self._perform_assessment(
                 student_response=student_response,
                 task=task
             )
 
             # 4. Update skills & error logs
+            print(f"ОБРАБОТКА ОТВЕТА 8. learning_service # Update skills & error logs\n\n", )
             skill_updates = self._update_skills(
                 enrollment=enrollment,
                 task=task,
                 assessment_result=assessment_result
             )
+            print(f"ОБРАБОТКА ОТВЕТА 8. learning_service # skill_updates:\n{skill_updates}\n\n", )
 
             # 5. Decision с учетом всех факторов
+            print(f"ОБРАБОТКА ОТВЕТА 9. learning_service # Decision с учетом всех факторов\n\n", )
             decision = self._make_decision(
                 enrollment=enrollment,
                 skill_update_result=skill_updates
@@ -304,7 +327,7 @@ class LearningService:
                     assessment_result, 'structured_feedback') else "",
                 "assessment_id": assessment_result.id if hasattr(assessment_result, 'id') else None,
                 "transition_id": transition.id if transition and hasattr(transition, 'id') else None,
-                "skill_updates": skill_updates
+                # "skill_updates": skill_updates
             }
 
         except Exception as e:
@@ -345,37 +368,6 @@ class LearningService:
             'enrollment': enrollment,
             'overall_progress': overall_progress
         }
-
-    def _get_enrollment_with_prefetch(self, enrollment_id: int) -> Enrollment:
-        """Получение зачисления с предзагрузкой связанных данных"""
-        return Enrollment.objects.select_related(
-            "student",
-            "course",
-            "current_lesson",
-            "current_lesson__course"
-        ).prefetch_related(
-            "current_lesson__tasks",
-            "current_lesson__learning_objectives",
-            "student__skill_profile"
-        ).get(id=enrollment_id, is_active=True)
-
-    def _get_task_with_validation(self, task_id: int, enrollment: Enrollment) -> Task:
-        """Получение и валидация задания"""
-        task = Task.objects.select_related(
-            "lesson",
-            "lesson__course"
-        ).prefetch_related(
-            "professional_tags",
-            "media_files"
-        ).get(id=task_id)
-
-        # Проверка принадлежности задания к текущему уроку
-        if task.lesson != enrollment.current_lesson:
-            raise InvalidTaskError(
-                f"Task {task_id} does not belong to current lesson {enrollment.current_lesson.pk}"
-            )
-
-        return task
 
     def _create_student_response(
             self,

@@ -163,13 +163,14 @@
 
 /* Progress Bar */
 .progress-bar {
-    height: 6px;
+    height: 8px;
     background: var(--color-muted-bg);
     border-radius: 4px;
     overflow: hidden;
 }
 
 .progress-bar__value {
+    padding-right: 6px;
     height: 100%;
     background: var(--color-accent);
     transition: width 0.4s ease, background 0.3s ease;

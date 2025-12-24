@@ -10,7 +10,7 @@ from curriculum.validators import validate_task_content_schema
 
 class TaskType(models.TextChoices):
     """Типы вопросов."""
-    GRAMMAR = "mcq", "Multiple Choice"
+    GRAMMAR = ('grammar', _('Grammar'))
     VOCABULARY = ('vocabulary', _('Vocabulary'))
     READING = ('reading', _('Reading'))
     LISTENING = ('listening', _('Listening'))

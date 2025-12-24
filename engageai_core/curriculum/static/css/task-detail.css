@@ -115,6 +115,7 @@
 .progress-bar__value {
     height: 100%;
     background: var(--color-accent);
+    padding-right: 6px;
 }
 
 /* LINKS */

@@ -297,11 +297,13 @@
 
 import logging
 import traceback
+from typing import Dict
 
 from django.conf import settings
 from django.utils import timezone
 
 from curriculum.application.ports.assessment_port import AssessmentPort
+from curriculum.domain.value_objects.assessment_result import AssessmentResult
 from curriculum.models.assessment.assessment import Assessment
 from curriculum.models.assessment.student_response import StudentTaskResponse
 from curriculum.models.content.task import Task, ResponseFormat
@@ -340,7 +342,7 @@ class AutoAssessorAdapter(AssessmentPort):
         """Инициализация без зависимостей"""
         pass
 
-    def assess_task(self, task: Task, response: StudentTaskResponse) -> Assessment:
+    def assess_task(self, task: Task, response: StudentTaskResponse) -> AssessmentResult:
         """
         Основной метод оценки с валидацией схемы.
 
@@ -358,19 +360,25 @@ class AutoAssessorAdapter(AssessmentPort):
             Assessment: Результат оценки в правильном формате
         """
         try:
+            print(f"ОБРАБОТКА ОТВЕТА 7. AutoAssessorAdapter # начало\n\n", )
+
             # 1. Валидация соответствия формата и схемы
             self._validate_format_schema_compatibility(task)
-
+            print(f"ОБРАБОТКА ОТВЕТА 7. AutoAssessorAdapter # Валидация соответствия формата и схемы\n\n", )
             # 2. Валидация контента по схеме
             schema = self._get_schema_for_task(task)
             self._validate_task_content(task.content, schema)
+            print(f"ОБРАБОТКА ОТВЕТА 7. AutoAssessorAdapter # Валидация контента по схеме:\n{schema}\n\n", )
 
             # 3. Выбор стратегии оценки
             if task.response_format == ResponseFormat.SINGLE_CHOICE:
+                print(f"ОБРАБОТКА ОТВЕТА 7. AutoAssessorAdapter # Выбор стратегии оценки :\nSINGLE_CHOICE\n\n", )
                 return self._assess_single_choice(task, response)
             elif task.response_format == ResponseFormat.MULTIPLE_CHOICE:
+                print(f"ОБРАБОТКА ОТВЕТА 7. AutoAssessorAdapter # Выбор стратегии оценки :\nMULTIPLE_CHOICE\n\n", )
                 return self._assess_multiple_choice(task, response)
             elif task.response_format == ResponseFormat.SHORT_TEXT:
+                print(f"ОБРАБОТКА ОТВЕТА 7. AutoAssessorAdapter # Выбор стратегии оценки :\nSHORT_TEXT\n\n", )
                 return self._assess_short_text(task, response)
 
         except SchemaValidationError as e:
@@ -539,7 +547,7 @@ class AutoAssessorAdapter(AssessmentPort):
         if min_length is not None and len(value) < min_length:
             raise SchemaValidationError(f"Field '{field_name}' must be at least {min_length} characters long")
 
-    def _assess_single_choice(self, task: Task, response: StudentTaskResponse) -> Assessment:
+    def _assess_single_choice(self, task: Task, response: StudentTaskResponse) -> AssessmentResult:
         """
         Оценка заданий с одиночным выбором (scq_v1).
 
@@ -553,10 +561,12 @@ class AutoAssessorAdapter(AssessmentPort):
             correct_idx = task.content["correct_idx"]
             is_correct = (student_choice == correct_idx)
             score = 1.0 if is_correct else 0.0
+            print(
+                f"ОБРАБОТКА ОТВЕТА 7. AutoAssessorAdapter # _assess_single_choice :\n{student_choice=}\n{correct_idx=}\n{is_correct=}\n{score=}\n\n", )
 
             # СТРУКТУРИРОВАННАЯ ОБРАТНАЯ СВЯЗЬ
             options = task.content["options"]
-            explanation = task.content.get("explanation", "Попробуйте ещё раз")
+            explanation = task.content.get("explanation", "Попробуйте ещё раз")  # TODO оно надо?
 
             structured_feedback = {
                 "score_grammar": score if task.task_type == "grammar" else 0.5,
@@ -576,24 +586,33 @@ class AutoAssessorAdapter(AssessmentPort):
                     "schema_version": task.content_schema_version
                 }
             }
-
-            return Assessment.objects.create(
-                task_response=response,
-                llm_version="auto-scq-v1",
-                raw_output={
+            assessment_data = {
+                "llm_version": "auto-scq-v1",
+                "raw_output": {
                     "student_input": response.response_text,
                     "student_idx": student_choice,
                     "correct_idx": correct_idx,
                     "task_content": task.content
                 },
-                structured_feedback=structured_feedback
+                "structured_feedback": structured_feedback
+            }
+
+            assessment_result = AssessmentResult(
+                score=score,
+                is_correct=is_correct,
+                metadata=assessment_data
             )
 
+            print(
+                f"ОБРАБОТКА ОТВЕТА 7. AutoAssessorAdapter # AssessmentResult:\n{assessment_result=}\n\n", )
+            return assessment_result
+
         except (ValueError, TypeError, KeyError) as e:
-            return self._create_error_assessment(
-                task, response,
-                f"Single choice processing error: {str(e)}"
+            logger.error(f"Single choice Task processing error: {str(e)}")
+            assessment_result = AssessmentResult(
+                score=0.5,
             )
+            return assessment_result
 
     def _parse_student_choice_scq(self, response_text: str, task: Task) -> int:
         """
@@ -739,30 +758,33 @@ class AutoAssessorAdapter(AssessmentPort):
             structured_feedback=structured_feedback
         )
 
-    # ================ ОБРАБОТКА ОШИБОК ================
-
-    def _create_error_assessment(self, task: Task, response: StudentTaskResponse, error: str) -> Assessment:
+    @staticmethod
+    def _create_error_assessment(task: Task, response: StudentTaskResponse, error: str) -> Assessment:
         """Создает Assessment для обработки ошибок"""
-        return Assessment.objects.create(
+        assessment, created = Assessment.objects.get_or_create(
             task_response=response,
-            llm_version="auto-error",
-            raw_output={"error": error, "task_id": task.pk},
-            structured_feedback={
-                "score_grammar": 0.5,
-                "score_vocabulary": 0.5,
-                "errors": [{
-                    "type": "processing_error",
-                    "example": error,
-                    "correction": "Ответ будет проверен преподавателем"
-                }],
-                "strengths": [],
-                "suggestions": ["Произошла техническая ошибка. Ваш ответ сохранен и будет проверен вручную."],
-                "metadata": {
-                    "overall_score": 0.5,
-                    "status": "requires_manual_review"
+            default={
+                "llm_version": "auto-error",
+                "raw_output": {"error": error, "task_id": task.pk},
+                "structured_feedback": {
+                    "score_grammar": 0.5,
+                    "score_vocabulary": 0.5,
+                    "errors": [{
+                        "type": "processing_error",
+                        "example": error,
+                        "correction": "Ответ будет проверен преподавателем"
+                    }],
+                    "strengths": [],
+                    "suggestions": ["Произошла техническая ошибка. Ваш ответ сохранен и будет проверен вручную."],
+                    "metadata": {
+                        "overall_score": 0.5,
+                        "status": "requires_manual_review"
+                    }
                 }
             }
+
         )
+        return assessment
 
     def _create_schema_error_assessment(
             self,

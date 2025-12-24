@@ -27,13 +27,13 @@ class LessonTransition(models.Model):
 
     from_lesson = models.ForeignKey(
         Lesson,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name="outgoing_transitions",
     )
 
     to_lesson = models.ForeignKey(
         Lesson,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         null=True,
         blank=True,
         related_name="incoming_transitions",
@@ -41,7 +41,7 @@ class LessonTransition(models.Model):
 
     task = models.ForeignKey(
         Task,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         null=True,
         blank=True,
         related_name="lesson_transitions",
@@ -50,7 +50,7 @@ class LessonTransition(models.Model):
 
     assessment = models.ForeignKey(
         Assessment,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name="lesson_transitions",
     )
 

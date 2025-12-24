@@ -20,7 +20,7 @@ class AssessmentResult:
     is_correct: Optional[bool] = None  # None для открытых заданий
     grade: AssessmentGrade = AssessmentGrade.POOR
     error_tags: List[str] = None
-    feedback: Dict[str, Any] = None
+    metadata: Dict[str, Any] = None
     confidence: float = 1.0  # Для LLM-оценок
 
     def __post_init__(self):
@@ -36,8 +36,8 @@ class AssessmentResult:
         # Инициализация пустых списков/словарей
         if self.error_tags is None:
             object.__setattr__(self, 'error_tags', [])
-        if self.feedback is None:
-            object.__setattr__(self, 'feedback', {})
+        if self.metadata is None:
+            object.__setattr__(self, 'metadata', {})
 
     def _calculate_grade(self) -> AssessmentGrade:
         if self.score >= 0.9:
@@ -55,6 +55,6 @@ class AssessmentResult:
             'is_correct': self.is_correct,
             'grade': self.grade.value,
             'error_tags': self.error_tags,
-            'feedback': self.feedback,
+            'metadata': self.metadata,
             'confidence': self.confidence
         }

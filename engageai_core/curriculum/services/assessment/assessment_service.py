@@ -162,34 +162,28 @@ class AssessmentService:
         self.llm_adapter = llm_adapter
 
     def assess(self, student_response: StudentTaskResponse) -> Assessment:
+        print(f"ОБРАБОТКА ОТВЕТА 7. AssessmentService # создание assessment\n\n", )
         task = student_response.task
 
         try:
             # Выбор адаптера в зависимости от формата задания
             adapter = self._select_adapter(task)
+            print(f"ОБРАБОТКА ОТВЕТА 7. AssessmentService # выбран адаптер оценки:\n{adapter}\n\n", )
             assessment_result = adapter.assess_task(task, student_response)
 
-            # Правильное формирование raw_output
-            raw_output = {
-                "source": getattr(assessment_result, "source", "auto"),
-                "confidence": assessment_result.confidence,
-                "raw_response": getattr(assessment_result, "raw_response", {}),
-                "processing_time": getattr(assessment_result, "processing_time", 0),
-                "model_version": getattr(assessment_result, "model_version", "unknown"),
-                "metadata": getattr(assessment_result, "metadata", {}),
-                "timestamp": timezone.now().isoformat()
-            }
+            assessment_data = assessment_result.metadata
+            llm_version = assessment_data.get("llm_version", "-")
 
             # Правильное формирование structured_feedback
-            structured_feedback = self._build_structured_feedback(assessment_result, task)
+            # structured_feedback = self._build_structured_feedback(assessment_result, task) # TODO отложено на потом
 
             assessment = Assessment.objects.create(
                 task_response=student_response,
-                llm_version=assessment_result.llm_version if hasattr(assessment_result, "llm_version") else "auto",
-                raw_output=raw_output,
-                structured_feedback=structured_feedback,
-                score=assessment_result.score
+                llm_version=llm_version,
+                raw_output=assessment_data,
+                structured_feedback=assessment_data,
             )
+            print(f"ОБРАБОТКА ОТВЕТА 7. AssessmentService # создан Assessment:\n{assessment}\n\n", )
 
             return assessment
 
@@ -220,33 +214,33 @@ class AssessmentService:
             "strengths": [],
             "suggestions": [],
             "metadata": {
-                "overall_score": assessment_result.score,
-                "confidence": assessment_result.confidence,
-                "is_correct": assessment_result.is_correct
+                # "overall_score": assessment_result.score,
+                # "confidence": assessment_result.confidence,
+                # "is_correct": assessment_result.is_correct
             }
         }
 
         # Обновляем поля в зависимости от типа задания
-        if task.task_type == "grammar":
-            structured["score_grammar"] = assessment_result.score
-        elif task.task_type == "vocabulary":
-            structured["score_vocabulary"] = assessment_result.score
+        # if task.task_type == "grammar":
+        #     structured["score_grammar"] = assessment_result.score
+        # elif task.task_type == "vocabulary":
+        #     structured["score_vocabulary"] = assessment_result.score
 
-        # Добавляем ошибки если они есть
-        if assessment_result.error_tags:
-            for tag in assessment_result.error_tags:
-                structured["errors"].append({
-                    "type": tag,
-                    "example": "",
-                    "correction": ""
-                })
+        # Добавляем ошибки если они есть #TODO смотреть отдельно потом ошибки
+        # if assessment_result.error_tags:
+        #     for tag in assessment_result.error_tags:
+        #         structured["errors"].append({
+        #             "type": tag,
+        #             "example": "",
+        #             "correction": ""
+        #         })
 
         # Добавляем фидбек если он есть
-        if assessment_result.feedback:
-            if "strengths" in assessment_result.feedback:
-                structured["strengths"] = assessment_result.feedback["strengths"]
-            if "suggestions" in assessment_result.feedback:
-                structured["suggestions"] = assessment_result.feedback["suggestions"]
+        if assessment_result.structured_feedback:
+            if "strengths" in assessment_result.structured_feedback:
+                structured["strengths"] = assessment_result.structured_feedback["strengths"]
+            if "suggestions" in assessment_result.structured_feedback:
+                structured["suggestions"] = assessment_result.structured_feedback["suggestions"]
 
         return structured
 
@@ -271,18 +265,19 @@ class AssessmentService:
             }
         }
 
-        assessment = Assessment.objects.create(
+        assessment, created = Assessment.objects.get_or_create(
             task_response=response,
-            llm_version="error-handler",
-            raw_output={
-                "error": error,
-                "exception_type": exception_type,
-                "task_id": task.pk,
-                "response_id": response.id,
-                "timestamp": timezone.now().isoformat()
-            },
-            structured_feedback=structured_feedback,
-            score=0.5
+            defaults={
+                "llm_version": "error-handler",
+                "raw_output": {
+                    "error": error,
+                    "exception_type": exception_type,
+                    "task_id": task.pk,
+                    "response_id": response.pk,
+                    "timestamp": timezone.now().isoformat()
+                },
+                "structured_feedback": structured_feedback,
+            }
         )
 
         # Отправляем уведомление администратору (асинхронно в продакшене)

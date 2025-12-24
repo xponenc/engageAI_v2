@@ -5,7 +5,7 @@ from django.utils import timezone
 import random
 
 from assessment.models import CEFRQuestion, QuestionInstance, TestSession, TestAnswer, CEFRLevel, SourceType
-from users.models import StudyProfile
+from users.models import Student
 
 from utils.setup_logger import setup_logger
 
@@ -248,7 +248,7 @@ def finalize_session(session):
     session.finished_at = timezone.now()
     session.save(update_fields=["estimated_level", "protocol_json", "finished_at"])
 
-    StudyProfile.objects.update_or_create(
+    Student.objects.update_or_create(
         user=session.user,
         defaults={"english_level": level}
     )

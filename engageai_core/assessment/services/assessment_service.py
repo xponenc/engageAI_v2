@@ -6,7 +6,7 @@
 
 from django.utils import timezone
 
-from users.models import StudyProfile, CEFRLevel
+from users.models import Student, CEFRLevel
 from utils.setup_logger import setup_logger
 from ..models import TestSession, QuestionInstance, TestAnswer, SessionSourceType
 from .test_flow import (
@@ -125,7 +125,7 @@ def finish_assessment(session):
         estimated_level = protocol.get("estimated_level")
 
         if estimated_level in CEFRLevel.values:
-            StudyProfile.objects.update_or_create(
+            Student.objects.update_or_create(
                 user=session.user,
                 defaults={"english_level": estimated_level}
             )

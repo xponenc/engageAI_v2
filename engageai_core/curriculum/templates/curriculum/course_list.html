@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Курсы{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/courses.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="courses">
+    <div class="courses__container container">
+
+        <header class="courses__header">
+            <h1 class="courses__title">Все доступные курсы</h1>
+
+            {% if student %}
+                <div class="courses__student student-info">
+                    <div class="student-info__item">
+                        👋 {{ student.user.get_full_name|default:student.user.username }}
+                    </div>
+                    <div class="student-info__item">
+                        Уровень: <strong>{{ student.cefr_level|default:"—" }}</strong>
+                    </div>
+                    <div class="student-info__item">
+                        Контекст: {{ student.professional_context|default:"не указан" }}
+                    </div>
+                </div>
+            {% endif %}
+        </header>
+
+        {% if courses %}
+            <div class="courses__grid">
+                {% for course in courses %}
+                    <article class="course-card">
+
+                        <header class="course-card__header">
+                            <h3 class="course-card__title">
+                                <a href="{% url 'curriculum:course_detail' course.id %}"
+                                class="course-card__title-link">
+                                    {{ course.title }}
+                                </a>
+                            </h3>
+                            <div class="course-card__level">
+                                {{ course.get_target_cefr_from_display }}
+                                →
+                                {{ course.get_target_cefr_to_display }}
+                            </div>
+                        </header>
+
+                        <div class="course-card__body">
+                            <p class="course-card__description">
+                                {{ course.description|truncatechars:120 }}
+                            </p>
+
+                            <div class="course-card__meta">
+                                <span>📚 {{ course.ordered_lessons|length }} уроков</span>
+                                <span>⏱ ~{{ course.estimated_duration }} мин</span>
+                            </div>
+
+                            {% if course.enrollment %}
+                                <div class="course-card__progress progress">
+                                    <div class="progress__bar"
+                                         style="width: {{ course.progress_percent }}%">
+                                        {{ course.progress_percent }}%
+                                    </div>
+                                </div>
+
+                                <div class="course-card__current">
+                                    Текущий урок:
+                                    <strong>
+                                        {{ course.enrollment.current_lesson.title|truncatechars:40 }}
+                                    </strong>
+                                </div>
+
+                                <a href="{% url 'course_detail' course.id %}"
+                                   class="btn btn_primary course-card__action">
+                                    Продолжить
+                                </a>
+                                <a href="{% url 'curriculum:course_history' course.enrollment.id %}"
+                                   class="btn btn_primary course-card__action">
+                                    История
+                                </a>
+                            {% else %}
+                                {% if not request.user.is_authenticated %}
+                                    <a href="{% url 'users:login' %}?next={{ request.path }}"
+                                    class="btn btn_ghost course-card__action">
+                                        Войти для записи
+                                    </a>
+                                {% else %}
+                                    <button 
+                                        class="btn btn_primary course-card__action enroll-btn" 
+                                        data-course-id="{{ course.id }}"
+                                        data-url="{% url 'curriculum:enroll_course' course.id %}">
+                                        Записаться
+                                    </button>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+
+            {% if page_obj.has_other_pages %}
+                <nav class="courses__pagination pagination">
+                    {% if page_obj.has_previous %}
+                        <a class="pagination__link"
+                           href="?page={{ page_obj.previous_page_number }}">
+                            ←
+                        </a>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <span class="pagination__link pagination__link--active">
+                                {{ num }}
+                            </span>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <a class="pagination__link" href="?page={{ num }}">
+                                {{ num }}
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <a class="pagination__link"
+                           href="?page={{ page_obj.next_page_number }}">
+                            →
+                        </a>
+                    {% endif %}
+                </nav>
+            {% endif %}
+
+        {% else %}
+            <div class="courses__empty">
+                Пока нет доступных курсов
+            </div>
+        {% endif %}
+
+    </div>
+</section>
+{% endblock %}
+
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const enrollButtons = document.querySelectorAll('.enroll-btn');
+
+    enrollButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const enrollUrl = button.dataset.url; // URL для POST
+            if (!enrollUrl) return;
+
+            // Создаём спиннер
+            const spinner = document.createElement('span');
+            spinner.className = 'button-spinner';
+
+            // Сохраняем исходный текст кнопки
+            const originalText = button.textContent;
+            button.textContent = '';
+            button.appendChild(spinner);
+            button.appendChild(document.createTextNode('Запись...'));
+            button.disabled = true;
+
+            fetch(enrollUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(async response => {
+                const data = await response.json();
+                if (!response.ok) {
+                    // Обрабатываем ошибки от бэка
+                    throw new Error(data.error || 'Неизвестная ошибка');
+                }
+                return data;
+            })
+            .then(data => {
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при записи на курс:', error);
+                button.disabled = false;
+                button.textContent = originalText;
+                alert('Ошибка при записи на курс: ' + error.message);
+            });
+        });
+    });
+});
+</script>
+{% endblock script %}
+

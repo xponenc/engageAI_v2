@@ -1,0 +1,203 @@
+/* ==========================
+   Learning Session Page
+========================== */
+
+.learning-session {
+    padding: 24px 0;
+    font-family: var(--font-family-system);
+}
+
+.learning-session__container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* --------------------------
+   Header
+-------------------------- */
+.learning-header {
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.learning-header__title {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+.learning-header__subtitle {
+    font-size: 1.2;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.learning-header__meta {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    margin-bottom: 12px;
+}
+
+/* --------------------------
+   Layout
+-------------------------- */
+.learning-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+}
+
+/* --------------------------
+   Task Card
+-------------------------- */
+.task-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.task-card:hover {
+    background: var(--color-surface-alt);
+    border-color: var(--color-accent-soft);
+    box-shadow: var(--shadow-sm);
+}
+
+.task-card__title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--color-text);
+}
+
+.task-card__prompt {
+    color: var(--color-text-muted);
+    margin-bottom: 16px;
+}
+
+/* --------------------------
+   Task Options / Inputs
+-------------------------- */
+.task-option {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.task-input,
+.task-textarea,
+.task-file {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    color: var(--color-text);
+    background: var(--color-surface);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.task-input:focus,
+.task-textarea:focus,
+.task-file:focus {
+    border-color: var(--color-accent);
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-accent-soft);
+}
+
+/* --------------------------
+   Submit Button
+-------------------------- */
+.task-submit {
+    margin-top: 16px;
+    padding: 10px;
+    width: 100%;
+    background: var(--color-accent);
+    color: var(--color-surface);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.task-submit:hover {
+    background: var(--color-accent-dark);
+    transform: translateY(-1px);
+}
+
+.task-submit:active {
+    transform: translateY(0);
+}
+
+/* --------------------------
+   Finished Lesson
+-------------------------- */
+.lesson-finished {
+    text-align: center;
+    padding: 40px;
+    border: 1px dashed var(--color-border);
+}
+
+.lesson-finished__icon {
+    font-size: 48px;
+    color: var(--color-success);
+}
+
+.lesson-finished__actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+/* --------------------------
+   Sidebar
+-------------------------- */
+.learning-sidebar section {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+/* Progress Bar */
+.progress-bar {
+    height: 6px;
+    background: var(--color-muted-bg);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar__value {
+    height: 100%;
+    background: var(--color-accent);
+    transition: width 0.4s ease, background 0.3s ease;
+}
+
+/* --------------------------
+   Skills
+-------------------------- */
+.skill {
+    margin-bottom: 12px;
+}
+
+.skill__row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--color-text);
+}
+
+.skill__bar {
+    height: 6px;
+    background: var(--color-muted-bg);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.skill__value {
+    height: 100%;
+    background: var(--color-success);
+    transition: width 0.4s ease, background 0.3s ease;
+}

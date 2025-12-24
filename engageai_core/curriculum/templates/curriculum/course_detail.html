@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ course.title }}{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/course-detail.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="course-detail">
+    <div class="course-detail__container container">
+
+        <!-- Основной контент -->
+        <div class="course-detail__layout">
+
+            <!-- Левая колонка -->
+            <main class="course-detail__main">
+
+                <header class="course-header">
+                    <h1 class="course-header__title">{{ course.title }}</h1>
+                    <p class="course-header__description">
+                        {{ course.description }}
+                    </p>
+
+                    <div class="course-header__meta">
+                        <span>📚 {{ course.ordered_lessons|length }} уроков</span>
+                        <span>⏱ ~{{ course.estimated_duration }} мин</span>
+                    </div>
+                </header>
+
+                <section class="course-progress card">
+                    {% if enrollment %}
+                        <div class="progress">
+                            <div class="progress__bar"
+                                 style="width: {{ progress_details.progress_percent|floatformat:0 }}%">
+                                {{ progress_details.progress_percent|floatformat:0 }}%
+                            </div>
+                        </div>
+
+                        <div class="course-progress__current">
+                            Текущий урок:
+                            <strong>{{ current_lesson.title|truncatechars:50 }}</strong>
+                        </div>
+
+                        {% if next_task %}
+                            <div class="course-progress__next">
+                                ➜ Следующее задание:
+                                <strong>{{ next_task.title }}</strong>
+                            </div>
+                        {% endif %}
+
+                        <a href="{% url 'curriculum:learning_session' enrollment.id %}"
+                           class="btn btn_primary course-progress__action">
+                            Продолжить обучение
+                        </a>
+                        <a href="{% url 'curriculum:course_history' enrollment.id %}"
+                           class="btn btn_primary course-progress__action">
+                            Посмотреть историю
+                        </a>
+                    {% else %}
+                        <button class="btn btn_success course-progress__action enroll-btn"
+                            data-course-id="{{ course.id }}"
+                            data-url="{% url 'curriculum:enroll_course' course.id %}">
+                            Записаться на курс
+                        </button>
+                    {% endif %}
+                </section>
+
+                <!-- Уроки -->
+                <section class="course-lessons">
+                    <h2 class="course-lessons__title">Уроки курса</h2>
+
+                    {% for lesson in course.ordered_lessons %}
+                        <article class="lesson-item">
+                            <header class="lesson-item__header">
+                                <h3 class="lesson-item__title">
+                                    {{ lesson.order }}. {{ lesson.title }}
+                                </h3>
+                                <span class="lesson-item__duration">
+                                    {{ lesson.duration_minutes }} мин
+                                </span>
+                            </header>
+
+                            <p class="lesson-item__description">
+                                {{ lesson.description|truncatechars:120 }}
+                            </p>
+
+                            <div class="lesson-item__meta">
+                                <span>🌍 {{ lesson.get_required_cefr_display }}</span>
+
+                                {% if lesson.skill_focus %}
+                                    <span>🧠
+                                        {% for skill in lesson.skill_focus %}
+                                            {{ skill }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </article>
+                    {% empty %}
+                        <div class="course-lessons__empty">
+                            В этом курсе пока нет уроков
+                        </div>
+                    {% endfor %}
+                </section>
+            </main>
+
+            <!-- Правая колонка -->
+            <aside class="course-detail__sidebar">
+
+                <div class="course-info card">
+                    <h3 class="course-info__title">Информация о курсе</h3>
+
+                    <ul class="course-info__list">
+                        <li>
+                            🎯 Уровень:
+                            {{ course.get_target_cefr_from_display }}
+                            –
+                            {{ course.get_target_cefr_to_display }}
+                        </li>
+                        <li>
+                            ⏱ Продолжительность:
+                            ~{{ course.estimated_duration }} мин
+                        </li>
+                        <li>
+                            📘 Уроков:
+                            {{ course.ordered_lessons|length }}
+                        </li>
+                    </ul>
+
+                    {% if course.learning_objectives.exists %}
+                        <div class="course-info__objectives">
+                            <h4>Цели обучения</h4>
+                            <ul>
+                                {% for objective in course.learning_objectives.all %}
+                                    <li>✔ {{ objective.name }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+
+                    {% if enrollment %}
+                        <div class="course-info__progress">
+                            <h4>Ваш прогресс</h4>
+                            <div class="progress">
+                                <div class="progress__bar"
+                                     style="width: {{ progress_details.progress_percent|floatformat:0 }}%">
+                                    {{ progress_details.progress_percent|floatformat:0 }}%
+                                </div>
+                            </div>
+                            <small>
+                                Текущий урок:
+                                {{ current_lesson.title|truncatechars:30 }}
+                            </small>
+                        </div>
+                    {% endif %}
+                </div>
+
+            </aside>
+
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+
+{% block script %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const enrollButtons = document.querySelectorAll('.enroll-btn');
+
+    enrollButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const enrollUrl = button.dataset.url; // URL для POST
+            if (!enrollUrl) return;
+
+            // Создаём спиннер
+            const spinner = document.createElement('span');
+            spinner.className = 'button-spinner';
+
+            // Сохраняем исходный текст кнопки
+            const originalText = button.textContent;
+            button.textContent = '';
+            button.appendChild(spinner);
+            button.appendChild(document.createTextNode('Запись...'));
+            button.disabled = true;
+
+            fetch(enrollUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(async response => {
+                const data = await response.json();
+                if (!response.ok) {
+                    // Обрабатываем ошибки от бэка
+                    throw new Error(data.error || 'Неизвестная ошибка');
+                }
+                return data;
+            })
+            .then(data => {
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при записи на курс:', error);
+                button.disabled = false;
+                button.textContent = originalText;
+                alert('Ошибка при записи на курс: ' + error.message);
+            });
+        });
+    });
+});
+</script>
+{% endblock script %}
+

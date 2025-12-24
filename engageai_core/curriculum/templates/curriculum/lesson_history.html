@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}История урока: {{ lesson.title }}{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/lesson-history.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="lesson-history">
+
+    <div class="lesson-history__layout">
+
+        <!-- MAIN -->
+        <main class="lesson-history__main">
+
+            <header class="lesson-history__header">
+                <h1 class="lesson-history__title">
+                    История урока: {{ lesson.title }}
+                </h1>
+
+                <div class="lesson-history__progress">
+                    {{ progress_percent }}% завершено
+                </div>
+            </header>
+
+            <p class="lesson-history__description">
+                {{ lesson.description }}
+            </p>
+
+            {% if history %}
+                <div class="lesson-history__list">
+
+                    {% for item in history %}
+                    <details class="history-item"
+                             {% if item.is_completed %}open{% endif %}>
+
+                        <summary class="history-item__summary">
+                            <span class="history-item__title">
+                                Задание {{ item.task.order }}:
+                                {{ item.task.title|truncatechars:50 }}
+                            </span>
+
+                            <span class="history-item__status
+                                {% if item.is_completed %}
+                                    history-item__status--done
+                                {% else %}
+                                    history-item__status--pending
+                                {% endif %}">
+                                {% if item.is_completed %}Выполнено{% else %}Не выполнено{% endif %}
+                            </span>
+
+                            {% if item.score is not None %}
+                            <span class="history-item__score">
+                                {{ item.score|floatformat:0 }}%
+                            </span>
+                            {% endif %}
+                        </summary>
+
+                        <div class="history-item__content">
+
+                            <section class="history-block">
+                                <h4 class="history-block__title">Текст задания</h4>
+                                <p>{{ item.task.content.prompt|safe }}</p>
+
+                                {% if item.task.content.options %}
+                                <ul class="history-options">
+                                    {% for option in item.task.content.options %}
+                                    <li>{{ forloop.counter }}. {{ option }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                            </section>
+
+                            {% if item.is_completed %}
+                            <section class="history-block">
+                                <h4 class="history-block__title">Ваш ответ</h4>
+
+                                {% if item.task.response_format == 'audio' and item.response.audio_file %}
+                                    <audio controls class="history-audio">
+                                        <source src="{{ item.response.audio_file.url }}">
+                                    </audio>
+                                {% else %}
+                                    <div class="history-answer">
+                                        {{ item.response.response_text|linebreaks }}
+                                    </div>
+                                {% endif %}
+                            </section>
+
+                            <section class="history-block">
+                                <h4 class="history-block__title">Обратная связь</h4>
+
+                                <div class="history-feedback
+                                    {% if item.score and item.score >= 70 %}
+                                        history-feedback--success
+                                    {% else %}
+                                        history-feedback--warning
+                                    {% endif %}">
+                                    {{ item.feedback|default:"Оценка выполнена" }}
+                                </div>
+
+                                {% if item.score is not None %}
+                                <div class="progress-bar">
+                                    <div class="progress-bar__value"
+                                         style="width: {{ item.score|floatformat:0 }}%">
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </section>
+
+                            <div class="history-meta">
+                                Ответ отправлен: {{ item.created_at|date:"d.m.Y H:i" }}
+                            </div>
+
+                            {% else %}
+                            <div class="history-info">
+                                Задание ещё не выполнено
+                            </div>
+                            {% endif %}
+
+                        </div>
+                    </details>
+                    {% endfor %}
+
+                </div>
+
+                {% if can_return_to_lesson %}
+                <a class="btn btn_primary lesson-history__back"
+                   href="{% url 'curriculum:learning_session_task' enrollment.id history.0.task.id %}">
+                    Вернуться к текущему заданию
+                </a>
+                {% endif %}
+
+            {% else %}
+                <div class="lesson-history__empty">
+                    В этом уроке ещё нет выполненных заданий
+                </div>
+            {% endif %}
+
+        </main>
+
+        <!-- SIDEBAR -->
+        <aside class="lesson-history__sidebar">
+
+            <section class="sidebar-card">
+                <div class="sidebar-title">Прогресс урока</div>
+
+                <div class="progress-bar">
+                    <div class="progress-bar__value"
+                         style="width: {{ progress_percent }}%"></div>
+                </div>
+
+                <div class="sidebar-muted">
+                    Завершено {{ completed_tasks }} из {{ total_tasks }} заданий
+                </div>
+            </section>
+
+            <section class="sidebar-card">
+                <div class="sidebar-title">Статистика</div>
+
+                <ul class="lesson-stats">
+                    <li>
+                        <strong>Навыки:</strong>
+                        {% for skill in lesson.skill_focus %}
+                            <span class="lesson-skill">{{ skill }}</span>
+                        {% endfor %}
+                    </li>
+                    <li>
+                        <strong>Длительность:</strong>
+                        ~{{ lesson.duration_minutes }} мин
+                    </li>
+                    <li>
+                        <strong>Уровень:</strong>
+                        {{ lesson.get_required_cefr_display }}
+                    </li>
+                </ul>
+            </section>
+
+            <section class="sidebar-card">
+                <a class="btn btn_outline"
+                   href="{% url 'curriculum:course_history' enrollment.id %}">
+                    История курса
+                </a>
+
+                <a class="btn btn_ghost"
+                   href="{% url 'curriculum:learning_session' enrollment.id %}">
+                    Назад к сессии
+                </a>
+            </section>
+
+        </aside>
+
+    </div>
+</section>
+{% endblock %}

@@ -8,7 +8,4 @@ urlpatterns = [
     path("start/", StartAssessmentView.as_view(), name="start_test"),
     path("session/<uuid:session_id>/question/", QuestionView.as_view(), name="question_view"),
     path("session/<uuid:session_id>/finish/", FinishView.as_view(), name="finish_view"),
-
-    # DRF API приложения
-    path("api/v1/assessment/", include("assessment.api.urls")),
 ]

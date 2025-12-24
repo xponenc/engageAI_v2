@@ -1,4 +1,5 @@
-from curriculum.models import CurrentSkill, SkillSnapshot
+from curriculum.models.skills.skill_curent import CurrentSkill
+from curriculum.models.skills.skill_snapshot import SkillSnapshot
 
 
 class SkillSnapshotCreator:

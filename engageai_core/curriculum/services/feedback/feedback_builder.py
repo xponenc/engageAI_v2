@@ -1,8 +1,5 @@
 import random
 
-from feedback.services.tone_adapter import ToneAdapter
-
-from curriculum.services.decisions import LessonOutcome
 from curriculum.services.feedback.template_loader import FeedbackTemplateLoader
 
 
@@ -77,53 +74,3 @@ class FeedbackBuilder:
             tone=tone.neutral(),
             highlights=[],
         )
-
-
-    #
-    #
-    # # версия без yaml
-    # def build(self, student, lesson, metrics, decision, assessment=None) -> dict:
-    #     tone = ToneAdapter().select(student, metrics)
-    #
-    #     if decision == LessonOutcome.ADVANCE:
-    #         return self._success_feedback(tone, metrics)
-    #
-    #     if decision == LessonOutcome.SIMPLIFY:
-    #         return self._supportive_feedback(tone, metrics)
-    #
-    #     if decision == LessonOutcome.REPEAT:
-    #         return self._retry_feedback(tone, metrics)
-    #
-    #     return self._neutral_feedback(tone)
-    #
-    # def _success_feedback(self, tone, metrics):
-    #     return {
-    #         "title": "Отлично!",
-    #         "message": tone.praise(),
-    #         "highlights": metrics.top_skills(),
-    #         "next_step_hint": "Следующий урок будет чуть сложнее."
-    #     }
-    #
-    # def _supportive_feedback(self, tone, metrics):
-    #     return {
-    #         "title": "Ничего страшного",
-    #         "message": tone.support(),
-    #         "highlights": metrics.weak_spots(limit=2),
-    #         "next_step_hint": "Мы немного упростим следующий шаг."
-    #     }
-    #
-    # def _retry_feedback(self, tone, metrics):
-    #     return {
-    #         "title": "Давай закрепим",
-    #         "message": tone.retry(),
-    #         "highlights": metrics.weak_spots(limit=1),
-    #         "next_step_hint": "Повторим этот урок с новыми примерами."
-    #     }
-    #
-    # def _neutral_feedback(self, tone):
-    #     return {
-    #         "title": "Продолжаем",
-    #         "message": tone.neutral(),
-    #         "highlights": [],
-    #         "next_step_hint": "Идём дальше."
-    #     }

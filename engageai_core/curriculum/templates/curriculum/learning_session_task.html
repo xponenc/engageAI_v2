@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Задание: {{ current_task.title }}{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/task-detail.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="task-page">
+
+    <div class="task-page__layout">
+
+        <!-- MAIN -->
+        <main class="task-main">
+
+            <header class="task-header">
+                <div class="task-header__title">
+                    {{ current_task.title }}
+                </div>
+
+                <div class="task-header__meta">
+                    Урок {{ progress_details.current_lesson.order }}
+                    из {{ progress_details.total_lessons }}
+                </div>
+            </header>
+
+            <section class="task-card">
+
+                {% if current_task.content.prompt %}
+                <h3 class="task-card__prompt">
+                    {{ current_task.content.prompt }}
+                </h3>
+                {% endif %}
+
+                {% if current_task.content.options %}
+                <form id="task-response-form"
+                      class="task-form"
+                      method="POST"
+                      action="{% url 'curriculum:submit_task_response' enrollment.id %}">
+
+                    {% csrf_token %}
+                    <input type="hidden" name="task_id" value="{{ current_task.id }}">
+
+                    {% if current_task.response_format == 'single_choice' %}
+                        {% for option in current_task.content.options %}
+                        <label class="task-option">
+                            <input type="radio" name="text" value="{{ forloop.counter0 }}" required>
+                            <span>{{ option }}</span>
+                        </label>
+                        {% endfor %}
+
+                    {% elif current_task.response_format == 'multiple_choice' %}
+                        {% for option in current_task.content.options %}
+                        <label class="task-option">
+                            <input type="checkbox" name="text" value="{{ forloop.counter0 }}">
+                            <span>{{ option }}</span>
+                        </label>
+                        {% endfor %}
+
+                    {% elif current_task.response_format == 'short_text' %}
+                        <input class="task-input"
+                               type="text"
+                               name="text"
+                               maxlength="100"
+                               placeholder="Введите краткий ответ"
+                               required>
+                        <div class="task-hint">Не более 3 слов</div>
+
+                    {% elif current_task.response_format == 'free_text' %}
+                        <textarea class="task-textarea"
+                                  name="text"
+                                  rows="4"
+                                  placeholder="Введите развёрнутый ответ"
+                                  required></textarea>
+
+                    {% elif current_task.response_format == 'audio' %}
+                        <input class="task-file"
+                               type="file"
+                               name="audio_file"
+                               accept="audio/*"
+                               required>
+                    {% endif %}
+
+                    <div class="task-actions">
+                        <button type="submit" class="btn btn_primary">
+                            Отправить ответ
+                        </button>
+
+                        <a href="{% url 'curriculum:learning_session' enrollment.id %}"
+                           class="btn btn_ghost">
+                            Назад к сессии
+                        </a>
+                    </div>
+
+                </form>
+                {% endif %}
+
+            </section>
+
+            {% if progress_details.completed_lessons > 0 %}
+            <a class="task-history"
+               href="{% url 'curriculum:lesson_history' enrollment.id progress_details.current_lesson.id %}">
+                История этого урока
+            </a>
+            {% endif %}
+
+        </main>
+
+        <!-- SIDEBAR -->
+        <aside class="task-sidebar">
+
+            <section class="sidebar-card">
+                <div class="sidebar-title">Прогресс курса</div>
+
+                <div class="progress-bar">
+                    <div class="progress-bar__value"
+                         style="width: {{ progress_percent }}%"></div>
+                </div>
+
+                <div class="sidebar-muted">
+                    {{ progress_percent }}% ·
+                    урок {{ progress_details.current_lesson.order }}
+                    из {{ progress_details.total_lessons }}
+                </div>
+            </section>
+
+            <section class="sidebar-card">
+                <div class="sidebar-title">
+                    {{ progress_details.current_lesson.title }}
+                </div>
+
+                <div class="sidebar-tip">
+                    {% if current_task.response_format == 'audio' %}
+                        Говорите чётко и спокойно
+                    {% elif current_task.response_format == 'free_text' %}
+                        Используйте изученную лексику
+                    {% else %}
+                        Внимательно читайте варианты
+                    {% endif %}
+                </div>
+            </section>
+
+            <section class="sidebar-card">
+                <a class="btn btn_outline"
+                   href="{% url 'curriculum:course_history' enrollment.id %}">
+                    История курса
+                </a>
+            </section>
+
+        </aside>
+
+    </div>
+</section>
+
+<div id="task-feedback"></div>
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'js/task-detail.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,159 @@
+.lesson-history {
+    padding: var(--double-gap) 0;
+}
+
+.lesson-history__layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: var(--double-gap);
+}
+
+@media (max-width: 1024px) {
+    .lesson-history__layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* HEADER */
+.lesson-history__header {
+    margin-bottom: var(--standard-gap);
+}
+
+.lesson-history__title {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.lesson-history__progress {
+    font-size: 14px;
+    color: var(--color-text-muted);
+}
+
+.lesson-history__description {
+    margin-bottom: var(--standard-gap);
+    color: var(--color-text-muted);
+}
+
+/* HISTORY LIST */
+.lesson-history__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--half-gap);
+}
+
+.history-item {
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.history-item__summary {
+    cursor: pointer;
+    padding: var(--standard-gap);
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: var(--half-gap);
+    align-items: center;
+}
+
+.history-item__status {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 999px;
+}
+
+.history-item__status--done {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.history-item__status--pending {
+    background: var(--color-muted-bg);
+    color: var(--color-text-muted);
+}
+
+.history-item__score {
+    font-size: 12px;
+    color: var(--color-accent);
+}
+
+/* CONTENT */
+.history-item__content {
+    padding: var(--standard-gap);
+    border-top: 1px solid var(--color-border);
+}
+
+.history-block {
+    margin-bottom: var(--standard-gap);
+}
+
+.history-block__title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.history-options {
+    padding-left: 16px;
+    font-size: 13px;
+}
+
+.history-answer {
+    background: var(--color-muted-bg);
+    padding: 12px;
+    border-radius: var(--radius-sm);
+}
+
+.history-feedback {
+    padding: 10px;
+    border-radius: var(--radius-sm);
+}
+
+.history-feedback--success {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.history-feedback--warning {
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
+}
+
+.history-meta {
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.history-info {
+    font-size: 14px;
+    color: var(--color-text-muted);
+}
+
+/* SIDEBAR */
+.lesson-history__sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--standard-gap);
+}
+
+.sidebar-card {
+    background: var(--color-surface);
+    padding: var(--standard-gap);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.lesson-stats {
+    list-style: none;
+    padding: 0;
+    font-size: 14px;
+}
+
+.lesson-skill {
+    display: inline-block;
+    margin-right: 6px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}

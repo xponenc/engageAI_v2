@@ -1,0 +1,722 @@
+{
+"course": {
+"title": "Practical English for IT Professionals",
+"description": "A B1-level English course focused on everyday communication tasks for backend developers and technical professionals in collaborative work environments.",
+"target_cefr_from": "B1",
+"target_cefr_to": "B1",
+"estimated_duration": 160
+},
+"lessons": [
+{
+"order": 1,
+"title": "Core Technical Vocabulary",
+"description": "Build confidence with common backend and workplace technical terms.",
+"duration_minutes": 15,
+"required_cefr": "B1",
+"skill_focus": ["vocabulary"],
+"learning_objectives": [
+{
+"identifier": "L1-VO1",
+"name": "Understand common backend and workflow vocabulary",
+"cefr_level": "B1",
+"skill_domain": "vocabulary"
+}
+],
+"content": {
+"intro": "This lesson introduces essential technical terms used in daily IT work."
+},
+"tasks": [
+{
+"order": 1,
+"task_type": "vocabulary",
+"response_format": "single_choice",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "What does 'deploy' most nearly mean?",
+"options": ["Write code", "Release software", "Fix a bug", "Design UI"],
+"correct_idx": 1
+}
+},
+{
+"order": 2,
+"task_type": "vocabulary",
+"response_format": "multiple_choice",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Which words relate to bugs?",
+"options": ["issue", "feature", "defect", "release"],
+"correct_idx": 0
+}
+},
+{
+"order": 3,
+"task_type": "vocabulary",
+"response_format": "short_text",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Write one word meaning 'test software'.",
+"correct": ["test", "testing"],
+"case_sensitive": false
+}
+},
+{
+"order": 4,
+"task_type": "reading",
+"response_format": "single_choice",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "In a ticket, what comes first?",
+"options": ["Solution", "Title", "Code", "Deployment"],
+"correct_idx": 1
+}
+},
+{
+"order": 5,
+"task_type": "speaking",
+"response_format": "audio",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Say three technical words you use at work.",
+"max_duration_sec": 30
+}
+}
+]
+},
+{
+"order": 2,
+"title": "Present Simple for Daily Work",
+"description": "Use present simple tense to describe routine tasks.",
+"duration_minutes": 20,
+"required_cefr": "B1",
+"skill_focus": ["grammar", "writing"],
+"learning_objectives": [
+{
+"identifier": "L2-GR1",
+"name": "Use present simple to describe routine technical tasks",
+"cefr_level": "B1",
+"skill_domain": "grammar"
+}
+],
+"content": {
+"intro": "This lesson focuses on clear sentences about daily responsibilities."
+},
+"tasks": [
+{
+"order": 1,
+"task_type": "grammar",
+"response_format": "single_choice",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Choose the correct form: 'I ___ the API.'",
+"options": ["maintain", "maintains", "maintained", "maintaining"],
+"correct_idx": 0
+}
+},
+{
+"order": 2,
+"task_type": "grammar",
+"response_format": "multiple_choice",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Which sentences are present simple?",
+"options": ["I deploy today", "I am deploying now", "I deployed yesterday", "I fix bugs weekly"],
+"correct_idx": 0
+}
+},
+{
+"order": 3,
+"task_type": "grammar",
+"response_format": "short_text",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Complete: 'She ___ the database.'",
+"correct": ["checks"],
+"case_sensitive": false
+}
+},
+{
+"order": 4,
+"task_type": "writing",
+"response_format": "free_text",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Write one sentence about your daily task.",
+"max_length_words": 20,
+"expected_elements": ["present simple verb"]
+}
+},
+{
+"order": 5,
+"task_type": "speaking",
+"response_format": "audio",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Describe one thing you do every day at work.",
+"max_duration_sec": 40
+}
+}
+]
+},
+{
+"order": 3,
+"title": "Reading Tickets and Issues",
+"description": "Understand short written technical tasks and issues.",
+"duration_minutes": 20,
+"required_cefr": "B1",
+"skill_focus": ["reading"],
+"learning_objectives": [
+{
+"identifier": "L3-RE1",
+"name": "Read and understand simple technical tickets",
+"cefr_level": "B1",
+"skill_domain": "reading"
+}
+],
+"content": {
+"intro": "This lesson practices reading short issue descriptions."
+},
+"tasks": [
+{
+"order": 1,
+"task_type": "reading",
+"response_format": "single_choice",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "What is the ticket mainly about?",
+"options": ["New feature", "Bug fix", "Meeting", "Deployment"],
+"correct_idx": 1
+}
+},
+{
+"order": 2,
+"task_type": "reading",
+"response_format": "multiple_choice",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Which details are included in the ticket?",
+"options": ["Steps", "Priority", "Salary", "Deadline"],
+"correct_idx": 0
+}
+},
+{
+"order": 3,
+"task_type": "reading",
+"response_format": "short_text",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Write one word describing the problem.",
+"correct": ["error", "bug"],
+"case_sensitive": false
+}
+},
+{
+"order": 4,
+"task_type": "vocabulary",
+"response_format": "single_choice",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "What does 'priority' mean?",
+"options": ["Importance", "Length", "Cost", "Owner"],
+"correct_idx": 0
+}
+},
+{
+"order": 5,
+"task_type": "speaking",
+"response_format": "audio",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Summarize a simple ticket you read.",
+"max_duration_sec": 45
+}
+}
+]
+},
+{
+"order": 4,
+"title": "Standup Meeting Basics",
+"description": "Communicate clearly in short daily meetings.",
+"duration_minutes": 20,
+"required_cefr": "B1",
+"skill_focus": ["speaking", "listening"],
+"learning_objectives": [
+{
+"identifier": "L4-SP1",
+"name": "Speak clearly about progress in standup meetings",
+"cefr_level": "B1",
+"skill_domain": "speaking"
+}
+],
+"content": {
+"intro": "This lesson focuses on short spoken updates."
+},
+"tasks": [
+{
+"order": 1,
+"task_type": "listening",
+"response_format": "audio",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Listen and identify today's task.",
+"max_duration_sec": 30
+}
+},
+{
+"order": 2,
+"task_type": "speaking",
+"response_format": "audio",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Say what you did yesterday.",
+"max_duration_sec": 30
+}
+},
+{
+"order": 3,
+"task_type": "speaking",
+"response_format": "audio",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Say what you will do today.",
+"max_duration_sec": 30
+}
+},
+{
+"order": 4,
+"task_type": "speaking",
+"response_format": "audio",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Mention one blocker.",
+"max_duration_sec": 20
+}
+},
+{
+"order": 5,
+"task_type": "vocabulary",
+"response_format": "single_choice",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "What is a 'blocker'?",
+"options": ["Problem", "Meeting", "Feature", "Deadline"],
+"correct_idx": 0
+}
+}
+]
+},
+{
+"order": 5,
+"title": "Writing Clear Tickets",
+"description": "Write short and clear issue descriptions.",
+"duration_minutes": 20,
+"required_cefr": "B1",
+"skill_focus": ["writing"],
+"learning_objectives": [
+{
+"identifier": "L5-WR1",
+"name": "Write clear and simple technical tickets",
+"cefr_level": "B1",
+"skill_domain": "writing"
+}
+],
+"content": {
+"intro": "This lesson practices structured writing."
+},
+"tasks": [
+{
+"order": 1,
+"task_type": "writing",
+"response_format": "free_text",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Write a short ticket title.",
+"max_length_words": 10,
+"expected_elements": ["issue description"]
+}
+},
+{
+"order": 2,
+"task_type": "writing",
+"response_format": "free_text",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Describe the problem in one sentence.",
+"max_length_words": 20,
+"expected_elements": ["problem"]
+}
+},
+{
+"order": 3,
+"task_type": "writing",
+"response_format": "free_text",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Write one expected result.",
+"max_length_words": 15,
+"expected_elements": ["expected behavior"]
+}
+},
+{
+"order": 4,
+"task_type": "reading",
+"response_format": "single_choice",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Which part explains the problem?",
+"options": ["Title", "Description", "Comment", "Status"],
+"correct_idx": 1
+}
+},
+{
+"order": 5,
+"task_type": "vocabulary",
+"response_format": "short_text",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Write one word for 'expected result'.",
+"correct": ["output", "result"],
+"case_sensitive": false
+}
+}
+]
+},
+{
+"order": 6,
+"title": "Explaining Technical Problems",
+"description": "Explain issues and causes clearly.",
+"duration_minutes": 20,
+"required_cefr": "B1",
+"skill_focus": ["speaking"],
+"learning_objectives": [
+{
+"identifier": "L6-SP1",
+"name": "Explain technical problems clearly",
+"cefr_level": "B1",
+"skill_domain": "speaking"
+}
+],
+"content": {
+"intro": "This lesson focuses on spoken explanations."
+},
+"tasks": [
+{
+"order": 1,
+"task_type": "speaking",
+"response_format": "audio",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Explain a recent bug.",
+"max_duration_sec": 45
+}
+},
+{
+"order": 2,
+"task_type": "speaking",
+"response_format": "audio",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Explain the cause.",
+"max_duration_sec": 30
+}
+},
+{
+"order": 3,
+"task_type": "speaking",
+"response_format": "audio",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Explain the solution.",
+"max_duration_sec": 30
+}
+},
+{
+"order": 4,
+"task_type": "listening",
+"response_format": "audio",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Listen and identify the main problem.",
+"max_duration_sec": 30
+}
+},
+{
+"order": 5,
+"task_type": "vocabulary",
+"response_format": "single_choice",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "What does 'root cause' mean?",
+"options": ["Main reason", "Temporary fix", "Test case", "Deadline"],
+"correct_idx": 0
+}
+}
+]
+},
+{
+"order": 7,
+"title": "Participating in Technical Discussions",
+"description": "Share opinions and suggestions in meetings.",
+"duration_minutes": 25,
+"required_cefr": "B1",
+"skill_focus": ["speaking"],
+"learning_objectives": [
+{
+"identifier": "L7-SP1",
+"name": "Express opinions in technical discussions",
+"cefr_level": "B1",
+"skill_domain": "speaking"
+}
+],
+"content": {
+"intro": "This lesson practices interactive speaking."
+},
+"tasks": [
+{
+"order": 1,
+"task_type": "speaking",
+"response_format": "audio",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Give your opinion on a solution.",
+"max_duration_sec": 40
+}
+},
+{
+"order": 2,
+"task_type": "speaking",
+"response_format": "audio",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Agree or disagree with a proposal.",
+"max_duration_sec": 30
+}
+},
+{
+"order": 3,
+"task_type": "speaking",
+"response_format": "audio",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Suggest an improvement.",
+"max_duration_sec": 30
+}
+},
+{
+"order": 4,
+"task_type": "listening",
+"response_format": "audio",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Listen and identify the opinion.",
+"max_duration_sec": 30
+}
+},
+{
+"order": 5,
+"task_type": "vocabulary",
+"response_format": "short_text",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Write one phrase to give an opinion.",
+"correct": ["I think", "In my opinion"],
+"case_sensitive": false
+}
+}
+]
+},
+{
+"order": 8,
+"title": "Integrated Work Communication",
+"description": "Combine skills in realistic work scenarios.",
+"duration_minutes": 25,
+"required_cefr": "B1",
+"skill_focus": ["writing", "speaking"],
+"learning_objectives": [
+{
+"identifier": "L8-IN1",
+"name": "Communicate effectively in combined work tasks",
+"cefr_level": "B1",
+"skill_domain": "speaking"
+}
+],
+"content": {
+"intro": "This lesson integrates reading, writing, and speaking."
+},
+"tasks": [
+{
+"order": 1,
+"task_type": "reading",
+"response_format": "single_choice",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "What is the main task described?",
+"options": ["Fix bug", "Write test", "Deploy app", "Hold meeting"],
+"correct_idx": 0
+}
+},
+{
+"order": 2,
+"task_type": "writing",
+"response_format": "free_text",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Write a short update message.",
+"max_length_words": 25,
+"expected_elements": ["status update"]
+}
+},
+{
+"order": 3,
+"task_type": "writing",
+"response_format": "free_text",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Write one follow-up question.",
+"max_length_words": 15,
+"expected_elements": ["question"]
+}
+},
+{
+"order": 4,
+"task_type": "speaking",
+"response_format": "audio",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Explain your update orally.",
+"max_duration_sec": 45
+}
+},
+{
+"order": 5,
+"task_type": "listening",
+"response_format": "audio",
+"difficulty_cefr": "B1",
+"professional_tags": ["backend", "standup-meetings", "ticket-writing", "technical-discussion"],
+"is_diagnostic": false,
+"content_schema_version": "v1",
+"content": {
+"prompt": "Listen and identify next steps.",
+"max_duration_sec": 30
+}
+}
+]
+}
+]
+}

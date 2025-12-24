@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'assessment',
     'chat',
     'ai_assistant',
+    'curriculum',
 ]
 
 if DEBUG:

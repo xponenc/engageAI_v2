@@ -1,28 +1,28 @@
 from datetime import datetime
 from typing import Optional, Dict, Any
 
-from users.models import StudyProfile
+from users.models import Student
 
 
 class UserRepository:
     """Репозиторий для работы с профилями пользователей"""
 
-    def get_profile(self, user_id: str) -> Optional[StudyProfile]:
+    def get_profile(self, user_id: str) -> Optional[Student]:
         """Получает профиль пользователя по ID"""
         try:
-            return StudyProfile.objects.get(user_id=user_id)
-        except StudyProfile.DoesNotExist:
+            return Student.objects.get(user_id=user_id)
+        except Student.DoesNotExist:
             return None
 
-    def create_profile(self, user_id: str, **kwargs) -> StudyProfile:
+    def create_profile(self, user_id: str, **kwargs) -> Student:
         """Создает новый профиль пользователя"""
-        profile = StudyProfile.objects.create(
+        profile = Student.objects.create(
             user_id=user_id,
             **kwargs
         )
         return profile
 
-    def update_profile(self, user_id: str, update_data: Dict[str, Any]) -> StudyProfile:
+    def update_profile(self, user_id: str, update_data: Dict[str, Any]) -> Student:
         """Обновляет профиль пользователя"""
         profile = self.get_profile(user_id)
         if not profile:
@@ -35,7 +35,7 @@ class UserRepository:
         profile.save()
         return profile
 
-    def get_or_create_profile(self, user_id: str) -> StudyProfile:
+    def get_or_create_profile(self, user_id: str) -> Student:
         """Получает или создает профиль пользователя"""
         profile = self.get_profile(user_id)
         if not profile:
@@ -46,31 +46,3 @@ class UserRepository:
         """Обновляет уровень вовлеченности пользователя"""
         profile = self.get_or_create_profile(user_id)
         profile.update_engagement(delta)
-
-    def save_learning_plan(self, user_id: str, learning_plan: Dict[str, Any]):
-        """Сохраняет учебный план пользователя"""
-        profile = self.get_or_create_profile(user_id)
-        profile.learning_path = learning_plan
-        profile.save()
-
-    def update_current_lesson(self, user_id: str, lesson_index: int):
-        """Обновляет текущий урок пользователя"""
-        profile = self.get_or_create_profile(user_id)
-        profile.current_lesson = lesson_index
-        profile.save()
-
-    def mark_lesson_completed(self, user_id: str, lesson_data: Dict[str, Any]):
-        """Отмечает урок как завершенный"""
-        profile = self.get_or_create_profile(user_id)
-        completed = profile.completed_lessons or []
-        completed.append({
-            **lesson_data,
-            'completed_at': datetime.now().isoformat()
-        })
-        profile.completed_lessons = completed
-
-        # Увеличиваем текущий урок
-        if profile.current_lesson < len(profile.learning_path.get('lessons', [])):
-            profile.current_lesson += 1
-
-        profile.save()

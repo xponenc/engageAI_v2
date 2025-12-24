@@ -50,7 +50,7 @@
             var(--color-accent-dark));
     color: #fff;
     box-shadow: 0 6px 18px rgba(59, 130, 246, 0.15);
-    border-color: transparent;
+    border-color: var(--color-accent);
 }
 
 .btn_primary:hover {

@@ -26,10 +26,21 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('users.urls')),
 
-    path("assessment/", include("assessment.urls", namespace="assessment")),
-    path("", include("chat.urls", namespace="chat")),
-    path("", include("ai_assistant.urls", namespace="assistant"))
+    # API версия 1 (единый префикс для всех API)
+    path('api/v1/', include([
+        path('assessment/', include('assessment.urls_api', namespace='assessment-api')),
+        path('chat/', include('chat.urls_api', namespace='chat-api')),
+        path('assistant/', include('ai_assistant.urls_api', namespace='assistant-api')),
+        path('curriculum/', include('curriculum.urls_api', namespace='curriculum-api')),
+    ])),
+
+    # UI/веб-версия (без api/v1 префикса)
+    path('assessment/', include('assessment.urls', namespace='assessment')),
+    path('chat/', include('chat.urls', namespace='chat')),
+    path('assistant/', include('ai_assistant.urls', namespace='assistant')),
+    path('curriculum/', include('curriculum.urls', namespace='curriculum')),
 ]
+
 
 if settings.DEBUG:
     from debug_toolbar.toolbar import debug_toolbar_urls

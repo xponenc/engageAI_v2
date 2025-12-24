@@ -1,0 +1,221 @@
+/* ==========================
+   Courses Page & Grid
+========================== */
+
+.courses {
+    padding: 32px 0;
+}
+
+.courses__header {
+    margin-bottom: 32px;
+}
+
+.courses__title {
+    font-size: 32px;
+    margin-bottom: 16px;
+}
+
+.student-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    color: var(--color-text-muted);
+    font-size: 14px;
+}
+
+.courses__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+    align-items: stretch;
+}
+
+/* ==========================
+   Course Card
+========================== */
+
+.course-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease;
+    cursor: default;
+}
+
+.course-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+}
+
+/* --------------------------
+   Card Header
+-------------------------- */
+.course-card__header {
+    padding: 20px;
+    border-bottom: 1px solid var(--color-border);
+    flex: 0 0 auto;
+}
+
+.course-card__title {
+    font-size: 18px;
+    margin-bottom: 4px;
+    line-height: 1.3;
+    min-height: calc(1.3em * 2); /* 2 строки */
+}
+
+.course-card__title-link {
+    position: relative;
+    display: inline-block;
+    color: var(--color-text);
+    text-decoration: none;
+    transition:
+        color 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.course-card__title-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 100%;
+    height: 2px;
+    background-color: var(--color-accent);
+    opacity: 0;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition:
+        opacity 0.2s ease,
+        transform 0.25s ease;
+}
+
+.course-card__title-link:hover::after,
+.course-card__title-link:focus-visible::after,
+.course-card:hover .course-card__title-link::after {
+    opacity: 1;
+    transform: scaleX(1);
+}
+
+.course-card__title-link:focus-visible {
+    outline: none;
+    /* Можно добавить subtle focus ring через var(--color-accent) */
+}
+
+.course-card__level {
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+/* --------------------------
+   Card Body
+-------------------------- */
+.course-card__body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex: 1;
+}
+
+.course-card__description {
+    color: var(--color-informer-text);
+    line-height: 1.5;
+}
+
+.course-card__meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+.progress {
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    height: 10px;
+}
+
+.progress__bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-accent), var(--color-accent-dark));
+    color: var(--color-surface);
+    font-size: 11px;
+    text-align: right;
+    padding-right: 6px;
+}
+
+.course-card__current {
+    font-size: 13px;
+    color: var(--color-informer-text);
+}
+
+/* --------------------------
+   Card Actions / Buttons
+-------------------------- */
+.course-card__action {
+    margin-top: auto;
+    position: relative;
+    z-index: 2;
+}
+
+/* ==========================
+   Pagination
+========================== */
+.courses__pagination {
+    margin-top: 40px;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.pagination__link {
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    background: var(--color-surface-alt);
+    color: var(--color-text);
+    text-decoration: none;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.pagination__link:hover {
+    background: var(--color-accent-soft);
+}
+
+.pagination__link--active {
+    background: var(--color-accent);
+    color: var(--color-surface);
+}
+
+/* ==========================
+   Empty State
+========================== */
+.courses__empty {
+    padding: 60px 0;
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: 18px;
+}
+
+
+.button-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--color-surface);
+    border-top: 2px solid var(--color-accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

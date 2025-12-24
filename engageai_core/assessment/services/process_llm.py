@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 
-from users.models import StudyProfile
+from users.models import Student
 from utils.setup_logger import setup_logger
 from ..models import TestSession, QuestionInstance, TestAnswer
 from users.models import CEFRLevel
@@ -289,7 +289,7 @@ def task_generate_final_report(self, session_id: str):
                 f"[LLM] change level={estimated_level}"
             )
 
-            sp, created = StudyProfile.objects.update_or_create(
+            sp, created = Student.objects.update_or_create(
                 user=session.user,
                 defaults={"english_level": estimated_level}
             )

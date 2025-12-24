@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Обучение · {{ enrollment.course.title }}{% endblock %}
+
+{% block css %}
+<link href="{% static 'css/learning-session.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<section class="learning-session">
+    <div class="learning-session__container">
+
+        <!-- Header -->
+        <header class="learning-header">
+            <h2 class="learning-header__title">
+                {{ enrollment.course.title }}
+            </h2>
+            <h3 class="learning-header__subtitle">
+                {{ learning_state.current_lesson.title }}
+            </h3>
+            <div class="learning-header__meta">
+                Урок {{ learning_state.current_lesson.order }}
+                из {{ progress_details.total_lessons }}
+            </div>
+        </header>
+
+        <div class="learning-layout">
+
+            <!-- Main -->
+            <main class="learning-main">
+
+                {% if next_task %}
+                    <section class="task-card">
+                        <h2 class="task-card__title">
+                            {{ next_task.title }}
+                        </h2>
+
+                        <p class="task-card__prompt">
+                            {{ next_task.content.prompt }}
+                        </p>
+
+                        <form class="task-form"
+                              id="task-response-form"
+                              method="post"
+                              action="{% url 'curriculum:submit_task_response' enrollment.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="task_id" value="{{ next_task.id }}">
+
+                            {% if next_task.response_format == 'single_choice' %}
+                                {% for option in next_task.content.options %}
+                                    <label class="task-option">
+                                        <input type="radio" name="text" value="{{ forloop.counter0 }}" required>
+                                        <span>{{ option }}</span>
+                                    </label>
+                                {% endfor %}
+                            {% elif next_task.response_format == 'multiple_choice' %}
+                                {% for option in next_task.content.options %}
+                                    <label class="task-option">
+                                        <input type="checkbox" name="text" value="{{ forloop.counter0 }}">
+                                        <span>{{ option }}</span>
+                                    </label>
+                                {% endfor %}
+                            {% elif next_task.response_format == 'short_text' %}
+                                <input class="task-input"
+                                       type="text"
+                                       name="text"
+                                       maxlength="100"
+                                       placeholder="Краткий ответ"
+                                       required>
+                            {% elif next_task.response_format == 'free_text' %}
+                                <textarea class="task-textarea"
+                                          name="text"
+                                          rows="4"
+                                          placeholder="Введите ответ"
+                                          required></textarea>
+                            {% elif next_task.response_format == 'audio' %}
+                                <input class="task-file"
+                                       type="file"
+                                       name="audio_file"
+                                       accept="audio/*"
+                                       required>
+                            {% endif %}
+
+                            <button class="task-submit" type="submit">
+                                Отправить ответ
+                            </button>
+                        </form>
+                    </section>
+                {% else %}
+                    <section class="lesson-finished">
+                        <div class="lesson-finished__icon">🧠</div>
+                        <h2 class="lesson-finished__title">Урок завершён</h2>
+                        <p class="lesson-finished__text">
+                            Этот урок больше не сопротивляется.
+                            Можно двигаться дальше.
+                        </p>
+
+                        <div class="lesson-finished__actions">
+                            <a href="{% url 'curriculum:course_detail' enrollment.course.id %}" class="btn btn_primary">К курсу</a>
+                            <a href="{% url 'curriculum:course_list' %}" class="btn">Все курсы</a>
+                        </div>
+                    </section>
+                {% endif %}
+
+            </main>
+
+            <!-- Sidebar -->
+            <aside class="learning-sidebar">
+
+                <section class="progress-card">
+                    <div class="progress-card__title">Прогресс курса</div>
+
+                    <div class="progress-bar">
+                        <div class="progress-bar__value" style="width: {{ progress_details.progress_percent|floatformat:0 }}%"></div>
+                    </div>
+
+                    <div class="progress-card__percent">
+                        {{ progress_details.progress_percent|floatformat:0 }}%
+                    </div>
+                </section>
+
+                <section class="skills-card">
+                    <div class="skills-card__title">Навыки</div>
+
+                    {% for skill, value in learning_state.skills.items %}
+                        <div class="skill">
+                            <div class="skill__row">
+                                <span>{{ skill|title }}</span>
+                                <span>{{ value|floatformat:0 }}%</span>
+                            </div>
+                            <div class="skill__bar">
+                                <div class="skill__value" style="width: {{ value|floatformat:0 }}%"></div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </section>
+
+            </aside>
+
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+
+{% block script %}
+<script src="{% static 'js/task-detail.js' %}"></script>
+{% endblock %}

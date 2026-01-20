@@ -6,18 +6,6 @@
     padding: 32px 0;
 }
 
-.course-detail__layout {
-    display: grid;
-    grid-template-columns: 1fr 320px;
-    gap: 32px;
-}
-
-@media (max-width: 1024px) {
-    .course-detail__layout {
-        grid-template-columns: 1fr;
-    }
-}
-
 /* --------------------------
    Course Header
 -------------------------- */
@@ -88,19 +76,6 @@
     color: var(--color-accent-dark);
 }
 
-/* PROGRESS */
-.progress-bar {
-    height: 8px;
-    background: var(--color-muted-bg);
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.progress-bar__value {
-    height: 100%;
-    background: var(--color-accent);
-    padding-right: 6px;
-}
 
 /* --------------------------
    Course Lessons

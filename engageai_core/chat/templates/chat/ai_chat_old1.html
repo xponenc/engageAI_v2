@@ -1,0 +1,1035 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load chat_filters %}
+{% block title %}Чат с AI | NeuroTutor{% endblock %}
+{% block css %}
+<link href="{% static 'css/chat.css' %}" rel="stylesheet">
+{% endblock css %}
+{% block content %}
+<section class="ai-chat">
+    <div class="ai-chat__container container-full">
+        <!-- Кнопка для разворачивания скрытого чата -->
+        <div class="chat-expand-trigger" id="chat-expand-trigger" style="display: none;">
+            <button class="btn btn_primary">
+                <span class="btn__icon">↔️</span>
+                <span>Открыть чат</span>
+            </button>
+        </div>
+        <!-- Двухпанельный макет -->
+        <div class="chat-layout" id="chat-layout">
+            <!-- Левая панель - Контент -->
+            <div class="chat-layout__content" id="chat-content-panel">
+                <!-- Хлебные крошки -->
+                <nav class="breadcrumbs">
+                    <a href="{% url 'chat:ai-chat' assistant.slug %}" class="breadcrumbs__link">AI-чат</a>
+                    <span class="breadcrumbs__separator">/</span>
+                    <span class="breadcrumbs__current">{{ chat.title }}</span>
+                </nav>
+                <div class="content-frame card" id="content-frame">
+                    {% if content %}
+                        {{ content|safe }}
+                    {% else %}
+                        <p class="content-placeholder">Контент курса появится здесь автоматически.</p>
+                        <div>
+                            <div class="chat-info card">
+                                <div class="chat-info__header">
+                                    <div class="chat-info__icon">🤖</div>
+                                    <h3 class="chat-info__title">{{ kb.engine.name }}</h3>
+                                </div>
+                                
+                                <div class="chat-info__content">
+                                    <div class="info-item">
+                                        <div class="info-item__icon">📚</div>
+                                        <div class="info-item__content">
+                                            <strong>База знаний</strong>
+                                            <span>{{ kb.name }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="info-item">
+                                        <div class="info-item__icon">⚡</div>
+                                        <div class="info-item__content">
+                                            <strong>Модель</strong>
+                                            <span>{{ kb.engine.model }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="info-item">
+                                        <div class="info-item__icon">🎯</div>
+                                        <div class="info-item__content">
+                                            <strong>Режим</strong>
+                                            <span>Образовательный</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Советы по использованию -->
+                            <div class="chat-tips card">
+                                <h4 class="chat-tips__title">Советы для лучших ответов</h4>
+                                <ul class="chat-tips__list">
+                                    <li class="chat-tips__item">✅ Задавайте конкретные вопросы</li>
+                                    <li class="chat-tips__item">✅ Просите объяснить сложные темы</li>
+                                    <li class="chat-tips__item">✅ Уточняйте, если ответ непонятен</li>
+                                    <li class="chat-tips__item">✅ Используйте примеры из уроков</li>
+                                </ul>
+                            </div>
+
+                            <!-- Статистика чата -->
+                            <div class="chat-stats card">
+                                <h4 class="chat-stats__title">Статистика чата</h4>
+                                <div class="stats-grid">
+                                    <div class="stat-item">
+                                        <div class="stat-item__value">{{ chat_history|length }}</div>
+                                        <div class="stat-item__label">Сообщений</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="chat-info card">
+                                <div class="chat-info__header">
+                                    <div class="chat-info__icon">🤖</div>
+                                    <h3 class="chat-info__title">{{ kb.engine.name }}</h3>
+                                </div>
+                                
+                                <div class="chat-info__content">
+                                    <div class="info-item">
+                                        <div class="info-item__icon">📚</div>
+                                        <div class="info-item__content">
+                                            <strong>База знаний</strong>
+                                            <span>{{ kb.name }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="info-item">
+                                        <div class="info-item__icon">⚡</div>
+                                        <div class="info-item__content">
+                                            <strong>Модель</strong>
+                                            <span>{{ kb.engine.model }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="info-item">
+                                        <div class="info-item__icon">🎯</div>
+                                        <div class="info-item__content">
+                                            <strong>Режим</strong>
+                                            <span>Образовательный</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Советы по использованию -->
+                            <div class="chat-tips card">
+                                <h4 class="chat-tips__title">Советы для лучших ответов</h4>
+                                <ul class="chat-tips__list">
+                                    <li class="chat-tips__item">✅ Задавайте конкретные вопросы</li>
+                                    <li class="chat-tips__item">✅ Просите объяснить сложные темы</li>
+                                    <li class="chat-tips__item">✅ Уточняйте, если ответ непонятен</li>
+                                    <li class="chat-tips__item">✅ Используйте примеры из уроков</li>
+                                </ul>
+                            </div>
+
+                            <!-- Статистика чата -->
+                            <div class="chat-stats card">
+                                <h4 class="chat-stats__title">Статистика чата</h4>
+                                <div class="stats-grid">
+                                    <div class="stat-item">
+                                        <div class="stat-item__value">{{ chat_history|length }}</div>
+                                        <div class="stat-item__label">Сообщений</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Разделитель для изменения ширины -->
+            <div class="chat-layout__resizer" id="layout-resizer"></div>
+            
+            <!-- Правая панель - Чат -->
+            <div class="chat-layout__chat" id="chat-panel">
+                <div class="chat-window card">
+                    <!-- Шапка чата с кнопкой сворачивания -->
+                    <div class="chat-window__header">
+                        <div class="chat-window__title">
+                            <h3>Диалог с AI</h3>
+                        </div>
+                        <div class="chat-window__actions">
+                            <button class="btn btn_ghost btn_sm" id="toggle-chat" title="Свернуть чат">
+                                <span class="btn__icon">↔️</span>
+                                <span class="toggle-label">Скрыть чат</span>
+                            </button>
+                            <button class="btn btn_ghost btn_sm" id="clear-chat" title="Очистить историю">
+                                <span class="btn__icon">🗑️</span>
+                                Очистить
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- История сообщений -->
+                    <div class="chat-window__messages" id="chat-history">
+                        {% if chat_history %}
+                            {% for message in chat_history %}
+                            <div class="chat-message{% if message.is_ai %} chat-message--ai{% else %} chat-message--user{% endif %}" 
+                                data-message-id="{{ message.id }}" 
+                                {% if message.is_ai %} data-url="{% url 'chat:ai-message-score' message.id %}"{% endif %}>
+                                <div class="chat-message__avatar">
+                                    {% if message.is_ai %}
+                                        <div class="avatar avatar--ai"></div>
+                                    {% else %}
+                                        <div class="avatar avatar--user">
+                                            <img src="{{ user.profile.avatar.url|default:'/static/images/default-avatar.png' }}" alt="Аватар пользователя">
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="chat-message__content">
+                                    {% if message.content %}
+                                        <div class="chat-message__text">
+                                            {{ message.content|safe }}
+                                        </div>
+                                    {% endif %}
+                                    {% if message.media_files.exists %}
+                                        <div class="message-preview__media">
+                                            {% for media in message.media_files.all %}
+                                                {% if media.file_type == 'image' %}
+                                                    <div class="media-item media-item--image">
+                                                        <a href="{{ media.file.url }}" target="_blank">
+                                                            <img src="{% if media.thumbnail and media.thumbnail.name %}{{ media.thumbnail.url }}{% else %}{{ media.file.url }}{% endif %}"
+                                                                class="chat-image"
+                                                                alt="Изображение"
+                                                                loading="lazy">
+                                                        </a>
+                                                    </div>
+                                                {% elif media.file_type == 'video' %}
+                                                    <div class="media-item media-item--video">
+                                                        <video controls class="chat-video">
+                                                            <source src="{{ media.file.url }}" type="{{ media.mime_type }}">
+                                                            Ваш браузер не поддерживает видео элемент.
+                                                        </video>
+                                                    </div>
+                                                {% elif media.file_type == 'audio' %}
+                                                    <div class="media-item media-item--audio">
+                                                        <audio controls class="chat-audio">
+                                                            <source src="{{ media.file.url }}" type="{{ media.mime_type }}">
+                                                            Ваш браузер не поддерживает аудио элемент.
+                                                        </audio>
+                                                    </div>
+                                                {% else %}
+                                                    <div class="media-item media-item--document">
+                                                        <a href="{{ media.file.url }}" class="document-link" download>
+                                                            <div class="document-icon">📄</div>
+                                                            <div class="document-name">
+                                                                {{ media.file.name|basename }}
+                                                            </div>
+                                                        </a>
+                                                    </div>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="chat-message__meta">
+                                        <span class="chat-message__time">
+                                            {{ message.created_at|time:"H:i" }}
+                                        </span>
+                                        {% if message.is_ai %}
+                                        <div class="chat-message__rating">
+                                            <div class="rating-stars" data-message-id="{{ message.id }}">
+                                                {% for i in "2 1 0 -1 -2"|split:" " %}
+                                                    {% with i_int=i|add:"0" %}
+                                                        <button class="star-btn {% if message.score >= i_int %}star-btn--active{% endif %}" 
+                                                                data-value="{{ i_int }}">
+                                                            ★
+                                                        </button>
+                                                    {% endwith %}
+                                                {% endfor %}
+                                            </div>
+                                            <span class="rating-hint">Оцените ответ</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <!-- Пустое состояние -->
+                            <div class="chat-empty">
+                                <h4 class="chat-empty__title">Начните диалог</h4>
+                                <p class="chat-empty__text">
+                                    Задайте вопрос AI-репетитору о материале курса, 
+                                    и он поможет вам разобраться в сложных темах
+                                </p>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Поле ввода -->
+                    <div class="chat-window__input">
+                        <form id="chat-form" method="post" class="chat-form" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="chat-input">
+                                <div class="chat-input__field">
+                                    <input type="text" 
+                                           name="message" 
+                                           id="message-input" 
+                                           class="chat-input__text" 
+                                           placeholder="Введите ваш вопрос..."
+                                           autocomplete="off">
+                                    <div class="chat-input__actions">
+                                        <button type="button" class="chat-input__action" id="voice-record-btn" title="Отправить голосовое сообщение">
+                                            🎤
+                                        </button>
+                                        <div class="recording-timer" id="recording-timer" style="display: none;">00:00</div>
+                                        <label for="file-upload" class="chat-input__action" title="Прикрепить файл">
+                                            📎
+                                            <input type="file" id="file-upload" name="file" style="display: none;" 
+                                                   accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt">
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="file-preview-container" id="file-preview-container" style="display: none;">
+                                    <div class="file-preview">
+                                        <span class="file-preview__name" id="file-name"></span>
+                                        <span class="file-preview__remove" id="remove-file">✖</span>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn_primary chat-input__submit" id="submit-btn">
+                                    <span class="btn__icon">✈️</span>
+                                    Отправить
+                                </button>
+                            </div>
+                            <div class="chat-input__hint">
+                                Нажмите Enter для отправки, Shift+Enter для новой строки
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}
+{% block script %}
+<script>
+// Получаем настройки из контекста Django
+const MAX_FILE_SIZE_MB = {{ max_file_size_mb }};
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const ALLOWED_FILE_TYPES = {{ allowed_file_types|safe }};
+// Авто-скролл к последнему сообщению
+function scrollChatToBottom(smooth = false) {
+    const msgBox = document.querySelector('.chat-window__messages');
+    if (!msgBox) return;
+    // Функция для фактического скролла
+    const doScroll = () => {
+        if (smooth) {
+            msgBox.scrollTo({
+                top: msgBox.scrollHeight,
+                behavior: 'smooth'
+            });
+        } else {
+            msgBox.scrollTop = msgBox.scrollHeight;
+        }
+        // Дополнительная проверка через маленькую задержку
+        setTimeout(() => {
+            // Если после скролла мы все еще не внизу - повторяем
+            const remainingSpace = msgBox.scrollHeight - msgBox.scrollTop - msgBox.clientHeight;
+            if (remainingSpace > 10) {
+                msgBox.scrollTop = msgBox.scrollHeight;
+            }
+        }, 100);
+    };
+    // Запускаем скролл после небольшой задержки, чтобы дать время на рендеринг
+    setTimeout(doScroll, 50);
+    // Дополнительный скролл после загрузки всех изображений
+    const images = msgBox.querySelectorAll('img:not([data-loaded])');
+    if (images.length > 0) {
+        let loadedCount = 0;
+        images.forEach(img => {
+            img.dataset.loaded = 'true';
+            if (img.complete) {
+                loadedCount++;
+            } else {
+                img.addEventListener('load', () => {
+                    loadedCount++;
+                    if (loadedCount === images.length) {
+                        setTimeout(doScroll, 100);
+                    }
+                }, { once: true });
+                img.addEventListener('error', () => {
+                    loadedCount++;
+                    if (loadedCount === images.length) {
+                        setTimeout(doScroll, 100);
+                    }
+                }, { once: true });
+            }
+        });
+        // Если все изображения уже загружены
+        if (loadedCount === images.length) {
+            setTimeout(doScroll, 150);
+        }
+    }
+}
+// Функция для скролла после добавления сообщений
+function scrollAfterMessage() {
+    scrollChatToBottom();
+    setTimeout(scrollChatToBottom, 500);
+}
+// Экранирование HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+// Проверка типа файла
+function isValidFileType(file) {
+    const fileType = file.type.split('/')[0];
+    const fileExt = file.name.split('.').pop().toLowerCase();
+    // Проверяем по MIME-типу
+    if (ALLOWED_FILE_TYPES.includes(fileType)) {
+        return true;
+    }
+    // Дополнительная проверка по расширению для случаев, когда MIME-тип не определен
+    const allowedExtensions = {
+        'image': ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'],
+        'audio': ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'],
+        'video': ['mp4', 'avi', 'mov', 'wmv', 'mkv', 'webm'],
+        'document': ['pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx', 'ppt', 'pptx']
+    };
+    for (const [type, extensions] of Object.entries(allowedExtensions)) {
+        if (ALLOWED_FILE_TYPES.includes(type) && extensions.includes(fileExt)) {
+            return true;
+        }
+    }
+    return false;
+}
+// Показать уведомление
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification--${type === 'success' ? 'success' : 'error'} notification--show`;
+    notification.innerHTML = `
+        <div class="notification__icon">${type === 'success' ? '✅' : '❌'}</div>
+        <div class="notification__text">${message}</div>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.classList.remove('notification--show');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+// Обновление контента
+function updateContent(html) {
+    const contentFrame = document.getElementById('content-frame');
+    if (contentFrame && html) {
+        contentFrame.innerHTML = html;
+    }
+}
+document.addEventListener("DOMContentLoaded", function () {
+    // === Настройки layout ===
+    const STORAGE_KEY = 'chat_layout_ratio';
+    const MIN_CHAT_WIDTH_PX = 320;
+    const DEFAULT_CHAT_RATIO = 0.5;
+    
+    // === Элементы DOM ===
+    const layout = document.getElementById('chat-layout');
+    const chatPanel = document.getElementById('chat-panel');
+    const resizer = document.getElementById('layout-resizer');
+    const toggleBtn = document.getElementById('toggle-chat');
+    const expandTrigger = document.getElementById('chat-expand-trigger');
+    
+    // === Состояние ===
+    let isResizing = false;
+    let startWidth, startX;
+    let chatCollapsed = false;
+    let currentRatio = parseFloat(localStorage.getItem(STORAGE_KEY)) || DEFAULT_CHAT_RATIO;
+    
+    // === Инициализация layout ===
+    function initLayout() {
+        if (chatCollapsed) {
+            layout.classList.add('chat-layout--chat-collapsed');
+            toggleBtn.querySelector('.toggle-label').textContent = 'Показать чат';
+            expandTrigger.style.display = 'block'; // Показываем кнопку-триггер
+        } else {
+            layout.classList.remove('chat-layout--chat-collapsed');
+            const ratioPercent = Math.max(currentRatio * 100, (MIN_CHAT_WIDTH_PX / window.innerWidth) * 100);
+            chatPanel.style.flex = `0 0 ${ratioPercent}%`;
+            toggleBtn.querySelector('.toggle-label').textContent = 'Скрыть чат';
+            expandTrigger.style.display = 'none'; // Скрываем кнопку-триггер
+        }
+    }
+    
+    // === Сохранение пропорции ===
+    function saveRatio() {
+        if (!chatCollapsed) {
+            const total = layout.offsetWidth;
+            const chatWidth = chatPanel.offsetWidth;
+            currentRatio = Math.min(0.8, Math.max(0.2, chatWidth / total));
+            localStorage.setItem(STORAGE_KEY, currentRatio.toString());
+        }
+    }
+    
+    // === Ресайзер ===
+    resizer.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        isResizing = true;
+        startWidth = chatPanel.offsetWidth;
+        startX = e.clientX;
+        document.body.style.userSelect = 'none';
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        const dx = e.clientX - startX;
+        const newWidth = startWidth - dx;
+        const total = layout.offsetWidth;
+        const ratio = Math.max(MIN_CHAT_WIDTH_PX, Math.min(newWidth, total * 0.8)) / total;
+        chatPanel.style.flex = `0 0 ${ratio * 100}%`;
+    });
+    
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            document.body.style.userSelect = '';
+            saveRatio();
+            scrollChatToBottom();
+        }
+    });
+    
+    // === Переключение чата ===
+    toggleBtn.addEventListener('click', () => {
+        chatCollapsed = !chatCollapsed;
+        initLayout();
+        setTimeout(() => {
+            if (!chatCollapsed) {
+                scrollChatToBottom(true);
+            }
+        }, 300);
+    });
+
+    expandTrigger.addEventListener('click', () => {
+        chatCollapsed = false;
+        initLayout();
+        setTimeout(() => {
+            scrollChatToBottom(true);
+        }, 300);
+    });
+    
+    // === Инициализация чата ===
+    const chatForm = document.getElementById("chat-form");
+    const chatHistory = document.getElementById("chat-history");
+    const messageInput = document.getElementById("message-input");
+    const submitBtn = document.getElementById("submit-btn");
+    const clearChatBtn = document.getElementById("clear-chat");
+    const fileUpload = document.getElementById("file-upload");
+    const filePreviewContainer = document.getElementById("file-preview-container");
+    const fileNameElement = document.getElementById("file-name");
+    const removeFileBtn = document.getElementById("remove-file");
+    const voiceRecordBtn = document.getElementById("voice-record-btn");
+    const recordingTimerElement = document.getElementById('recording-timer');
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+    let currentFile = null;
+    let audioStream = null;
+    let recordingTimer = null;
+    let recordingStartTime = 0;
+    const MAX_RECORDING_TIME = 300;
+    
+    // Инициализация звезд рейтинга
+    function initStarRating() {
+        document.querySelectorAll('.rating-stars').forEach(stars => {
+            stars.addEventListener('click', function(e) {
+                if (!e.target.classList.contains('star-btn')) return;
+                const clickedValue = parseInt(e.target.dataset.value, 10);
+                const messageId = this.dataset.messageId;
+                const starsList = this.querySelectorAll('.star-btn');
+                starsList.forEach(btn => {
+                    const val = parseInt(btn.dataset.value, 10);
+                    btn.classList.toggle('star-btn--active', val <= clickedValue);
+                });
+                fetch(this.closest('[data-url]').dataset.url, {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ score: clickedValue })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        showNotification("Спасибо за оценку!", "success");
+                    } else {
+                        showNotification("Ошибка при сохранении оценки", "error");
+                    }
+                })
+                .catch(error => {
+                    console.error("Ошибка:", error);
+                    showNotification("Ошибка при сохранении оценки", "error");
+                });
+            });
+        });
+    }
+    
+    // Обработка прикрепленного файла
+    fileUpload.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            currentFile = e.target.files[0];
+            if (currentFile.size > MAX_FILE_SIZE_BYTES) {
+                showNotification(`Размер файла не должен превышать ${MAX_FILE_SIZE_MB}MB`, "error");
+                fileUpload.value = '';
+                currentFile = null;
+                return;
+            }
+            if (!isValidFileType(currentFile)) {
+                const allowedTypes = ALLOWED_FILE_TYPES.map(type => {
+                    const readable = {
+                        'image': 'изображения',
+                        'audio': 'аудио',
+                        'video': 'видео',
+                        'document': 'документы'
+                    };
+                    return readable[type] || type;
+                }).join(', ');
+                showNotification(`Недопустимый тип файла. Разрешены: ${allowedTypes}`, "error");
+                fileUpload.value = '';
+                currentFile = null;
+                return;
+            }
+            fileNameElement.textContent = currentFile.name;
+            filePreviewContainer.style.display = 'block';
+        }
+    });
+    
+    // Удаление прикрепленного файла
+    removeFileBtn.addEventListener('click', function() {
+        filePreviewContainer.style.display = 'none';
+        fileUpload.value = '';
+        currentFile = null;
+    });
+    
+    // Голосовая запись
+    voiceRecordBtn.addEventListener('click', function() {
+        if (isRecording) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
+    });
+    
+    function startRecording() {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                audioStream = stream;
+                isRecording = true;
+                audioChunks = [];
+                recordingStartTime = Date.now();
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'audio/webm;codecs=opus'
+                });
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+                mediaRecorder.onstop = () => {
+                    stopRecordingTimer();
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    if (audioBlob.size > MAX_FILE_SIZE_BYTES) {
+                        showNotification(`Голосовое сообщение слишком большое. Максимум ${MAX_FILE_SIZE_MB}MB`, "error");
+                        cleanupRecording();
+                        return;
+                    }
+                    const recordingDuration = (Date.now() - recordingStartTime) / 1000;
+                    if (recordingDuration < 1) {
+                        showNotification("Запись слишком короткая. Минимум 1 секунда", "error");
+                        cleanupRecording();
+                        return;
+                    }
+                    currentFile = new File([audioBlob], `voice-message-${new Date().toISOString().replace(/[:.]/g, '-')}.webm`, {
+                        type: 'audio/webm',
+                        lastModified: Date.now()
+                    });
+                    fileNameElement.textContent = `Голосовое сообщение (${formatTime(recordingDuration)})`;
+                    filePreviewContainer.style.display = 'block';
+                    cleanupRecording();
+                };
+                mediaRecorder.start(1000);
+                voiceRecordBtn.innerHTML = '<span class="recording-indicator"></span> Закончить запись';
+                voiceRecordBtn.classList.add('recording');
+                startRecordingTimer();
+                setTimeout(() => {
+                    if (isRecording) {
+                        showNotification(`Достигнуто максимальное время записи (${formatTime(MAX_RECORDING_TIME)})`, "info");
+                        stopRecording();
+                    }
+                }, MAX_RECORDING_TIME * 1000);
+            })
+            .catch(error => {
+                console.error('Ошибка доступа к микрофону:', error);
+                let errorMessage = "Не удалось получить доступ к микрофону";
+                if (error.name === 'NotAllowedError') {
+                    errorMessage = "Доступ к микрофону запрещен. Разрешите доступ в настройках браузера.";
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage = "Микрофон не найден. Подключите микрофон и попробуйте снова.";
+                } else if (error.name === 'NotReadableError') {
+                    errorMessage = "Микрофон занят другим приложением. Закройте другие приложения, использующие микрофон.";
+                }
+                showNotification(errorMessage, "error");
+                cleanupRecording();
+            });
+    }
+    
+    function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+            }
+        }
+        stopRecordingTimer();
+        voiceRecordBtn.innerHTML = '🎤';
+        voiceRecordBtn.classList.remove('recording');
+        isRecording = false;
+    }
+    
+    function startRecordingTimer() {
+        stopRecordingTimer();
+        recordingTimer = setInterval(() => {
+            const elapsedTime = Math.floor((Date.now() - recordingStartTime) / 1000);
+            if (elapsedTime >= MAX_RECORDING_TIME) {
+                stopRecording();
+                return;
+            }
+            if (recordingTimerElement) {
+                recordingTimerElement.style.display = 'inline-block';
+                recordingTimerElement.textContent = formatTime(elapsedTime);
+                if (elapsedTime > MAX_RECORDING_TIME - 10) {
+                    recordingTimerElement.style.color = '#e53e3e';
+                    recordingTimerElement.style.fontWeight = 'bold';
+                } else {
+                    recordingTimerElement.style.color = '';
+                    recordingTimerElement.style.fontWeight = '';
+                }
+            }
+        }, 1000);
+    }
+    
+    function stopRecordingTimer() {
+        if (recordingTimer) {
+            clearInterval(recordingTimer);
+            recordingTimer = null;
+        }
+        if (recordingTimerElement) {
+            recordingTimerElement.style.display = 'none';
+            recordingTimerElement.textContent = '00:00';
+            recordingTimerElement.style.color = '';
+            recordingTimerElement.style.fontWeight = '';
+        }
+    }
+    
+    function cleanupRecording() {
+        stopRecording();
+        if (audioStream) {
+            audioStream.getTracks().forEach(track => track.stop());
+            audioStream = null;
+        }
+        audioChunks = [];
+    }
+    
+    function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    
+    // Обработчик закрытия страницы для очистки ресурсов
+    window.addEventListener('beforeunload', function() {
+        cleanupRecording();
+    });
+    
+    // Отправка формы
+    chatForm.addEventListener("submit", function(e) {
+        e.preventDefault();
+        const message = messageInput.value.trim();
+        if (!message && !currentFile) {
+            showNotification("Введите сообщение или прикрепите файл", "error");
+            return;
+        }
+        if (currentFile) {
+            if (currentFile.size > MAX_FILE_SIZE_BYTES) {
+                showNotification(`Размер файла не должен превышать ${MAX_FILE_SIZE_MB}MB`, "error");
+                return;
+            }
+            if (!isValidFileType(currentFile)) {
+                showNotification("Недопустимый тип файла", "error");
+                return;
+            }
+        }
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="btn__icon">⏳</span>Отправка...';
+        const tempId = Date.now();
+        const userMessageHTML = `
+            <div class="chat-message chat-message--user" id="temp-user-${tempId}">
+                <div class="chat-message__avatar">
+                    <div class="avatar avatar--user">
+                        <img src="{{ user.profile.avatar.url|default:'/static/images/default-avatar.png' }}" alt="Аватар пользователя">
+                    </div>
+                </div>
+                <div class="chat-message__content">
+                    ${message ? `<div class="chat-message__text">${escapeHtml(message)}</div>` : ''}
+                    ${currentFile ? `
+                        <div class="message-preview__media">
+                            <div class="media-item media-item--${currentFile.type.startsWith('audio/') ? 'audio' : 
+                                currentFile.type.startsWith('video/') ? 'video' : 
+                                currentFile.type.startsWith('image/') ? 'image' : 'document'}">
+                                ${currentFile.type.startsWith('audio/') ? `
+                                    <audio controls class="chat-audio">
+                                        <source src="${URL.createObjectURL(currentFile)}" type="${currentFile.type}">
+                                    </audio>
+                                ` : currentFile.type.startsWith('video/') ? `
+                                    <video controls class="chat-video">
+                                        <source src="${URL.createObjectURL(currentFile)}" type="${currentFile.type}">
+                                    </video>
+                                ` : currentFile.type.startsWith('image/') ? `
+                                    <img src="${URL.createObjectURL(currentFile)}" class="chat-image" alt="Изображение">
+                                ` : `
+                                    <a href="#" class="document-link">
+                                        <div class="document-icon">📄</div>
+                                        <div class="document-name">${escapeHtml(currentFile.name)}</div>
+                                    </a>
+                                `}
+                            </div>
+                        </div>
+                    ` : ''}
+                    <div class="chat-message__meta">
+                        <span class="chat-message__time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        const botMessageHTML = `
+            <div class="chat-message chat-message--ai" id="temp-bot-${tempId}">
+                <div class="chat-message__avatar">
+                    <div class="avatar avatar--ai"></div>
+                </div>
+                <div class="chat-message__content">
+                    <div class="chat-message__text">
+                        <div class="typing-indicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        const emptyState = document.querySelector('.chat-empty');
+        if (emptyState) emptyState.remove();
+        chatHistory.insertAdjacentHTML('beforeend', userMessageHTML + botMessageHTML);
+        scrollAfterMessage(); 
+        messageInput.value = '';
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        if (message) formData.append('message', message);
+        if (currentFile) formData.append('file', currentFile);
+        fetch("", {
+            method: "POST",
+            body: formData,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'Ошибка сервера');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            const botMessage = document.getElementById(`temp-bot-${tempId}`);
+            if (botMessage && data.ai_response) {
+                botMessage.remove();
+                let mediaContent = '';
+                if (data.ai_response.media_files && data.ai_response.media_files.length > 0) {
+                    mediaContent = '<div class="message-preview__media">';
+                    data.ai_response.media_files.forEach(media => {
+                        if (media.type === 'image') {
+                            mediaContent += `
+                                <div class="media-item media-item--image">
+                                    <a href="${media.url}" target="_blank">
+                                        <img src="${media.thumbnail || media.url}" class="chat-image" alt="Изображение">
+                                    </a>
+                                </div>
+                            `;
+                        } else if (media.type === 'audio') {
+                            mediaContent += `
+                                <div class="media-item media-item--audio">
+                                    <audio controls class="chat-audio">
+                                        <source src="${media.url}" type="${media.mime_type}">
+                                    </audio>
+                                </div>
+                            `;
+                        } else if (media.type === 'video') {
+                            mediaContent += `
+                                <div class="media-item media-item--video">
+                                    <video controls class="chat-video">
+                                        <source src="${media.url}" type="${media.mime_type}">
+                                    </video>
+                                </div>
+                            `;
+                        } else {
+                            mediaContent += `
+                                <div class="media-item media-item--document">
+                                    <a href="${media.url}" class="document-link" download>
+                                        <div class="document-icon">📄</div>
+                                        <div class="document-name">${media.name}</div>
+                                    </a>
+                                </div>
+                            `;
+                        }
+                    });
+                    mediaContent += '</div>';
+                }
+                // Обновляем контент, если он есть в ответе
+                if (data.content_html) {
+                    updateContent(data.content_html);
+                }
+                const newMessageHTML = `
+                    <div class="chat-message chat-message--ai" data-message-id="${data.ai_response.id}" data-url="${data.ai_response.request_url}">
+                        <div class="chat-message__avatar">
+                            <div class="avatar avatar--ai"></div>
+                        </div>
+                        <div class="chat-message__content">
+                            <div class="chat-message__text">${data.ai_response.text}</div>
+                            ${mediaContent}
+                            <div class="chat-message__meta">
+                                <span class="chat-message__time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                <div class="chat-message__rating">
+                                    <div class="rating-stars" data-message-id="${data.ai_response.id}">
+                                        <button class="star-btn" data-value="2">★</button>
+                                        <button class="star-btn" data-value="1">★</button>
+                                        <button class="star-btn" data-value="0">★</button>
+                                        <button class="star-btn" data-value="-1">★</button>
+                                        <button class="star-btn" data-value="-2">★</button>
+                                    </div>
+                                    <span class="rating-hint">Оцените ответ</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                chatHistory.insertAdjacentHTML('beforeend', newMessageHTML);
+                initStarRating();
+                scrollAfterMessage();
+            }
+            filePreviewContainer.style.display = 'none';
+            fileUpload.value = '';
+            currentFile = null;
+            if (isRecording) stopRecording();
+        })
+        .catch(error => {
+            console.error("Ошибка:", error);
+            showNotification(error.message || "Ошибка при отправке сообщения", "error");
+            const tempUser = document.getElementById(`temp-user-${tempId}`);
+            const tempBot = document.getElementById(`temp-bot-${tempId}`);
+            if (tempUser) tempUser.remove();
+            if (tempBot) tempBot.remove();
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span class="btn__icon">✈️</span>Отправить';
+            messageInput.focus();
+        });
+    });
+    
+    // Очистка чата
+    clearChatBtn.addEventListener("click", function() {
+        if (confirm("Вы уверены, что хотите очистить историю чата?")) {
+            fetch("{% url 'chat:web-chat-clear' chat.pk %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    chatHistory.innerHTML = `
+                        <div class="chat-empty">
+                            <h4 class="chat-empty__title">Начните диалог</h4>
+                            <p class="chat-empty__text">
+                                Задайте вопрос AI-репетитору о материале курса, 
+                                и он поможет вам разобраться в сложных темах
+                            </p>
+                        </div>
+                    `;
+                    showNotification("История чата очищена", "success");
+                    scrollChatToBottom(true);
+                } else {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Ошибка при очистке чата');
+                    });
+                }
+            })
+            .catch(error => {
+                console.error("Ошибка:", error);
+                showNotification(error.message || "Ошибка при очистке чата", "error");
+            });
+        }
+    });
+    
+    // Управление вводом: Enter отправляет, Shift+Enter новая строка
+    messageInput.addEventListener("keydown", function(e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            chatForm.requestSubmit();
+        }
+    });
+    
+    // Обновление атрибута accept для input файла на основе разрешенных типов
+    function updateFileInputAccept() {
+        const acceptTypes = [];
+        if (ALLOWED_FILE_TYPES.includes('image')) {
+            acceptTypes.push('image/*');
+        }
+        if (ALLOWED_FILE_TYPES.includes('audio')) {
+            acceptTypes.push('audio/*');
+        }
+        if (ALLOWED_FILE_TYPES.includes('video')) {
+            acceptTypes.push('video/*');
+        }
+        if (ALLOWED_FILE_TYPES.includes('document')) {
+            acceptTypes.push('.pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx');
+        }
+        if (acceptTypes.length > 0) {
+            fileUpload.setAttribute('accept', acceptTypes.join(','));
+        }
+    }
+    
+    // Инициализация при загрузке
+    updateFileInputAccept();
+    initStarRating();
+    initLayout();
+    scrollChatToBottom();
+    messageInput.focus();
+    
+    // Обработка закрытия страницы для остановки записи и очистки ресурсов
+    window.addEventListener('beforeunload', function() {
+        if (isRecording) stopRecording();
+        cleanupRecording();
+    });
+    
+    // Обработчик изменения размера окна
+    window.addEventListener('resize', () => {
+        if (!chatCollapsed) scrollChatToBottom();
+    });
+});
+</script>
+{% endblock script %}

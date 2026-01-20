@@ -1,0 +1,8 @@
+services:
+  faster-whisper-server:
+    image: fedirz/faster-whisper-server:latest-cpu
+    ports:
+      - 8010:8000
+    volumes:
+      - C:/whisper-cache:/root/.cache/huggingface
+    restart: unless-stopped

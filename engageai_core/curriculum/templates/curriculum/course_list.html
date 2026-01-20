@@ -1,13 +1,16 @@
-{% extends "base.html" %}
+{% extends 'extended/assistant_layout.html' %}
 {% load static %}
+
 
 {% block title %}Курсы{% endblock %}
 
-{% block css %}
+
+{% block assistant_css %}
 <link rel="stylesheet" href="{% static 'css/courses.css' %}">
 {% endblock %}
 
-{% block content %}
+
+{% block assistant_content %}
 <section class="courses">
     <div class="courses__container container">
 
@@ -32,72 +35,87 @@
         {% if courses %}
             <div class="courses__grid">
                 {% for course in courses %}
-                    <article class="course-card">
+                    <div class="course-card-wrap">
+                        <article class="course-card">
 
-                        <header class="course-card__header">
-                            <h3 class="course-card__title">
-                                <a href="{% url 'curriculum:course_detail' course.id %}"
-                                class="course-card__title-link">
-                                    {{ course.title }}
-                                </a>
-                            </h3>
-                            <div class="course-card__level">
-                                {{ course.get_target_cefr_from_display }}
-                                →
-                                {{ course.get_target_cefr_to_display }}
-                            </div>
-                        </header>
+                            <header class="course-card__header">
+                                <h3 class="course-card__title">
+                                    <a href="{% url 'curriculum:course_detail' course.id %}"
+                                    class="course-card__title-link">
+                                        {{ course.title }}
+                                    </a>
+                                </h3>
+                                <div class="course-card__level">
+                                    {{ course.get_target_cefr_from_display }}
+                                    →
+                                    {{ course.get_target_cefr_to_display }}
+                                </div>
+                            </header>
 
-                        <div class="course-card__body">
-                            <p class="course-card__description">
-                                {{ course.description|truncatechars:120 }}
-                            </p>
+                            <div class="course-card__body">
+                                <p class="course-card__description">
+                                    {{ course.description|truncatechars:120 }}
+                                </p>
 
-                            <div class="course-card__meta">
-                                <span>📚 {{ course.ordered_lessons|length }} уроков</span>
-                                <span>⏱ ~{{ course.estimated_duration }} мин</span>
-                            </div>
+                                <div class="course-card__meta">
+                                    <span>📚 {{ course.ordered_lessons|length }} уроков</span>
+                                    <span>⏱ ~{{ course.estimated_duration }} мин</span>
+                                </div>
 
-                            {% if course.enrollment %}
-                                <div class="course-card__progress progress">
-                                    <div class="progress__bar"
-                                         style="width: {{ course.progress_percent }}%">
-                                        {{ course.progress_percent }}%
+                                {% if course.has_enrollment %}
+                                    <div class="course-card__progress progress">
+                                        <div class="progress__bar"
+                                            style="width: {{ course.progress_percent }}%">
+                                            {{ course.progress_percent }}%
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div class="course-card__current">
-                                    Текущий урок:
-                                    <strong>
-                                        {{ course.enrollment.current_lesson.title|truncatechars:40 }}
-                                    </strong>
-                                </div>
+                                    <div class="course-card__current">
+                                        Текущий урок:
+                                        <strong>
+                                            {{ course.current_lesson_title|truncatechars:40 }}
+                                        </strong>
+                                    </div>
 
-                                <a href="{% url 'course_detail' course.id %}"
-                                   class="btn btn_primary course-card__action">
-                                    Продолжить
-                                </a>
-                                <a href="{% url 'curriculum:course_history' course.enrollment.id %}"
-                                   class="btn btn_primary course-card__action">
-                                    История
-                                </a>
-                            {% else %}
-                                {% if not request.user.is_authenticated %}
-                                    <a href="{% url 'users:login' %}?next={{ request.path }}"
-                                    class="btn btn_ghost course-card__action">
-                                        Войти для записи
+                                    <a href="{% url 'curriculum:course_detail' course.id %}"
+                                    class="btn btn_primary course-card__action">
+                                        Подробнее
+                                    </a>
+                                    <a href="{% url 'curriculum:learning_session' course.enrollment_id %}"
+                                    class="btn btn_primary course-card__action">
+                                        К уроку
+                                    </a>
+                                    <a href="{% url 'curriculum:course_history' course.enrollment_id %}"
+                                    class="btn btn_primary course-card__action">
+                                        История
                                     </a>
                                 {% else %}
-                                    <button 
-                                        class="btn btn_primary course-card__action enroll-btn" 
-                                        data-course-id="{{ course.id }}"
-                                        data-url="{% url 'curriculum:enroll_course' course.id %}">
-                                        Записаться
-                                    </button>
+                                    {% if not request.user.is_authenticated %}
+                                        <a href="{% url 'users:login' %}?next={{ request.path }}"
+                                        class="btn btn_ghost course-card__action">
+                                            Войти для записи
+                                        </a>
+                                    {% else %}
+                                        {% comment %} <button 
+                                            class="btn btn_primary course-card__action enroll-btn" 
+                                            data-course-id="{{ course.id }}"
+                                            data-url="{% url 'curriculum:enroll_course' course.id %}">
+                                            Записаться
+                                        </button> {% endcomment %}
+                                        <button class="btn btn_reset btn_blob course-card__action enroll-btn"
+                                            data-course-id="{{ course.id }}"
+                                            data-url="{% url 'curriculum:enroll_course' course.id %}">
+                                            <span class="btn_text">Записаться</span>
+                                            <span class="blob"></span>
+                                            <span class="blob"></span>
+                                            <span class="blob"></span>
+                                            <span class="blob"></span>
+                                        </button>
+                                    {% endif %}
                                 {% endif %}
-                            {% endif %}
-                        </div>
-                    </article>
+                            </div>
+                        </article>
+                    </div>
                 {% endfor %}
             </div>
 
@@ -142,7 +160,7 @@
 {% endblock %}
 
 
-{% block script %}
+{% block assistant_script %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const enrollButtons = document.querySelectorAll('.enroll-btn');
@@ -195,5 +213,5 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-{% endblock script %}
+{% endblock assistant_script %}
 

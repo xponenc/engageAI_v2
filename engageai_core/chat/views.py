@@ -804,6 +804,46 @@ logger = logging.getLogger(__name__)
 #             return self._get_ajax_response(user_message, ai_message)
 #
 #         return redirect('chat:ai-chat', slug=slug)
+class ChatContextMixin:
+    """
+    Mixin для добавления контекста чата в любой View.
+    Требует slug ассистента.
+    """
+
+    def get_chat_context(self, request, slug="main_orchestrator"):
+        """Возвращает словарь контекста для шаблона чата"""
+        chat_service = getattr(self, 'chat_service', None) or ChatService()
+        user_media_service = getattr(self, 'user_media_service', None) or UserMediaService(request.user)
+
+        # Получаем ассистента
+        try:
+            assistant = AIAssistant.objects.get(slug=slug, is_active=True)
+        except AIAssistant.DoesNotExist:
+            logger.error(f"AI-ассистент с slug {slug} не найден")
+            raise Http404("AI-ассистент не найден или неактивен")
+
+        # Получаем или создаем чат
+        try:
+            chat = chat_service.get_or_create_chat(
+                user=request.user,
+                platform=ChatPlatform.WEB,
+                assistant_slug=slug,
+                scope=ChatScope.PRIVATE,
+            )
+        except (AssistantNotFoundError, ChatCreationError) as e:
+            logger.error(f"Ошибка при получении чата: {str(e)}")
+            raise Http404(str(e))
+
+        chat_history = chat_service.get_chat_history(chat)
+
+        return {
+            'chat': chat,
+            'chat_history': chat_history,
+            'assistant': assistant,
+            'max_file_size_mb': UserMediaService.MAX_FILE_SIZE // 1024 // 1024,
+            'allowed_file_types': list(UserMediaService.ALLOWED_MIME_TYPES.keys()),
+        }
+
 
 class AiChatView(LoginRequiredMixin, View):
     """Чат с AI с полной поддержкой медиафайлов"""

@@ -137,6 +137,65 @@ class ThemeSwitcher {
 }
 
 
+const modal = document.getElementById("app-modal");
+const titleEl = document.getElementById("app-modal-title");
+const bodyEl = document.getElementById("app-modal-body");
+const actionBtn = document.getElementById("app-modal-action");
+
+let modalAction = null;
+
+function lockScroll() {
+    const scrollBarWidth =
+        window.innerWidth - document.documentElement.clientWidth;
+
+    document.body.style.overflow = "hidden";
+    document.body.style.paddingRight = `${scrollBarWidth}px`;
+}
+
+function unlockScroll() {
+    document.body.style.overflow = "";
+    document.body.style.paddingRight = "";
+}
+
+function openModal({ title, body, type = "success", onAction }) {
+    lockScroll();
+    modal.classList.remove("modal--success", "modal--warning");
+    modal.classList.add("modal--open", `modal--${type}`);
+    modal.setAttribute("aria-hidden", "false");
+
+    titleEl.textContent = title;
+    bodyEl.innerHTML = body;
+
+    modalAction = onAction;
+    actionBtn.focus();
+}
+
+function closeModal() {
+    modal.classList.remove("modal--open");
+    modal.setAttribute("aria-hidden", "true");
+    modalAction = null;
+    unlockScroll();
+}
+
+actionBtn.addEventListener("click", () => {
+    if (typeof modalAction === "function") {
+        modalAction();
+    }
+    closeModal();
+});
+
+modal.addEventListener("click", (e) => {
+    if (e.target.hasAttribute("data-modal-close")) {
+        closeModal();
+    }
+});
+
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal.classList.contains("modal--open")) {
+        closeModal();
+    }
+});
+
 
 document.addEventListener('DOMContentLoaded', function() {
     new ThemeSwitcher();
@@ -277,4 +336,39 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // отображение сообщений Django
+
+    const messageContainer = document.getElementById('django-messages');
+    if (!messageContainer) return;
+
+    const AUTO_CLOSE_MS = 5000;
+
+    messageContainer.querySelectorAll('.message').forEach((msg, index) => {
+        // staggered appearance
+        msg.style.opacity = '0';
+        msg.style.transform = 'translateY(-8px)';
+        msg.style.transition = 'opacity .25s ease, transform .25s ease';
+
+        requestAnimationFrame(() => {
+            msg.style.opacity = '1';
+            msg.style.transform = 'translateY(0)';
+        });
+
+        let timeout = setTimeout(() => closeMessage(msg), AUTO_CLOSE_MS);
+
+        // pause on hover
+        msg.addEventListener('mouseenter', () => clearTimeout(timeout));
+        msg.addEventListener('mouseleave', () => {
+            timeout = setTimeout(() => closeMessage(msg), 1500);
+        });
+    });
+
+    function closeMessage(msg) {
+        msg.style.opacity = '0';
+        msg.style.transform = 'translateY(-6px)';
+        setTimeout(() => msg.remove(), 250);
+    }
+
 });
+

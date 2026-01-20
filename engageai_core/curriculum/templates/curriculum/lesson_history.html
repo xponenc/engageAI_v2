@@ -1,196 +1,199 @@
-{% extends "base.html" %}
+{% extends 'extended/assistant_layout.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}История урока: {{ lesson.title }}{% endblock %}
+{% block title %}История урока · {{ course.title }}{% endblock %}
 
-{% block css %}
-<link rel="stylesheet" href="{% static 'css/lesson-history.css' %}">
+{% block assistant_css %}
+<link href="{% static 'css/learning-session.css' %}" rel="stylesheet">
+<link href="{% static 'css/lesson-history.css' %}" rel="stylesheet">
 {% endblock %}
 
-{% block content %}
+{% block assistant_content %}
 <section class="lesson-history">
 
-    <div class="lesson-history__layout">
+    <!-- ===== Заголовок урока ===== -->
+    <header class="lesson-history__header">
+        <h1 class="lesson-history__title">
+            {{ lesson_history.lesson.title }}
+        </h1>
 
-        <!-- MAIN -->
-        <main class="lesson-history__main">
+        <div class="lesson-history__progress">
+            <div class="lesson-history__progress-bar">
+                <div
+                    class="lesson-history__progress-fill"
+                    style="width: {{ lesson_history.progress_percent }}%;"
+                ></div>
+            </div>
+            <span class="lesson-history__progress-text">
+                {{ lesson_history.progress_percent|floatformat:0 }}%
+            </span>
+        </div>
 
-            <header class="lesson-history__header">
-                <h1 class="lesson-history__title">
-                    История урока: {{ lesson.title }}
-                </h1>
+        {% if lesson_history.is_completed %}
+            <div class="lesson-history__status lesson-history__status--completed">
+                {% trans "Урок завершён" %}
+            </div>
+        {% else %}
+            <div class="lesson-history__status lesson-history__status--in-progress">
+                {% trans "Урок в процессе" %}
+            </div>
+        {% endif %}
+    </header>
 
-                <div class="lesson-history__progress">
-                    {{ progress_percent }}% завершено
-                </div>
-            </header>
+    <!-- ===== Задания ===== -->
+    <section class="lesson-history__tasks">
+        <h2 class="lesson-history__section-title">
+            {% trans "Задания" %}
+        </h2>
 
-            <p class="lesson-history__description">
-                {{ lesson.description }}
-            </p>
+        <ul class="task-list">
+            {{  lesson_history }}
+            {% for item in lesson_history.tasks %}
+                <li class="task-list__item
+                    {% if item.is_completed %}
+                        task-list__item--completed
+                    {% else %}
+                        task-list__item--pending
+                    {% endif %}
+                ">
+                    <div class="task-list__header">
+                        <span class="task-list__title">
+                            {{ item.task.title }}
+                        </span>
 
-            {% if history %}
-                <div class="lesson-history__list">
-
-                    {% for item in history %}
-                    <details class="history-item"
-                             {% if item.is_completed %}open{% endif %}>
-
-                        <summary class="history-item__summary">
-                            <span class="history-item__title">
-                                Задание {{ item.task.order }}:
-                                {{ item.task.title|truncatechars:50 }}
+                        {% if item.is_completed %}
+                            <span class="task-list__score">
+                                {{ item.best_score|floatformat:2 }}
                             </span>
-
-                            <span class="history-item__status
-                                {% if item.is_completed %}
-                                    history-item__status--done
-                                {% else %}
-                                    history-item__status--pending
-                                {% endif %}">
-                                {% if item.is_completed %}Выполнено{% else %}Не выполнено{% endif %}
+                        {% else %}
+                            <span class="task-list__score task-list__score--empty">
+                                —
                             </span>
+                        {% endif %}
+                    </div>
 
-                            {% if item.score is not None %}
-                            <span class="history-item__score">
-                                {{ item.score|floatformat:0 }}%
+                    <div class="task-list__meta">
+                        {% if item.is_completed %}
+                            <span>
+                                {% trans "Попыток" %}: {{ item.attempts_count }}
                             </span>
-                            {% endif %}
-                        </summary>
+                            <span>
+                                {% trans "Время" %}:
+                                {{ item.time_spent }}
+                            </span>
+                        {% else %}
+                            <span>{% trans "Не выполнено" %}</span>
+                        {% endif %}
+                    </div>
 
-                        <div class="history-item__content">
-
-                            <section class="history-block">
-                                <h4 class="history-block__title">Текст задания</h4>
-                                <p>{{ item.task.content.prompt|safe }}</p>
-
-                                {% if item.task.content.options %}
-                                <ul class="history-options">
-                                    {% for option in item.task.content.options %}
-                                    <li>{{ forloop.counter }}. {{ option }}</li>
-                                    {% endfor %}
-                                </ul>
-                                {% endif %}
-                            </section>
-
-                            {% if item.is_completed %}
-                            <section class="history-block">
-                                <h4 class="history-block__title">Ваш ответ</h4>
-
-                                {% if item.task.response_format == 'audio' and item.response.audio_file %}
-                                    <audio controls class="history-audio">
-                                        <source src="{{ item.response.audio_file.url }}">
-                                    </audio>
-                                {% else %}
-                                    <div class="history-answer">
-                                        {{ item.response.response_text|linebreaks }}
-                                    </div>
-                                {% endif %}
-                            </section>
-
-                            <section class="history-block">
-                                <h4 class="history-block__title">Обратная связь</h4>
-
-                                <div class="history-feedback
-                                    {% if item.score and item.score >= 70 %}
-                                        history-feedback--success
-                                    {% else %}
-                                        history-feedback--warning
-                                    {% endif %}">
-                                    {{ item.feedback|default:"Оценка выполнена" }}
-                                </div>
-
-                                {% if item.score is not None %}
-                                <div class="progress-bar">
-                                    <div class="progress-bar__value"
-                                         style="width: {{ item.score|floatformat:0 }}%">
-                                    </div>
-                                </div>
-                                {% endif %}
-                            </section>
-
-                            <div class="history-meta">
-                                Ответ отправлен: {{ item.created_at|date:"d.m.Y H:i" }}
+                    {% if item.last_assessment %}
+                        {% with skills=item.last_assessment.structured_feedback.skill_evaluation %}
+                            <div class="task-list__skills">
+                                {% for skill, data in skills.items %}
+                                    {% if data.score != None %}
+                                        <div class="task-list__skill">
+                                            <span class="task-list__skill-name">
+                                                {{ skill|capfirst }}
+                                            </span>
+                                            <span class="task-list__skill-score">
+                                                {{ data.score|floatformat:2 }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
                             </div>
+                        {% endwith %}
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    </section>
 
-                            {% else %}
-                            <div class="history-info">
-                                Задание ещё не выполнено
-                            </div>
-                            {% endif %}
+    <!-- ===== Статистика ===== -->
+    <section class="lesson-history__statistics">
+        <h2 class="lesson-history__section-title">
+            {% trans "Статистика" %}
+        </h2>
 
-                        </div>
-                    </details>
-                    {% endfor %}
+        <div class="lesson-stats">
+            <div class="lesson-stats__item">
+                <span class="lesson-stats__label">{% trans "Средняя оценка" %}</span>
+                <span class="lesson-stats__value">
+                    {{ lesson_history.statistics.average_score|floatformat:2 }}
+                </span>
+            </div>
 
-                </div>
+            <div class="lesson-stats__item">
+                <span class="lesson-stats__label">{% trans "Общее время" %}</span>
+                <span class="lesson-stats__value">
+                    {{ lesson_history.statistics.total_time_spent }}
+                </span>
+            </div>
 
-                {% if can_return_to_lesson %}
-                <a class="btn btn_primary lesson-history__back"
-                   href="{% url 'curriculum:learning_session_task' enrollment.id history.0.task.id %}">
-                    Вернуться к текущему заданию
-                </a>
-                {% endif %}
+            <div class="lesson-stats__item">
+                <span class="lesson-stats__label">{% trans "Выполнено" %}</span>
+                <span class="lesson-stats__value">
+                    {{ lesson_history.statistics.completion_rate|floatformat:2 }}
+                </span>
+            </div>
+        </div>
+    </section>
 
-            {% else %}
-                <div class="lesson-history__empty">
-                    В этом уроке ещё нет выполненных заданий
-                </div>
-            {% endif %}
+    <!-- ===== Прогресс навыков ===== -->
+    <section class="lesson-history__skills">
+        <h2 class="lesson-history__section-title">
+            {% trans "Навыки" %}
+        </h2>
 
-        </main>
+        <ul class="skill-progress">
+            {% for skill, data in lesson_history.skill_progress.items %}
+                <li class="skill-progress__item">
+                    <span class="skill-progress__name">
+                        {{ skill|capfirst }}
+                    </span>
+                    <span class="skill-progress__value">
+                        {{ data.before|floatformat:2 }}
+                        →
+                        {{ data.after|floatformat:2 }}
+                    </span>
+                    <span class="skill-progress__delta
+                        {% if data.delta > 0 %}
+                            skill-progress__delta--positive
+                        {% elif data.delta < 0 %}
+                            skill-progress__delta--negative
+                        {% endif %}
+                    ">
+                        {{ data.delta|floatformat:2 }}
+                    </span>
+                </li>
+            {% endfor %}
+        </ul>
+    </section>
 
-        <!-- SIDEBAR -->
-        <aside class="lesson-history__sidebar">
+    <!-- ===== Рекомендации ===== -->
+    {% if lesson_history.recommendations %}
+        <section class="lesson-history__recommendations">
+            <h2 class="lesson-history__section-title">
+                {% trans "Рекомендации" %}
+            </h2>
 
-            <section class="sidebar-card">
-                <div class="sidebar-title">Прогресс урока</div>
-
-                <div class="progress-bar">
-                    <div class="progress-bar__value"
-                         style="width: {{ progress_percent }}%"></div>
-                </div>
-
-                <div class="sidebar-muted">
-                    Завершено {{ completed_tasks }} из {{ total_tasks }} заданий
-                </div>
-            </section>
-
-            <section class="sidebar-card">
-                <div class="sidebar-title">Статистика</div>
-
-                <ul class="lesson-stats">
-                    <li>
-                        <strong>Навыки:</strong>
-                        {% for skill in lesson.skill_focus %}
-                            <span class="lesson-skill">{{ skill }}</span>
-                        {% endfor %}
+            <ul class="recommendation-list">
+                {% for rec in lesson_history.recommendations %}
+                    <li class="recommendation-list__item
+                        recommendation-list__item--priority-{{ rec.priority }}">
+                        <span class="recommendation-list__skill">
+                            {{ rec.skill|capfirst }}
+                        </span>
+                        <p class="recommendation-list__message">
+                            {{ rec.message }}
+                        </p>
                     </li>
-                    <li>
-                        <strong>Длительность:</strong>
-                        ~{{ lesson.duration_minutes }} мин
-                    </li>
-                    <li>
-                        <strong>Уровень:</strong>
-                        {{ lesson.get_required_cefr_display }}
-                    </li>
-                </ul>
-            </section>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
 
-            <section class="sidebar-card">
-                <a class="btn btn_outline"
-                   href="{% url 'curriculum:course_history' enrollment.id %}">
-                    История курса
-                </a>
-
-                <a class="btn btn_ghost"
-                   href="{% url 'curriculum:learning_session' enrollment.id %}">
-                    Назад к сессии
-                </a>
-            </section>
-
-        </aside>
-
-    </div>
 </section>
 {% endblock %}
+

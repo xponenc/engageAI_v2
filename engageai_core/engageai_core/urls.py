@@ -31,7 +31,7 @@ urlpatterns = [
         path('assessment/', include('assessment.urls_api', namespace='assessment-api')),
         path('chat/', include('chat.urls_api', namespace='chat-api')),
         path('assistant/', include('ai_assistant.urls_api', namespace='assistant-api')),
-        path('curriculum/', include('curriculum.urls_api', namespace='curriculum-api')),
+        # path('curriculum/', include('curriculum.urls_api', namespace='curriculum-api')),
     ])),
 
     # UI/веб-версия (без api/v1 префикса)

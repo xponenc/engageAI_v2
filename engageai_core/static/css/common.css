@@ -65,6 +65,15 @@
     --btn-radius: var(--radius-md);
     --btn-padding: 12px 22px;
 
+    --primary-color: #4CAF50;
+    --secondary-color: #2196F3;
+    --success-color: #4CAF50;
+    --warning-color: #FFC107;
+    --danger-color: #F44336;
+    --info-color: #9C27B0;
+    --light-color: #F8F9FA;
+    --dark-color: #343A40;
+
     /* Тема по умолчанию */
     --theme-name: 'light';
 }
@@ -105,6 +114,17 @@
     --form-input-border-hover-color: #60a5fa;
     --placeholder-color: #64748b;
 
+    --primary-color:   #66BB6A; /* green 400 */
+    --secondary-color: #42A5F5; /* blue 400 */
+
+    --success-color:   #66BB6A;
+    --warning-color:   #FFCA28; /* amber 400 */
+    --danger-color:    #EF5350; /* red 400 */
+    --info-color:      #AB47BC; /* purple 400 */
+
+    --light-color:     #2A2E33; /* cards / surfaces */
+    --dark-color:      #ECEFF1; /* primary text */
+
     --theme-name: 'dark';
 }
 
@@ -143,6 +163,17 @@
     --form-input-border-color: #586e75;
     --form-input-border-hover-color: #2aa198;
     --placeholder-color: #657b83;
+
+    --primary-color:   #859900; /* green */
+    --secondary-color: #268BD2; /* blue */
+
+    --success-color:   #859900;
+    --warning-color:   #B58900; /* yellow */
+    --danger-color:    #DC322F; /* red */
+    --info-color:      #6C71C4; /* violet */
+
+    --light-color:     #073642; /* base02 */
+    --dark-color:      #EEE8D5; /* base2 */
 
     --theme-name: 'solarized-dark';
 }

@@ -32,6 +32,11 @@ class Lesson(models.Model):
         verbose_name=_("Content"),
         help_text=_("Optional structured lesson instructions or narrative for AI")
     )
+    theory_content = models.TextField(
+        blank=True,
+        verbose_name=_("Theory Content"),
+        help_text=_("HTML content with theory and explanations")
+    )
     duration_minutes = models.PositiveIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(120)],
         verbose_name=_("Duration (minutes)")
@@ -49,6 +54,7 @@ class Lesson(models.Model):
         verbose_name=_("Adaptive Parameters"),
         help_text=_("e.g., {'min_correct_ratio': 0.7, 'max_items': 10}")
     )
+    is_remedial = models.BooleanField(verbose_name="дополнительные, корректирующие уроки", default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True, verbose_name=_("Is Active"))
@@ -58,7 +64,7 @@ class Lesson(models.Model):
         verbose_name_plural = _("Lessons")
         ordering = ['course', 'order']
         indexes = [models.Index(fields=['course', 'order'])]
-        unique_together = [['course', 'order']]
 
     def __str__(self):
         return f"{self.course.title} → {self.title}"
+

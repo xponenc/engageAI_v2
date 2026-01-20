@@ -1,0 +1,664 @@
+:root {
+    --border-radius: 8px;
+    --box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    --box-shadow-hover: 0 4px 12px rgba(0,0,0,0.15);
+    --transition: all 0.3s ease;
+}
+
+.course-history {
+    margin-top: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.course-header {
+    background: white;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    border: 1px solid #e9ecef;
+    margin-bottom: 1.5rem;
+}
+
+.course-header__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.course-header__info {
+    flex: 1;
+    min-width: 0;
+}
+
+.course-header__title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 0.5rem;
+}
+
+.course-header__description {
+    color: #6c757d;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
+.course-header__level-badge {
+    display: inline-block;
+    font-size: 0.9rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 50px;
+    margin-top: 0.5rem;
+}
+
+.course-progress {
+    margin-top: 1.5rem;
+}
+
+.course-progress__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.course-progress__title {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0;
+}
+
+.course-progress__percent {
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.progress {
+    height: 8px;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.progress__bar {
+    height: 100%;
+    border-radius: inherit;
+}
+
+.progress__bar--success { background-color: var(--success-color); }
+.progress__bar--primary { background-color: var(--primary-color); }
+.progress__bar--warning { background-color: var(--warning-color); }
+.progress__bar--danger { background-color: var(--danger-color); }
+
+.progress__bar--striped {
+    background-image: linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.15) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.15) 50%,
+        rgba(255, 255, 255, 0.15) 75%,
+        transparent 75%,
+        transparent
+    );
+    background-size: 1rem 1rem;
+}
+
+.progress__bar--animated {
+    animation: progress-bar-stripes 2s linear infinite;
+}
+
+@keyframes progress-bar-stripes {
+    0% { background-position: 1rem 0; }
+    100% { background-position: 0 0; }
+}
+
+.course-progress__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.progress-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.progress-item__label {
+    font-weight: 500;
+    color: #6c757d;
+    font-size: 0.95rem;
+    margin-bottom: 0.25rem;
+}
+
+.progress-item__values {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.progress-item__value {
+    font-weight: 600;
+    color: #212529;
+}
+
+.progress-item__percent {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.course-header__actions {
+    margin-top: 1.5rem;
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+/* Статистика курса */
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.stat-card {
+    border: 1px solid #e9ecef;
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    text-align: center;
+    transition: var(--transition);
+}
+
+.stat-card:hover {
+    box-shadow: var(--box-shadow-hover);
+    transform: translateY(-3px);
+}
+
+.stat-card__icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
+}
+
+.stat-card__value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 0.25rem;
+}
+
+.stat-card__label {
+    font-weight: 500;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+}
+
+.stat-card__hint {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+/* Список уроков */
+.lessons-accordion {
+    margin-top: 1rem;
+}
+
+.lesson-card {
+    border: 1px solid #e9ecef;
+    border-radius: var(--border-radius);
+    margin-bottom: 0.75rem;
+    background-color: white;
+    transition: var(--transition);
+}
+
+.lesson-card:hover {
+    box-shadow: var(--box-shadow-hover);
+}
+
+.lesson-card--current {
+    border-left: 4px solid var(--secondary-color);
+    background-color: rgba(76, 175, 80, 0.05);
+}
+
+.lesson-card--completed {
+    border-left: 4px solid var(--success-color);
+    background-color: rgba(76, 175, 80, 0.05);
+}
+
+.lesson-card__header {
+    padding: 0.75rem 1.25rem;
+}
+
+.lesson-card__toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    text-align: left;
+    font-weight: 600;
+    color: #212529;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.lesson-card__info {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.lesson-card__number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background-color: #e9ecef;
+    color: #495057;
+    border-radius: 50%;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-right: 0.75rem;
+}
+
+.lesson-card__number--completed {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.lesson-card__title {
+    font-size: 1.1rem;
+    margin-bottom: 0;
+}
+
+.lesson-card__meta {
+    text-align: right;
+    min-width: 80px;
+}
+
+.lesson-card__progress-badge {
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 0.85rem;
+    display: inline-block;
+}
+
+.lesson-card__progress-badge--success { background-color: rgba(76, 175, 80, 0.15); color: var(--success-color); }
+.lesson-card__progress-badge--primary { background-color: rgba(76, 175, 80, 0.15); color: var(--primary-color); }
+
+.lesson-card__body {
+    padding: 1rem 1.5rem 1.5rem;
+    border-top: 1px solid #e9ecef;
+    background-color: #f8f9fa;
+}
+
+.lesson-card__description {
+    color: #495057;
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.lesson-skills {
+    margin-top: 1rem;
+}
+
+.lesson-skills__title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #495057;
+    font-size: 0.95rem;
+}
+
+.lesson-skills__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.lesson-skills__item {
+    display: inline-block;
+    background-color: #e3f2fd;
+    color: #1976d2;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.lesson-objectives {
+    margin-top: 1rem;
+}
+
+.lesson-objectives__title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #495057;
+    font-size: 0.95rem;
+}
+
+.lesson-objectives__list {
+    padding-left: 1.5rem;
+    margin-bottom: 0;
+}
+
+.lesson-objectives__item {
+    margin-bottom: 0.25rem;
+    line-height: 1.5;
+}
+
+.lesson-objectives__item--empty {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.lesson-objectives__icon {
+    color: var(--success-color);
+    margin-right: 0.25rem;
+    font-size: 0.85rem;
+}
+
+.lesson-stats {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+}
+
+.lesson-stats__item {
+    margin-bottom: 0.75rem;
+}
+
+.lesson-stats__label {
+    font-weight: 500;
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+
+.lesson-stats__values {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.lesson-stats__value {
+    font-weight: 600;
+    color: #212529;
+}
+
+.lesson-stats__date {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+}
+
+.lesson-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Боковое меню */
+.sidebar {
+    background-color: white;
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--box-shadow);
+    margin-bottom: 1.5rem;
+}
+
+.sidebar__header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.sidebar__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0;
+}
+
+.quick-links {
+    margin-bottom: 1.5rem;
+}
+
+.quick-links__title {
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+    color: #495057;
+}
+
+.quick-links__list {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 0;
+}
+
+.quick-links__item {
+    border-bottom: 1px solid #e9ecef;
+    padding: 0.5rem 0;
+}
+
+.quick-links__item:last-child {
+    border-bottom: none;
+}
+
+.quick-links__link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: #495057;
+    transition: var(--transition);
+    padding: 0.25rem;
+    border-radius: 4px;
+}
+
+.quick-links__link:hover {
+    background-color: #f8f9fa;
+    color: var(--primary-color);
+}
+
+.quick-links__icon {
+    margin-right: 0.5rem;
+    font-size: 1rem;
+    min-width: 20px;
+    text-align: center;
+}
+
+.quick-links__text {
+    flex: 1;
+}
+
+.weak-skills {
+    margin-bottom: 1.5rem;
+}
+
+.weak-skills__title {
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+    color: #495057;
+}
+
+.skill-item {
+    margin-bottom: 0.75rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+}
+
+.skill-item--danger { border-left: 3px solid var(--danger-color); }
+.skill-item--warning { border-left: 3px solid var(--warning-color); }
+.skill-item--primary { border-left: 3px solid var(--primary-color); }
+
+.skill-item__header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+}
+
+.skill-item__name {
+    font-weight: 500;
+    color: #495057;
+    font-size: 0.95rem;
+}
+
+.skill-item__value {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.weekly-goals {
+    margin-bottom: 1.5rem;
+}
+
+.weekly-goals__title {
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+    color: #495057;
+}
+
+.goal-item {
+    background-color: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 0.75rem;
+}
+
+.goal-item__header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+    color: #495057;
+}
+
+/* Пустое состояние */
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    background-color: #f8f9fa;
+    border-radius: var(--border-radius);
+    border: 1px dashed #e9ecef;
+}
+
+.empty-state__icon {
+    font-size: 3rem;
+    color: #6c757d;
+    margin-bottom: 1rem;
+}
+
+.empty-state__title {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    color: #212529;
+}
+
+.empty-state__description {
+    color: #6c757d;
+    margin-bottom: 1.5rem;
+}
+
+/* Кнопки */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-weight: 500;
+    transition: var(--transition);
+    text-decoration: none;
+    border: 1px solid transparent;
+}
+
+.btn--with-icon i {
+    margin-right: 0.5rem;
+    min-width: 16px;
+    text-align: center;
+}
+
+.btn--primary {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.btn--primary:hover {
+    background-color: #3d8b40;
+    border-color: #3d8b40;
+}
+
+.btn--outline-secondary {
+    background-color: transparent;
+    color: #6c757d;
+    border-color: #ced4da;
+}
+
+.btn--outline-secondary:hover {
+    background-color: #e9ecef;
+    color: #495057;
+}
+
+.btn--sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.btn--block {
+    width: 100%;
+    justify-content: center;
+}
+
+/* Адаптивность */
+@media (max-width: 992px) {
+    .course-header__top {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .course-header__level-badge {
+        margin-top: 1rem;
+    }
+    
+    .lessons-accordion .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .stat-card {
+        margin-bottom: 1rem;
+    }
+    
+    .btn--sm {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .lesson-card__toggle {
+        font-size: 0.95rem;
+    }
+    
+    .lesson-card__title {
+        font-size: 1rem !important;
+    }
+    
+    .course-header__actions {
+        flex-direction: column;
+    }
+}

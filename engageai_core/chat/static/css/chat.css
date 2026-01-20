@@ -221,6 +221,7 @@
     display: flex;
     gap: 16px;
     max-width: 85%;
+    min-width: 50%;
     animation: messageAppear 0.3s ease;
 }
 
@@ -244,10 +245,16 @@
     margin-right: auto;
 }
 
+.chat-message__avatar {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+}
+
 .chat-message__content {
     overflow: hidden;
     padding: 16px 20px;
-    max-width: 100%;
+    width: 100%;
     background: var(--color-surface);
     border-radius: var(--radius-lg);
     border: 1px solid var(--color-border);
@@ -620,7 +627,7 @@
 
 @keyframes pulse {
     0% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.9); }
+    50% { opacity: 0.75; transform: scale(0.95); }
     100% { opacity: 1; transform: scale(1); }
 }
 

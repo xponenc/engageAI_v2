@@ -68,19 +68,77 @@ logger = logging.getLogger(__name__)
 
 # Данные для расчета стоимости токенов (только для OpenAI)
 MODEL_COSTS = {
-    # Input costs per 1M tokens, Output costs per 1M tokens
-    "gpt-4-turbo-preview": (10.0, 30.0),
-    "gpt-4-0125-preview": (10.0, 30.0),
-    "gpt-4-1106-preview": (10.0, 30.0),
-    "gpt-3.5-turbo-0125": (0.5, 1.5),
-    "gpt-3.5-turbo-1106": (1.0, 2.0),
-    "gpt-4o": (5.0, 15.0),
-    "gpt-4o-mini": (0.15, 0.6),
-    "text-embedding-3-large": (0.13, 0.13),
-    "text-embedding-3-small": (0.02, 0.02),
-    "dall-e-3": (40.0, 0.0),  # Цена за изображение
-    "tts-1": (15.0, 0.0),  # Цена за 1000 символов
+    # GPT-5 family
+    "gpt-5.2": (1.75, 14.0),
+    "gpt-5.1": (1.25, 10.0),
+    "gpt-5": (1.25, 10.0),
+    "gpt-5-mini": (0.25, 2.0),
+    "gpt-5-nano": (0.05, 0.40),
+
+    # Chat latest
+    "gpt-5.2-chat-latest": (1.75, 14.0),
+    "gpt-5.1-chat-latest": (1.25, 10.0),
+    "gpt-5-chat-latest": (1.25, 10.0),
+
+    # Codex
+    "gpt-5.1-codex-max": (1.25, 10.0),
+    "gpt-5.1-codex": (1.25, 10.0),
+    "gpt-5-codex": (1.25, 10.0),
+    "gpt-5.1-codex-mini": (0.25, 2.0),
+    "codex-mini-latest": (1.50, 6.0),
+
+    # Pro
+    "gpt-5.2-pro": (21.0, 168.0),
+    "gpt-5-pro": (15.0, 120.0),
+
+    # GPT-4.1
+    "gpt-4.1": (2.0, 8.0),
+    "gpt-4.1-mini": (0.40, 1.60),
+    "gpt-4.1-nano": (0.10, 0.40),
+
+    # GPT-4o
+    "gpt-4o": (2.50, 10.0),
+    "gpt-4o-2024-05-13": (5.0, 15.0),
+    "gpt-4o-mini": (0.15, 0.60),
+
+    # Realtime
+    "gpt-realtime": (4.0, 16.0),
+    "gpt-realtime-mini": (0.60, 2.40),
+    "gpt-4o-realtime-preview": (5.0, 20.0),
+    "gpt-4o-mini-realtime-preview": (0.60, 2.40),
+
+    # Audio
+    "gpt-audio": (2.50, 10.0),
+    "gpt-audio-mini": (0.60, 2.40),
+    "gpt-4o-audio-preview": (2.50, 10.0),
+    "gpt-4o-mini-audio-preview": (0.15, 0.60),
+
+    # o-series
+    "o1": (15.0, 60.0),
+    "o1-pro": (150.0, 600.0),
+    "o3-pro": (20.0, 80.0),
+    "o3": (2.0, 8.0),
+    "o3-deep-research": (10.0, 40.0),
+    "o4-mini": (1.10, 4.40),
+    "o4-mini-deep-research": (2.0, 8.0),
+    "o3-mini": (1.10, 4.40),
+    "o1-mini": (1.10, 4.40),
+
+    # Search
+    "gpt-5-search-api": (1.25, 10.0),
+    "gpt-4o-mini-search-preview": (0.15, 0.60),
+    "gpt-4o-search-preview": (2.50, 10.0),
+
+    # Tools
+    "computer-use-preview": (3.0, 12.0),
+
+    # Images (output = 0, т.к. цена за изображение)
+    "gpt-image-1.5": (5.0, 10.0),
+    "chatgpt-image-latest": (5.0, 10.0),
+    "gpt-image-1": (5.0, 0.0),
+    "gpt-image-1-mini": (2.0, 0.0),
 }
+
 
 
 @dataclass
@@ -669,6 +727,11 @@ class LLMFactory:
 
             # Для OpenAI используем полную цепочку
             # Создаем цепочку в зависимости от формата ответа
+            print(f"{system_prompt=}")
+            print(f"{user_message=}")
+            print(f"{conversation_history=}")
+            print(f"{response_format=}")
+            print(f"{media_context=}")
             chain, input_data = self._create_chain(
                 system_prompt,
                 user_message,
@@ -685,8 +748,10 @@ class LLMFactory:
                 # Повторяем попытку с резервной моделью
                 result = await self._generate_with_retry(chain, input_data, use_fallback=True)
 
+            print(f"{result=}")
             # Обрабатываем результат
-            response = self._process_result(result, response_format)
+            # response = self._process_result(result, response_format)
+            response = result
 
             # Рассчитываем стоимость
             token_usage = result.get('token_usage', {})
@@ -774,15 +839,18 @@ class LLMFactory:
         ])
 
         # Выбираем парсер в зависимости от формата
-        parser = self.json_parser if response_format == "json" else self.text_parser
+        # parser = self.json_parser if response_format == "json" else self.text_parser
+        parser = self.text_parser
 
         # Добавляем форматирование для JSON
         if response_format == "json":
-            format_instructions = self.json_parser.get_format_instructions()
-            full_prompt = prompt_template + [
-                SystemMessage(content=f"ВАЖНО: Ответ должен быть строго в формате JSON: {format_instructions}")
-            ]
-            chain = full_prompt | self.llm | parser
+            # format_instructions = self.json_parser.get_format_instructions()
+            # full_prompt = prompt_template + [
+            #     SystemMessage(content=f"ВАЖНО: Ответ должен быть строго в формате JSON: {format_instructions}")
+            # ]
+            # chain = full_prompt | self.llm | parser
+            chain = prompt_template | self.llm | parser
+
         else:
             chain = prompt_template | self.llm | parser
 

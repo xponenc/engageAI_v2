@@ -1,0 +1,38 @@
+{% extends 'extended/assistant_layout.html' %}
+{% load static %}
+
+{% block title %}Оценка урока · {{ enrollment.course.title }}{% endblock %}
+
+{% block assistant_css %}
+<link href="{% static 'css/learning-session.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block assistant_content %}
+<section class="assessment">
+    <div class="assessment__container" data-enrollment-id="{{ enrollment.id }}">
+
+        <header class="assessment__header">
+            <h1 class="assessment__course">{{ course.title }}</h1>
+            <h2 class="assessment__lesson">{{ current_lesson.title }}</h2>
+            <div class="assessment__meta">
+                Урок {{ current_lesson.order }} из {{ course.lessons.count }}
+            </div>
+        </header>
+
+        <main class="assessment__content">
+            {% if assessment_status.status == 'PENDING_ASSESSMENT' %}
+                {% include 'curriculum/include/assessment_pending.html' %}
+            {% elif assessment_status.status == 'COMPLETED' %}
+                {% include 'curriculum/include/assessment_completed.html' %}
+            {% elif assessment_status.status == 'ERROR' %}
+                {% include 'curriculum/include/assessment_error.html' %}
+            {% endif %}
+        </main>
+
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/assessment-progress.js' %}"></script>
+{% endblock %}

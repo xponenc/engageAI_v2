@@ -1,0 +1,26 @@
+<section class="assessment-card assessment-card--completed">
+    <header class="assessment-card__header">
+        <span class="assessment-card__icon">✅</span>
+        <h3 class="assessment-card__title">Оценка завершена</h3>
+    </header>
+
+    <div class="assessment-card__body assessment-card__body--center">
+        <p class="assessment-card__text">
+            Все ответы успешно оценены.
+        </p>
+
+        <div class="assessment-card__actions assessment-card__actions--column">
+            <a
+                href="{% url 'curriculum:learning_session' enrollment.id %}"
+                class="assessment-card__button btn btn_primary">
+                Продолжить обучение
+            </a>
+
+            <a
+                href="{% url 'curriculum:course_detail' course.id %}"
+                class="assessment-card__button btn btn_outline">
+                Вернуться к курсу
+            </a>
+        </div>
+    </div>
+</section>

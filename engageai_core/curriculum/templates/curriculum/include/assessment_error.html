@@ -1,0 +1,32 @@
+<section class="assessment-card assessment-card--error">
+    <header class="assessment-card__header">
+        <span class="assessment-card__icon">⚠️</span>
+        <h3 class="assessment-card__title">Ошибка оценки</h3>
+    </header>
+
+    <div class="assessment-card__body">
+        <p class="assessment-card__error-text">
+            {{ assessment_status.message }}
+        </p>
+
+        {% if assessment_status.error_message %}
+            <p class="assessment-card__error-details">
+                {{ assessment_status.error_message|truncatechars:120 }}
+            </p>
+        {% endif %}
+
+        <div class="assessment-card__actions assessment-card__actions--column">
+            <a
+                href="{% url 'curriculum:learning_session' enrollment.id %}"
+                class="assessment-card__button btn btn_outline">
+                Попробовать снова
+            </a>
+
+            <a
+                href="{% url 'curriculum:course_detail' course.id %}"
+                class="assessment-card__button btn btn_outline">
+                Вернуться к курсу
+            </a>
+        </div>
+    </div>
+</section>

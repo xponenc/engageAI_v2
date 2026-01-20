@@ -1,0 +1,415 @@
+{% extends 'extended/assistant_layout.html' %}
+{% load static %}
+
+
+{% block title %}История курса: {{ course.title }}{% endblock %}
+
+
+{% block assistant_css %}
+<link href="{% static 'css/course-history_v1.css' %}" rel="stylesheet">
+{% endblock %}
+
+
+{% block assistant_content %}
+<div class="course-history">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Главная область -->
+            <div class="col-lg-9">
+                <div style="display: grid; grid-template-columns: 1fr 200px; gap:20px;">
+                    <div class="course-history__header">
+                        <div class="course-header">
+                            <div class="course-header__top">
+                                <div class="course-header__info">
+                                    <h1 class="course-header__title">История курса: {{ course.title }}</h1>
+                                    <p class="course-header__description">{{ course.description }}</p>
+                                </div>
+                                <div class="course-header__level-badge badge badge--primary">
+                                    {{ course.get_target_cefr_from_display }} → {{ course.get_target_cefr_to_display }}
+                                </div>
+                            </div>
+                            
+                            <!-- Прогресс курса -->
+                            <div class="course-progress">
+                                <div class="course-progress__header">
+                                    <h3 class="course-progress__title">Ваш прогресс</h3>
+                                    <span class="course-progress__percent">{{ overall_progress }}%</span>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress__bar progress__bar--success progress__bar--striped progress__bar--animated" 
+                                         style="width: {{ overall_progress }}%">
+                                    </div>
+                                </div>
+                                
+                                <div class="course-progress__stats">
+                                    <!-- Прогресс по урокам -->
+                                    <div class="progress-item">
+                                        <div class="progress-item__label">Уроки</div>
+                                        <div class="progress-item__values">
+                                            {% comment %} <span class="progress-item__value">{{ completed_lessons_count }}/{{ total_lessons_count }}</span> {% endcomment %}
+                                            {% comment %} <span class="progress-item__percent">{{ completed_lessons_count|default:0|div:total_lessons_count|default:1|floatformat:0|intcomma }}%</span> {% endcomment %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Прогресс по заданиям -->
+                                    <div class="progress-item">
+                                        <div class="progress-item__label">Задания</div>
+                                        <div class="progress-item__values">
+                                            {% comment %} <span class="progress-item__value">{{ total_completed_tasks }}/{{ course.lessons.aggregate(total=Sum('tasks__id'))|default:0 }}</span> {% endcomment %}
+                                            {% comment %} <span class="progress-item__percent">{{ total_completed_tasks|default:0|div:course.lessons.aggregate(total=Sum('tasks__id'))|default:1|floatformat:0|intcomma }}%</span> {% endcomment %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Кнопки действий -->
+                                <div class="course-header__actions">
+                                    <a href="{% url 'curriculum:learning_session' enrollment.id %}" 
+                                       class="btn btn--primary btn--with-icon">
+                                        <i class="fas fa-play-circle"></i>Продолжить обучение
+                                    </a>
+                                    <a href="{% url 'curriculum:course_detail' course.id %}" 
+                                       class="btn btn--outline-secondary btn--with-icon">
+                                        <i class="fas fa-book-open"></i>Детали курса
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="sidebar__header">
+                            <h3 class="sidebar__title">Навигация</h3>
+                        </div>
+                        <div></div>
+                        <!-- Быстрые ссылки -->
+                        <div class="quick-links">
+                            <h5 class="quick-links__title">Быстрые ссылки</h5>
+                            <ul class="quick-links__list">
+                                <li class="quick-links__item">
+                                    <a href="{% url 'curriculum:learning_session' enrollment.id %}" class="quick-links__link">
+                                        <i class="quick-links__icon fas fa-play-circle"></i>
+                                        <span class="quick-links__text">Текущий урок</span>
+                                    </a>
+                                </li>
+                                <li class="quick-links__item">
+                                    <a href="{% url 'curriculum:course_detail' course.id %}" class="quick-links__link">
+                                        <i class="quick-links__icon fas fa-book-open"></i>
+                                        <span class="quick-links__text">Описание курса</span>
+                                    </a>
+                                </li>
+                                <li class="quick-links__item">
+                                    <a href="#" class="quick-links__link">
+                                        <i class="quick-links__icon fas fa-chart-line"></i>
+                                        <span class="quick-links__text">Статистика обучения</span>
+                                    </a>
+                                </li>
+                                <li class="quick-links__item">
+                                    <a href="#" class="quick-links__link">
+                                        <i class="quick-links__icon fas fa-certificate"></i>
+                                        <span class="quick-links__text">Сертификаты</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Слабые места -->
+                        <div class="weak-skills">
+                            <h5 class="weak-skills__title">Слабые места</h5>
+                            <div class="skill-item skill-item--danger">
+                                <div class="skill-item__header">
+                                    <span class="skill-item__name">Грамматика</span>
+                                    <span class="skill-item__value">45%</span>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress__bar progress__bar--danger" style="width: 45%"></div>
+                                </div>
+                            </div>
+                            <div class="skill-item skill-item--warning">
+                                <div class="skill-item__header">
+                                    <span class="skill-item__name">Аудирование</span>
+                                    <span class="skill-item__value">62%</span>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress__bar progress__bar--warning" style="width: 62%"></div>
+                                </div>
+                            </div>
+                            <div class="skill-item skill-item--primary">
+                                <div class="skill-item__header">
+                                    <span class="skill-item__name">Говорение</span>
+                                    <span class="skill-item__value">75%</span>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress__bar progress__bar--primary" style="width: 75%"></div>
+                                </div>
+                            </div>
+                            
+                            <a href="#" class="btn btn--sm btn--outline-secondary btn--block btn--with-icon">
+                                <i class="fas fa-lightbulb"></i>Рекомендации для улучшения
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+                
+                <!-- Статистика курса -->
+                <div class="course-stats">
+                    <h2 class="section-title">Статистика обучения</h2>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="stat-card stat-card--time">
+                                <div class="stat-card__icon">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="stat-card__value">{{ total_time_spent }} мин</div>
+                                <div class="stat-card__label">Всего времени</div>
+                                <small class="stat-card__hint">≈ {{ average_time_per_lesson }} мин/урок</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card stat-card--lessons">
+                                <div class="stat-card__icon">
+                                    <i class="fas fa-trophy"></i>
+                                </div>
+                                <div class="stat-card__value">{{ completed_lessons_count }}</div>
+                                <div class="stat-card__label">Завершено уроков</div>
+                                <small class="stat-card__hint">из {{ total_lessons_count }}</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card stat-card--level">
+                                <div class="stat-card__icon">
+                                    <i class="fas fa-graduation-cap"></i>
+                                </div>
+                                <div class="stat-card__value">{{ enrollment.student.cefr_level|default:"—" }}</div>
+                                <div class="stat-card__label">Текущий уровень</div>
+                                <small class="stat-card__hint">Динамика: +0.4 за курс</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- График прогресса -->
+                <div class="progress-chart">
+                    <h2 class="section-title">Динамика прогресса</h2>
+                    <div class="chart-container">
+                        <canvas id="progressChart" height="250"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Список уроков -->
+                <div class="lessons-list">
+                    <h2 class="section-title">Пройденные уроки</h2>
+                    
+                    {% if all_lessons %}
+                        <div class="lessons-accordion" id="lessonsAccordion">
+                            {% for lesson_data in all_lessons %}
+                            <div class="lesson-card {% if lesson_data.is_current %}lesson-card--current{% elif lesson_data.is_completed %}lesson-card--completed{% endif %}" id="lesson-{{ lesson_data.lesson.id }}">
+                                <div class="lesson-card__header">
+                                    <button class="lesson-card__toggle {% if not lesson_data.is_completed %}collapsed{% endif %}" 
+                                            type="button" 
+                                            data-bs-toggle="collapse" 
+                                            data-bs-target="#collapse{{ lesson_data.lesson.id }}" 
+                                            aria-expanded="{% if lesson_data.is_completed %}true{% else %}false{% endif %}" 
+                                            aria-controls="collapse{{ lesson_data.lesson.id }}">
+                                        <div class="lesson-card__info">
+                                            <span class="lesson-card__number {% if lesson_data.is_completed %}lesson-card__number--completed{% endif %}">
+                                                {{ lesson_data.order }}
+                                            </span>
+                                            <h3 class="lesson-card__title">{{ lesson_data.lesson.title }}</h3>
+                                        </div>
+                                        <div class="lesson-card__meta">
+                                            <span class="lesson-card__progress-badge {% if lesson_data.is_completed %}lesson-card__progress-badge--success{% else %}lesson-card__progress-badge--primary{% endif %}">
+                                                {{ lesson_data.completion_percent|floatformat:0 }}%
+                                            </span>
+                                        </div>
+                                    </button>
+                                </div>
+                                <div id="collapse{{ lesson_data.lesson.id }}" 
+                                     class="collapse {% if lesson_data.is_completed %}show{% endif %}" 
+                                     aria-labelledby="heading{{ lesson_data.lesson.id }}" 
+                                     data-bs-parent="#lessonsAccordion">
+                                    <div class="lesson-card__body">
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <p class="lesson-card__description">{{ lesson_data.lesson.description|truncatechars:180 }}</p>
+                                                
+                                                <!-- Навыки урока -->
+                                                <div class="lesson-skills">
+                                                    <h5 class="lesson-skills__title">Навыки:</h5>
+                                                    <div class="lesson-skills__list">
+                                                        {% for skill in lesson_data.skill_focus %}
+                                                        <span class="lesson-skills__item">{{ skill|capfirst }}</span>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Цели обучения -->
+                                                <div class="lesson-objectives">
+                                                    <h5 class="lesson-objectives__title">Цели обучения:</h5>
+                                                    <ul class="lesson-objectives__list">
+                                                        {% for objective in lesson_data.objectives %}
+                                                        <li class="lesson-objectives__item">
+                                                            <i class="fas fa-check-circle lesson-objectives__icon"></i>
+                                                            {{ objective.name|truncatechars:60 }}
+                                                        </li>
+                                                        {% empty %}
+                                                        <li class="lesson-objectives__item lesson-objectives__item--empty">Цели обучения не указаны</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="lesson-stats">
+                                                    <!-- Прогресс по заданиям -->
+                                                    <div class="lesson-stats__item">
+                                                        <div class="lesson-stats__label">Заданий</div>
+                                                        <div class="lesson-stats__values">
+                                                            <span class="lesson-stats__value">{{ lesson_data.completed_tasks }}/{{ lesson_data.total_tasks }}</span>
+                                                        </div>
+                                                        <div class="progress">
+                                                            <div class="progress__bar {% if lesson_data.is_completed %}progress__bar--success{% else %}progress__bar--primary{% endif %}" style="width: {{ lesson_data.completion_percent|floatformat:0 }}%">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Средний балл -->
+                                                    <div class="lesson-stats__item">
+                                                        <div class="lesson-stats__label">Средний балл</div>
+                                                        <div class="lesson-stats__values">
+                                                            <span class="lesson-stats__value">{{ lesson_data.average_score|floatformat:2 }}</span>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Дата последнего ответа -->
+                                                    <div class="lesson-stats__item">
+                                                        <div class="lesson-stats__label">Последнее выполнение</div>
+                                                        <div class="lesson-stats__date">
+                                                            <i class="far fa-clock"></i>
+                                                            {% if lesson_data.last_response_date %}
+                                                                {{ lesson_data.last_response_date|date:"d.m.Y H:i" }}
+                                                            {% else %}
+                                                                -
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Кнопки действий -->
+                                                    <div class="lesson-actions">
+                                                        {% if lesson_data.is_completed %}
+                                                        <a href="{% url 'curriculum:lesson_history' enrollment.id lesson_data.lesson.id %}" 
+                                                           class="btn btn--sm btn--outline-primary btn--with-icon">
+                                                            <i class="fas fa-history"></i>История
+                                                        </a>
+                                                        {% endif %}
+
+                                                        {% if lesson_data.is_current %}
+                                                        <a href="{% url 'curriculum:learning_session' enrollment.id %}" 
+                                                           class="btn btn--sm btn--primary btn--with-icon">
+                                                            <i class="fas fa-play"></i>Продолжить
+                                                        </a>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="empty-state__icon fas fa-book-reader"></i>
+                            <h4 class="empty-state__title">Нет пройденных уроков</h4>
+                            <p class="empty-state__description">Начните обучение, чтобы увидеть здесь историю вашего прогресса.</p>
+                            <a href="{% url 'curriculum:learning_session' enrollment.id %}" 
+                               class="btn btn--primary btn--with-icon">
+                                <i class="fas fa-arrow-right"></i>Начать обучение
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Боковое меню -->
+            <div class="col-lg-3">
+                
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block assistant_script %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализация графика прогресса
+    const ctx = document.getElementById('progressChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [{% for lesson_data in all_lessons %}'Урок {{ lesson_data.order }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Прогресс по урокам (%)',
+                    data: [{% for lesson_data in all_lessons %}{{ lesson_data.completion_percent }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    borderColor: '#4CAF50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                }, {
+                    label: 'Средний балл',
+                    data: [{% for lesson_data in all_lessons %}{{ lesson_data.average_score|floatformat:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    borderColor: '#2196F3',
+                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                    tension: 0.3,
+                    fill: false,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Прогресс (%)'
+                        }
+                    },
+                    y1: {
+                        position: 'right',
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            drawOnChartArea: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Средний балл (%)'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                }
+            }
+        });
+    }
+    
+    // Анимация прогресс-баров
+    document.querySelectorAll('.progress__bar').forEach(bar => {
+        const width = bar.style.width;
+        bar.style.width = '0';
+        setTimeout(() => {
+            bar.style.width = width;
+        }, 300);
+    });
+    
+});
+</script>
+{% endblock %}

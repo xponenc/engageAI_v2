@@ -22,8 +22,9 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.views import View, generic
 from PIL import Image
-from django.views.generic import FormView
+from django.views.generic import FormView, DetailView
 
+from chat.views import ChatContextMixin
 from .forms import UserRegistrationForm, UserProfileForm, UserProfileUpdateForm, FeedbackForm
 from .models import Profile
 from .services.emails import send_activation_email
@@ -97,6 +98,7 @@ class ActivateUserView(View):
 
 class ResendActivationEmailView(View):
     """Повторная отправка письма активации"""
+
     def post(self, request):
         email = request.POST.get("email")
 
@@ -175,20 +177,21 @@ def avatar_resize(image):
     return File(content_file)
 
 
-class UserProfileView(LoginRequiredMixin, generic.DetailView):
+class UserProfileView(LoginRequiredMixin, ChatContextMixin, DetailView):
     """Просмотр профиля пользователя"""
     model = User
     template_name = "users/profile.html"
-    queryset = User.objects.select_related("profile", "study_profile")
+    queryset = User.objects.select_related("profile", "student")
 
     def dispatch(self, request, *args, **kwargs):
         user = self.get_object()
         if not hasattr(user, 'profile') or user.profile is None:
-            return redirect(reverse_lazy("users:profile-create", kwargs={"pk": request.user.id }))
+            return redirect(reverse_lazy("users:profile-create", kwargs={"pk": request.user.id}))
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context.update(self.get_chat_context(request=self.request))
         user = self.object
         profile = getattr(user, "telegram_profile", None)
 
@@ -249,7 +252,7 @@ class UserProfileUpdateView(LoginRequiredMixin, View):
             profile = request.user.profile
         except ObjectDoesNotExist:
             # перенаправляем на создание профиля
-            return redirect(reverse_lazy("users:profile-create", kwargs={"pk": request.user.id }))
+            return redirect(reverse_lazy("users:profile-create", kwargs={"pk": request.user.id}))
 
         form = UserProfileUpdateForm(instance=profile)
         # print(profile.avatar, profile.avatar.url).
@@ -261,7 +264,7 @@ class UserProfileUpdateView(LoginRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         profile_id = kwargs.get('pk')
         profile = Profile.objects.get(id=profile_id)
-        if request.user.profile .pk != profile_id:
+        if request.user.profile.pk != profile_id:
             return redirect("users:profile-update", pk=request.user.profile.pk)
         form = UserProfileUpdateForm(request.POST, request.FILES, instance=profile)
         if form.is_valid():
@@ -314,7 +317,6 @@ class UserFeedbackView(View):
             })
         return render(request=self.request, template_name="users/feedback.html", context={"form": feedback_form})
 
-
     def post(self, *args, **kwargs):
         is_ajax = self.request.headers.get('x-requested-with') == 'XMLHttpRequest'
         feedback_form = FeedbackForm(self.request.POST)
@@ -326,7 +328,7 @@ class UserFeedbackView(View):
                     {
                         "message": "Сообщение успешно отправлено",
                         "redirect_url": reverse_lazy("index"),
-                     }, status=200)
+                    }, status=200)
             return redirect("index")
         if is_ajax:
             csrf_token = get_token(self.request)
@@ -352,7 +354,7 @@ class CheckEmailExistView(View):
             email_exist = User.objects.filter(email=email).exists()
             if email_exist:
                 return JsonResponse({"available": False}, status=200)
-            return JsonResponse({"available": True},status=200)
+            return JsonResponse({"available": True}, status=200)
             # except Exception:
             #     return JsonResponse({}, status=500)
         return HttpResponse(status=404)

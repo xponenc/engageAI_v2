@@ -1,0 +1,161 @@
+{
+  "course": {
+    "title": "General English A2–B1 Test",
+    "description": "Тестовый курс для проверки полного цикла: от зачисления до адаптивного прогресса",
+    "estimated_duration": 180
+  },
+
+  "lessons": [
+    {
+      "order": 1,
+      "title": "Daily Routines & Present Simple",
+      "description": "Базовые повседневные действия и Present Simple в рабочем контексте",
+      "duration_minutes": 25,
+      "required_cefr": "A2",
+      "skill_focus": ["grammar", "vocabulary"],
+      "is_remedial": false,
+      "learning_objectives": [
+        {
+          "identifier": "grammar-A2-01",
+          "name": "Use Present Simple for daily routines and habits",
+          "cefr_level": "A2",
+          "skill_domain": "grammar"
+        },
+        {
+          "identifier": "vocabulary-A2-01",
+          "name": "Basic work and daily life vocabulary",
+          "cefr_level": "A2",
+          "skill_domain": "vocabulary"
+        }
+      ],
+      "tasks": [
+        {
+          "order": 1,
+          "task_type": "grammar",
+          "response_format": "single_choice",
+          "difficulty_cefr": "A2",
+          "is_diagnostic": false,
+          "content_schema_version": "v1",
+          "content": {
+            "prompt": "I _____ coffee every morning at 8:00.",
+            "options": ["drink", "drinks", "drinking", "am drink"],
+            "correct_idx": 0
+          },
+          "professional_tags": ["daily-routines"]
+        },
+        {
+          "order": 2,
+          "task_type": "vocabulary",
+          "response_format": "multiple_choice",
+          "difficulty_cefr": "A2",
+          "content": {
+            "prompt": "Select words you use at work (choose all that apply):",
+            "options": ["meeting", "coffee", "ticket", "stand-up", "pizza"],
+            "correct_idx": [0, 2, 3]
+          },
+          "professional_tags": ["standup-meetings", "ticket-writing"]
+        },
+        {
+          "order": 3,
+          "task_type": "grammar",
+          "response_format": "short_text",
+          "difficulty_cefr": "A2",
+          "content": {
+            "prompt": "Write what you do every day at work (3–5 words)",
+            "max_length_words": 5
+          },
+          "professional_tags": []
+        }
+      ]
+    },
+
+    {
+      "order": 2,
+      "title": "Describing Your Job",
+      "description": "Учим рассказывать о своей работе на уровне A2–B1",
+      "duration_minutes": 30,
+      "required_cefr": "A2",
+      "skill_focus": ["speaking", "vocabulary"],
+      "is_remedial": false,
+      "learning_objectives": [
+        {
+          "identifier": "speaking-A2-01",
+          "name": "Describe your job and daily tasks",
+          "cefr_level": "A2",
+          "skill_domain": "speaking"
+        }
+      ],
+      "tasks": [
+        {
+          "order": 1,
+          "task_type": "speaking",
+          "response_format": "audio",
+          "difficulty_cefr": "A2",
+          "is_diagnostic": false,
+          "content_schema_version": "v1",
+          "content": {
+            "prompt": "Record 20–30 seconds: Tell about your job and what you do every day."
+          },
+          "media_required": true,
+          "media_type": "audio",
+          "media_description": "No media needed for prompt — student records own voice",
+          "professional_tags": ["backend", "daily-routines"]
+        },
+        {
+          "order": 2,
+          "task_type": "vocabulary",
+          "response_format": "short_text",
+          "difficulty_cefr": "A2",
+          "content": {
+            "prompt": "Write 3 words you use at work every day",
+            "max_length_words": 5
+          },
+          "professional_tags": []
+        }
+      ]
+    },
+
+    {
+      "order": 3,
+      "title": "Past Simple: Extra Practice (Remedial)",
+      "description": "Дополнительный урок для закрепления Past Simple (если были ошибки)",
+      "duration_minutes": 20,
+      "required_cefr": "A2",
+      "skill_focus": ["grammar"],
+      "is_remedial": true,
+      "learning_objectives": [
+        {
+          "identifier": "grammar-A2-02",
+          "name": "Use Past Simple for completed actions yesterday",
+          "cefr_level": "A2",
+          "skill_domain": "grammar"
+        }
+      ],
+      "tasks": [
+        {
+          "order": 1,
+          "task_type": "grammar",
+          "response_format": "multiple_choice",
+          "difficulty_cefr": "A2",
+          "content": {
+            "prompt": "Yesterday I _____ the bug in production.",
+            "options": ["fix", "fixed", "fixing", "have fixed"],
+            "correct_idx": 1
+          },
+          "professional_tags": ["incident-response"]
+        },
+        {
+          "order": 2,
+          "task_type": "grammar",
+          "response_format": "short_text",
+          "difficulty_cefr": "A2",
+          "content": {
+            "prompt": "Write what you did at work yesterday (3–5 words)",
+            "max_length_words": 5
+          },
+          "professional_tags": ["daily-routines"]
+        }
+      ]
+    }
+  ]
+}

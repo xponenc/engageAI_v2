@@ -1,9 +1,15 @@
 # Created by https://www.toptal.com/developers/gitignore/api/django,visualstudiocode,pycharm+all,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=django,visualstudiocode,pycharm+all,python
 
+download
+fixtures
+code.txt
+*.jsonl
+*.json
+
 # windows
 *.exe
-code.txt
+old_services.txt
 extract_code.py
 
 

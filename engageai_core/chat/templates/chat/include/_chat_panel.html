@@ -1,0 +1,157 @@
+{% load chat_filters %}
+
+<div class="chat-window card">
+    <!-- Шапка чата с кнопкой сворачивания -->
+    <div class="chat-window__header">
+        <div class="chat-window__title">
+            <h3>Диалог с AI</h3>
+        </div>
+        <div class="chat-window__actions">
+            <button class="btn btn_ghost btn_sm" id="toggle-chat" title="Свернуть чат">
+                <span class="btn__icon">↔️</span>
+                <span class="toggle-label">Скрыть чат</span>
+            </button>
+            <button class="btn btn_ghost btn_sm" id="clear-chat" title="Очистить историю">
+                <span class="btn__icon">🗑️</span>
+                Очистить
+            </button>
+        </div>
+    </div>
+    
+    <!-- История сообщений -->
+    <div class="chat-window__messages" id="chat-history">
+        {% if chat_history %}
+            {% for message in chat_history %}
+            <div class="chat-message{% if message.is_ai %} chat-message--ai{% else %} chat-message--user{% endif %}" 
+                data-message-id="{{ message.id }}" 
+                {% if message.is_ai %} data-url="{% url 'chat:ai-message-score' message.id %}"{% endif %}>
+                <div class="chat-message__avatar">
+                    {% if message.is_ai %}
+                        <div class="avatar avatar--ai"></div>
+                    {% else %}
+                        <div class="avatar avatar--user">
+                            <img src="{{ user.profile.avatar.url|default:'/static/images/default-avatar.png' }}" alt="Аватар пользователя">
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="chat-message__content">
+                    {% if message.content %}
+                        <div class="chat-message__text">
+                            {{ message.content|safe }}
+                        </div>
+                    {% endif %}
+                    {% if message.media_files.exists %}
+                        <div class="message-preview__media">
+                            {% for media in message.media_files.all %}
+                                {% if media.file_type == 'image' %}
+                                    <div class="media-item media-item--image">
+                                        <a href="{{ media.file.url }}" target="_blank">
+                                            <img src="{% if media.thumbnail and media.thumbnail.name %}{{ media.thumbnail.url }}{% else %}{{ media.file.url }}{% endif %}"
+                                                class="chat-image"
+                                                alt="Изображение"
+                                                loading="lazy">
+                                        </a>
+                                    </div>
+                                {% elif media.file_type == 'video' %}
+                                    <div class="media-item media-item--video">
+                                        <video controls class="chat-video">
+                                            <source src="{{ media.file.url }}" type="{{ media.mime_type }}">
+                                            Ваш браузер не поддерживает видео элемент.
+                                        </video>
+                                    </div>
+                                {% elif media.file_type == 'audio' %}
+                                    <div class="media-item media-item--audio">
+                                        <audio controls class="chat-audio">
+                                            <source src="{{ media.file.url }}" type="{{ media.mime_type }}">
+                                            Ваш браузер не поддерживает аудио элемент.
+                                        </audio>
+                                    </div>
+                                {% else %}
+                                    <div class="media-item media-item--document">
+                                        <a href="{{ media.file.url }}" class="document-link" download>
+                                            <div class="document-icon">📄</div>
+                                            <div class="document-name">
+                                                {{ media.file.name|basename }}
+                                            </div>
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="chat-message__meta">
+                        <span class="chat-message__time">
+                            {{ message.created_at|time:"H:i" }}
+                        </span>
+                        {% if message.is_ai %}
+                        <div class="chat-message__rating">
+                            <div class="rating-stars" data-message-id="{{ message.id }}">
+                                {% for i in "2 1 0 -1 -2"|split:" " %}
+                                    {% with i_int=i|add:"0" %}
+                                        <button class="star-btn {% if message.score >= i_int %}star-btn--active{% endif %}" 
+                                                data-value="{{ i_int }}">
+                                            ★
+                                        </button>
+                                    {% endwith %}
+                                {% endfor %}
+                            </div>
+                            <span class="rating-hint">Оцените ответ</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <!-- Пустое состояние -->
+            <div class="chat-empty">
+                <h4 class="chat-empty__title">Начните диалог</h4>
+                <p class="chat-empty__text">
+                    Задайте вопрос AI-репетитору о материале курса, 
+                    и он поможет вам разобраться в сложных темах
+                </p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Поле ввода -->
+    <div class="chat-window__input">
+        <form id="chat-form" method="post" class="chat-form" enctype="multipart/form-data" action="{% url 'chat:ai-chat' assistant.slug %}">
+            {% csrf_token %}
+            <div class="chat-input">
+                <div class="chat-input__field">
+                    <input type="text" 
+                            name="message" 
+                            id="message-input" 
+                            class="chat-input__text" 
+                            placeholder="Введите ваш вопрос..."
+                            autocomplete="off">
+                    <div class="chat-input__actions">
+                        <button type="button" class="chat-input__action" id="voice-record-btn" title="Отправить голосовое сообщение">
+                            🎤
+                        </button>
+                        <div class="recording-timer" id="recording-timer" style="display: none;">00:00</div>
+                        <label for="file-upload" class="chat-input__action" title="Прикрепить файл">
+                            📎
+                            <input type="file" id="file-upload" name="file" style="display: none;" 
+                                    accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt">
+                        </label>
+                    </div>
+                </div>
+                <div class="file-preview-container" id="file-preview-container" style="display: none;">
+                    <div class="file-preview">
+                        <span class="file-preview__name" id="file-name"></span>
+                        <span class="file-preview__remove" id="remove-file">✖</span>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn_primary chat-input__submit" id="submit-btn">
+                    <span class="btn__icon">✈️</span>
+                    Отправить
+                </button>
+            </div>
+            <div class="chat-input__hint">
+                Нажмите Enter для отправки, Shift+Enter для новой строки
+            </div>
+        </form>
+    </div>
+</div>

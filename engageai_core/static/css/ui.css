@@ -4,6 +4,13 @@
  *   BUTTONS — Unified Modern System
  *************************************/
 
+.btns {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--standard-gap)
+}
+
 /* Core BTN */
 .btn {
     display: inline-flex;
@@ -102,6 +109,86 @@
 .btn_ghost:hover {
     color: var(--color-accent);
     transform: translateY(-1px);
+}
+
+/* -------------------------------------
+    Btn Blob
+   ------------------------------------- */
+
+.btn_blob {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0.8em 1.8em;
+    min-height: 3em;
+
+    font-size: 18px;
+    border-radius: 999px;
+    border: none;
+    color: white;
+
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.btn_blob .btn_text {
+    position: relative;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.btn_blob .blob {
+    position: absolute;
+    z-index: 1;
+
+    width: 50%;
+    aspect-ratio: 1/1;
+    top: -10%;
+
+    border-radius: 50%;
+
+    transition:
+        transform 0.35s ease,
+        background 0.35s ease;
+}
+
+.btn_blob .blob:nth-child(2) {
+    left: -14%;
+    top: -40%;
+    background: #541388;
+}
+
+.btn_blob .blob:nth-child(3) {
+    left: 10%;
+    top: 40%;
+    background: #1768AC;
+}
+
+.btn_blob .blob:nth-child(4) {
+    left: 28%;
+    top: -150%;
+    background: #06467b;
+}
+
+.btn_blob .blob:nth-child(5) {
+    left: 55%;
+    top: -20%;
+    background: #1063a9;
+}
+
+.btn_blob:hover .blob {
+    transform: scale(1.3);
+}
+
+.btn_blob:hover .blob:nth-child(2) { background: #F5A962; }
+.btn_blob:hover .blob:nth-child(3) { background: #A2D7D3; }
+.btn_blob:hover .blob:nth-child(4) { background: #1768AC; }
+.btn_blob:hover .blob:nth-child(5) { background: #541388; }
+
+.btn_blob:active {
+    border: 2px solid white;
 }
 
 /* -------------------------------------
@@ -1024,6 +1111,34 @@
     }
 }
 
+
+.progress-card {}
+
+.progress-card__title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.progress-bar {
+    height: 8px;
+    background: var(--color-muted-bg);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar__value {
+    height: 100%;
+    background: var(--color-accent);
+    padding-right: 6px;
+}
+
+.progress-card__percent {
+    font-size: 13px;
+    margin-top: 6px;
+    text-align: right;
+    color: var(--color-text-muted);
+}
 
 /* Дополнительные стили для страницы регистрации */
 
@@ -2025,7 +2140,7 @@ input:valid:not(:focus):not(:placeholder-shown) {
     font-weight: bold;
 }
 
-.json__collapsed > .json__indent {
+.json__collapsed>.json__indent {
     display: none;
     margin-left: 0;
     padding-left: 0;
@@ -2034,4 +2149,3 @@ input:valid:not(:focus):not(:placeholder-shown) {
 .json__collapsed:hover {
     cursor: pointer;
 }
-

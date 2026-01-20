@@ -1,14 +1,16 @@
-{% extends 'base.html' %}
+{% extends 'extended/assistant_layout.html' %}
 {% load static %}
+
 
 {% block title %}Личный кабинет — {{ user.get_full_name|default:user.username }}{% endblock title %}
 
-{% block css %}
+
+{% block assistant_css %}
 <link href="{% static 'css/users/user.css' %}" rel="stylesheet">
-{% endblock css %}
+{% endblock assistant_css %}
 
-{% block content %}
 
+{% block assistant_content %}
 <section class="dashboard">
     <div class="dashboard__container container">
         
@@ -89,7 +91,7 @@
                 <div class="dashboard__section card">
                     <div class="section-header">
                         <h2 class="section-header__title">Текущий прогресс</h2>
-                        <a href="/courses" class="btn btn_ghost btn_sm">Все курсы</a>
+                        <a href="{% url 'curriculum:course_list' %}" class="btn btn_ghost btn_sm">Все курсы</a>
                     </div>
                     
                     <div class="progress-course">
@@ -404,4 +406,4 @@
     </div>
 </section>
 
-{% endblock content %}
+{% endblock assistant_content %}

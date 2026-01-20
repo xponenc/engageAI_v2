@@ -16,7 +16,6 @@ class Course(models.Model):
 
     Поля:
     - title: название курса
-    - target_cefr_from/to: диапазон CEFR
     - estimated_duration: общая длительность в минутах
     - learning_objectives: цели, которые покрывает курс
     - required_skills: список навыков/уровней, необходимых для старта (JSON)
@@ -25,8 +24,6 @@ class Course(models.Model):
 
     title = models.CharField(max_length=200, verbose_name=_("Title"))
     description = models.TextField(verbose_name=_("Description"))
-    target_cefr_from = models.CharField(max_length=2, choices=CEFRLevel, verbose_name=_("From CEFR"))
-    target_cefr_to = models.CharField(max_length=2, choices=CEFRLevel, verbose_name=_("To CEFR"))
     estimated_duration = models.PositiveIntegerField(
         verbose_name=_("Estimated Duration (minutes)"),
         help_text=_("Total estimated time to complete the course")
@@ -47,4 +44,4 @@ class Course(models.Model):
         verbose_name_plural = _("Courses")
 
     def __str__(self):
-        return f"{self.title} ({self.get_target_cefr_from_display()} → {self.get_target_cefr_to_display()})"
+        return f"{self.title}"

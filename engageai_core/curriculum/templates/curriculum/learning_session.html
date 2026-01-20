@@ -1,149 +1,449 @@
-{% extends "base.html" %}
+{% extends 'extended/assistant_layout.html' %}
 {% load static %}
+{% load form_extras %}
+
 
 {% block title %}Обучение · {{ enrollment.course.title }}{% endblock %}
 
-{% block css %}
+
+{% block assistant_css %}
 <link href="{% static 'css/learning-session.css' %}" rel="stylesheet">
 {% endblock %}
 
-{% block content %}
+
+{% block assistant_content %}
 <section class="learning-session">
     <div class="learning-session__container">
 
         <!-- Header -->
         <header class="learning-header">
-            <h2 class="learning-header__title">
+            <h1 class="learning-header__title">
                 {{ enrollment.course.title }}
-            </h2>
-            <h3 class="learning-header__subtitle">
+            </h1>
+            <h2 class="learning-header__subtitle">
                 {{ learning_state.current_lesson.title }}
-            </h3>
+            </h2>
             <div class="learning-header__meta">
                 Урок {{ learning_state.current_lesson.order }}
                 из {{ progress_details.total_lessons }}
             </div>
+            <article class="progress-card mb-3">
+                <div class="progress-card__title">Прогресс</div>
+                <div class="progress-bar">
+                    <div class="progress-bar__value"
+                            style="width: {{ progress_details.progress_percent|floatformat:0 }}%"></div>
+                </div>
+                <div class="progress-card__percent">
+                    {{ progress_details.progress_percent|floatformat:0 }}%
+                </div>
+            </article>
         </header>
 
-        <div class="learning-layout">
 
-            <!-- Main -->
-            <main class="learning-main">
+        <!-- Main -->
+        <main class="learning-main">
+            {% if lesson_blocked %}
+                <section class="lesson-blocked">
+                    <div class="lesson-blocked__icon">🌱</div>
 
-                {% if next_task %}
-                    <section class="task-card">
-                        <h2 class="task-card__title">
-                            Задание № {{  next_task.order }}
-                        </h2>
+                    <div class="lesson-blocked__content">
+                        <h3 class="lesson-blocked__title">
+                            <span>Урок пока закрыт</span>
+                            <span>Мы проверяем задания предыдущего урока. После завершения оценки вы сразу сможете продолжить обучение.</span>
+                        </h3>
 
-                        <p class="task-card__prompt">
-                            {{ next_task.content.prompt }}
+                        <p class="lesson-blocked__message">
+                            {{ block_message }}
                         </p>
 
-                        <form class="task-form"
-                              id="task-response-form"
-                              method="post"
-                              action="{% url 'curriculum:submit_task_response' enrollment.id %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="task_id" value="{{ next_task.id }}">
-
-                            {% if next_task.response_format == 'single_choice' %}
-                                {% for option in next_task.content.options %}
-                                    <label class="task-option">
-                                        <input type="radio" name="text" value="{{ forloop.counter0 }}" required>
-                                        <span>{{ option }}</span>
-                                    </label>
-                                {% endfor %}
-                            {% elif next_task.response_format == 'multiple_choice' %}
-                                {% for option in next_task.content.options %}
-                                    <label class="task-option">
-                                        <input type="checkbox" name="text" value="{{ forloop.counter0 }}">
-                                        <span>{{ option }}</span>
-                                    </label>
-                                {% endfor %}
-                            {% elif next_task.response_format == 'short_text' %}
-                                <input class="task-input"
-                                       type="text"
-                                       name="text"
-                                       maxlength="100"
-                                       placeholder="Краткий ответ"
-                                       required>
-                            {% elif next_task.response_format == 'free_text' %}
-                                <textarea class="task-textarea"
-                                          name="text"
-                                          rows="4"
-                                          placeholder="Введите ответ"
-                                          required></textarea>
-                            {% elif next_task.response_format == 'audio' %}
-                                <input class="task-file"
-                                       type="file"
-                                       name="audio_file"
-                                       accept="audio/*"
-                                       required>
-                            {% endif %}
-
-                            <button class="task-submit" type="submit">
-                                Отправить ответ
-                            </button>
-                        </form>
-                    </section>
-                {% else %}
-                    <section class="lesson-finished">
-                        <div class="lesson-finished__icon">🧠</div>
-                        <h2 class="lesson-finished__title">Урок завершён</h2>
-                        <p class="lesson-finished__text">
-                            Этот урок больше не сопротивляется.
-                            Можно двигаться дальше.
+                        <p class="lesson-blocked__meta">
+                            Оценка начата:
+                            {{ assessment_started_at|date:"d.m.Y H:i" }}
                         </p>
 
-                        <div class="lesson-finished__actions">
-                            <a href="{% url 'curriculum:course_detail' enrollment.course.id %}" class="btn btn_primary">К курсу</a>
-                            <a href="{% url 'curriculum:course_list' %}" class="btn">Все курсы</a>
-                        </div>
-                    </section>
+                        <a href="{% url 'curriculum:course_detail' enrollment.course.id %}"
+                           class="lesson-blocked__action">
+                            Вернуться к курсу
+                        </a>
+                    </div>
+                </section>
+                <input type="hidden" id="enrollment-id" value="{{ enrollment.id }}">
+                <input type="hidden" id="assessment-job-id" value="{{ enrollment.assessment_job_id }}">
+            {% else %}
+
+                {% if lesson_theory %}
+                <section class="lesson-theory">
+                    <h3 class="lesson-theory__title">Теория урока</h3>
+                    <div class="lesson-theory__content">
+                        {{ lesson_theory|safe }}
+                    </div>
+                </section>
                 {% endif %}
 
-            </main>
+                <section class="lesson-tasks">
+                    <h3 class="lesson-tasks__title">
+                        Задания урока
+                        <span class="lesson-tasks__count">
+                            {{ lesson_tasks|length }}
+                        </span>
+                    </h3>
 
-            <!-- Sidebar -->
-            <aside class="learning-sidebar">
+                    <form class="lesson-tasks__form"
+                            method="post"
+                            action="{% url 'curriculum:learning_session' enrollment.id %}"
+                            enctype="multipart/form-data">
+                        {% csrf_token %}
 
-                <section class="progress-card">
-                    <div class="progress-card__title">Прогресс курса</div>
 
-                    <div class="progress-bar">
-                        <div class="progress-bar__value" style="width: {{ progress_details.progress_percent|floatformat:0 }}%"></div>
-                    </div>
+                        {% if lesson_form.errors %}
+                            <div class="alert alert-danger">
+                                {{ lesson_form.non_field_errors }}
+                            </div>
+                        {% endif %}
 
-                    <div class="progress-card__percent">
-                        {{ progress_details.progress_percent|floatformat:0 }}%
-                    </div>
+                        {% comment %} {% for field in lesson_form %}
+                            <div class="lesson-task">
+                                <div class="lesson-task__prompt">
+                                    {{ task.content.prompt|safe }}
+                                </div>
+                                <label>{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.errors %}
+                                    <div class="error">{{ field.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                        {% endfor %} {% endcomment %}
+
+                        {% for task in lesson_tasks %}
+                            {{ task.content }}
+                            {% with field=lesson_form|field_for_task:task.id %}
+                                <article class="lesson-task {% if task.id in completed_tasks %}lesson-task--completed{% endif %}">
+                                    <header class="lesson-task__header">
+                                        <h4 class="lesson-task__title">Задание № {{ task.order }}</h4>
+                                        {% if task.id in completed_tasks %}
+                                            <span class="lesson-task__status">✓ выполнено</span>
+                                        {% endif %}
+                                    </header>
+
+                                    <div class="lesson-task__prompt">
+                                        {{ task.content.prompt|safe }}
+                                    </div>
+
+                                    <div class="lesson-task__response">
+                                        {% if task.id in completed_tasks %}
+                                            {# === Показываем ответ студента, если задание уже выполнено === #}
+                                            {% if task.student_answer.response_text %}
+                                                <div class="student-answer student-answer--text">
+                                                    {{ task.student_answer.response_text|linebreaks }}
+                                                </div>
+                                            {% endif %}
+
+                                            {% if task.student_answer.audio_file %}
+                                                <div class="student-answer student-answer--audio">
+                                                    <audio controls class="task__audio">
+                                                        <source src="{{ task.student_answer.audio_file.url }}" type="audio/mpeg">
+                                                        Ваш браузер не поддерживает аудио.
+                                                    </audio>
+                                                    <p><small>Аудио ответ загружен</small></p>
+                                                </div>
+                                            {% endif %}
+
+                                            {# Опционально: показать оценку #}
+                                            {% if task.student_answer.assessment %}
+                                                <div class="task-feedback">
+                                                    {{ task.student_answer.assessment.structured_feedback.summary.text }}
+                                                </div>
+                                            {% endif %}
+
+                                        {% else %}
+                                            {% if task.response_format == 'audio' %}
+                                                {# Вручную рендерим только input файла #}
+                                                <input type="file"
+                                                    name="task_{{ task.id }}_audio"
+                                                    accept="audio/*"
+                                                    class="task-file"
+                                                    data-task-audio-input="{{ task.id }}"
+                                                    {% if field.field.required %}required{% endif %}>
+
+                                                <div class="task-audio">
+                                                    <button type="button"
+                                                            class="task-audio__record-btn btn btn_outline"
+                                                            data-task-record="{{ task.id }}">
+                                                        Записать с микрофона
+                                                    </button>
+
+                                                    <div class="task-audio__preview"
+                                                        data-task-audio-preview="{{ task.id }}"
+                                                        hidden>
+                                                        <audio controls></audio>
+                                                        <div class="task-audio__meta">Аудио записано</div>
+                                                    </div>
+                                                </div>
+
+                                                {% if field.errors %}
+                                                    <div class="error">{{ field.errors|join:", " }}</div>
+                                                {% endif %}
+
+                                            {% else %}
+                                                {# Для всех остальных типов — используем стандартный рендер #}
+                                                {{ field }}
+                                                {% if field.errors %}
+                                                    <div class="error">{{ field.errors|join:", " }}</div>
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </article>
+                            {% endwith %}
+                        {% endfor %}
+
+                        {% comment %} {% for task in lesson_tasks %}
+                        {{task.content}}
+                        
+                        <article class="lesson-task
+                            {% if task.id in completed_tasks %}
+                                lesson-task--completed
+                            {% endif %}">
+                            
+                            <header class="lesson-task__header">
+                                <h4 class="lesson-task__title">
+                                    Задание № {{ task.order }}
+                                </h4>
+
+                                {% if task.id in completed_tasks %}
+                                <span class="lesson-task__status">
+                                    ✓ выполнено
+                                </span>
+                                {% endif %}
+                            </header>
+
+                            <div class="lesson-task__prompt">
+                                {{ task.content.prompt|safe }}
+                            </div>
+
+                            <div class="lesson-task__response">
+                                {% if task.response_format == 'single_choice' %}
+                                    {% for option in task.content.options %}
+                                    <label class="task-option">
+                                        <input type="radio"
+                                            name="task_{{ task.id }}"
+                                            value="{{ option }}"
+                                            {% if task.id in completed_tasks %}disabled{% endif %}>
+                                            <span>{{ option }}</span>
+                                    </label>
+                                    {% endfor %}
+
+                                {% elif task.response_format == 'multiple_choice' %}
+                                    {% for option in task.content.options %}
+                                    <label class="task-option">
+                                        <input type="checkbox"
+                                                name="task_{{ task.id }}"
+                                                value="{{ option }}"
+                                                {% if task.id in completed_tasks %}disabled{% endif %}>
+                                        <span>{{ option }}</span>
+                                    </label>
+                                    {% endfor %}
+
+                                {% if task.response_format == 'short_text' %}
+                                    <input class="task-input"
+                                            type="text"
+                                            name="task_{{ task.id }}"
+                                            maxlength="100"
+                                            value=""
+                                            {% if task.id in completed_tasks %}disabled{% endif %}>
+
+                                {% elif task.response_format == 'free_text' %}
+                                    <textarea class="task-textarea"
+                                                name="task_{{ task.id }}"
+                                                rows="3"
+                                                {% if task.id in completed_tasks %}disabled{% endif %}></textarea>
+
+                                {% elif task.response_format == 'audio' %}
+                                    {% if task.id in completed_tasks %}
+                                        <div class="task-audio__done">
+                                            Аудио ответ загружен
+                                        </div>
+                                    {% else %}
+                                        <div class="task-audio">
+
+                                            <!-- Загрузка файла -->
+                                            <input
+                                                class="task-file"
+                                                type="file"
+                                                name="task_{{ task.id }}_audio"
+                                                accept="audio/*"
+                                                data-task-audio-input="{{ task.id }}"
+                                            >
+
+                                            <!-- Запись с микрофона -->
+                                            <button
+                                                type="button"
+                                                class="task-audio__record-btn"
+                                                data-task-record="{{ task.id }}"
+                                            >
+                                                🎤 Записать
+                                            </button>
+
+                                            <!-- Превью записи -->
+                                            <div
+                                                class="task-audio__preview"
+                                                data-task-audio-preview="{{ task.id }}"
+                                                hidden
+                                            >
+                                                <audio controls></audio>
+                                                <div class="task-audio__meta">
+                                                    Аудио записано
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            {% if task.student_answer %}
+                            <div>
+                                {% if task.student_answer.response_text %}{{ task.student_answer.response_text }}{% endif %}
+                                {% if task.student_answer.audio_file %}
+                                    <audio controls class="task__audio">
+                                        <source src="{{ task.student_answer.audio_file.url }}">
+                                    </audio>
+                                    <a href="{{ task.student_answer.audio_file.url }}">{{ task.student_answer.audio_file }}</a>
+                                {% endif %}
+                            </div>
+                                {% if task.student_answer.assessment %}
+                                    {{ task.student_answer.assessment.structured_feedback }}
+                                {% endif %}
+                            {% endif %}
+                        </article>
+                        {% endfor %} {% endcomment %}
+
+                        <button class="lesson-tasks__submit btn btn_primary" type="submit">
+                            Отправить ответы
+                        </button>
+                    </form>
                 </section>
 
-                <section class="skills-card">
-                    <div class="skills-card__title">Навыки</div>
-
-                    {% for skill, value in learning_state.skills.items %}
-                        <div class="skill">
-                            <div class="skill__row">
-                                <span>{{ skill|title }}</span>
-                                <span>{{ value|floatformat:0 }}%</span>
-                            </div>
-                            <div class="skill__bar">
-                                <div class="skill__value" style="width: {{ value|floatformat:0 }}%"></div>
-                            </div>
-                        </div>
-                    {% endfor %}
-                </section>
-
-            </aside>
-
-        </div>
+            {% endif %}
+        </main>
     </div>
 </section>
 {% endblock %}
 
+{% block assistant_script %}
+<script>
+// Глобальный объект для хранения состояния записи по task_id
+const audioRecorders = {};
 
-{% block script %}
-<script src="{% static 'js/task-detail.js' %}"></script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Находим все кнопки записи
+    document.querySelectorAll('[data-task-record]').forEach(button => {
+        const taskId = button.dataset.taskRecord;
+
+        // Элементы для этой задачи
+        const recordBtn = button;
+        const previewDiv = document.querySelector(`[data-task-audio-preview="${taskId}"]`);
+        const audioElement = previewDiv.querySelector('audio');
+        const metaDiv = previewDiv.querySelector('.task-audio__meta');
+        const fileInput = document.querySelector(`[data-task-audio-input="${taskId}"]`);
+
+        let mediaRecorder;
+        let audioChunks = [];
+        let timerInterval;
+        let seconds = 0;
+
+        const updateTimer = () => {
+            seconds++;
+            const mins = String(Math.floor(seconds / 60)).padStart(2, '0');
+            const secs = String(seconds % 60).padStart(2, '0');
+            recordBtn.textContent = `🎤 Идёт запись... ${mins}:${secs}`;
+        };
+
+        const startRecording = async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+
+                    audioElement.src = audioUrl;
+                    previewDiv.hidden = false;
+
+                    // Создаём File и кладём в hidden input для отправки с формой
+                    const file = new File([audioBlob], `task_${taskId}_recording.webm`, { type: 'audio/webm' });
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    fileInput.files = dataTransfer.files;
+
+                    // Обновляем мета-информацию
+                    const duration = seconds;
+                    const mins = String(Math.floor(duration / 60)).padStart(2, '0');
+                    const secs = String(duration % 60).padStart(2, '0');
+                    metaDiv.textContent = `Аудио записано (${mins}:${secs})`;
+
+                    // Останавливаем треки потока
+                    stream.getTracks().forEach(track => track.stop());
+
+                    // Сохраняем состояние
+                    audioRecorders[taskId] = { recorded: true, blob: audioBlob, duration: seconds };
+                };
+
+                mediaRecorder.start();
+
+                // UI: меняем кнопку
+                recordBtn.textContent = `🎤 Идёт запись... 00:00`;
+                recordBtn.classList.add('recording');
+                seconds = 0;
+                timerInterval = setInterval(updateTimer, 1000);
+
+                // Сохраняем recorder
+                audioRecorders[taskId] = { mediaRecorder, stream };
+
+            } catch (err) {
+                console.error('Ошибка доступа к микрофону:', err);
+                alert('Не удалось получить доступ к микрофону. Проверьте разрешения.');
+                recordBtn.textContent = '🎤 Записать';
+            }
+        };
+
+        const stopRecording = () => {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+
+            recordBtn.textContent = '🎤 Записать заново';
+            recordBtn.classList.remove('recording');
+        };
+
+        // Обработчик клика по кнопке
+        recordBtn.addEventListener('click', () => {
+            if (!audioRecorders[taskId]?.mediaRecorder || audioRecorders[taskId].mediaRecorder.state === 'inactive') {
+                // Начинаем новую запись
+                startRecording();
+            } else {
+                // Останавливаем текущую
+                stopRecording();
+            }
+        });
+
+        // Опционально: возможность перезаписать (клик по превью или кнопке "заново")
+        // Уже реализовано: после остановки кнопка становится "Записать заново"
+    });
+});
+</script>
+
+
 {% endblock %}
+
+

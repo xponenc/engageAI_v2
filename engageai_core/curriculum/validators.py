@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from curriculum.infrastructure.validation.task_schemas import TASK_CONTENT_SCHEMAS
+from curriculum.validation.task_schemas import TASK_CONTENT_SCHEMAS
 
 
 class SkillDomain(models.TextChoices):

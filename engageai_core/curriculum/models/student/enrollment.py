@@ -12,23 +12,24 @@ from curriculum.services.path_generation_service import PathGenerationService
 from users.models import Student
 
 
+class LessonStatus(models.TextChoices):
+    ACTIVE = 'ACTIVE', _('Active')
+    COMPLETED_TASKS = 'COMPLETED_TASKS', _('All tasks completed')
+    PENDING_ASSESSMENT = 'PENDING_ASSESSMENT', _('Pending assessment')
+    ASSESSMENT_ERROR = 'ASSESSMENT_ERROR', _('Assessment error')
+    COMPLETED = 'COMPLETED', _('Lesson completed')
+
+
 class Enrollment(models.Model):
     """
     Зачисление студента на курс с полным отслеживанием прогресса.
     """
     objects = models.Manager()
 
-    LESSON_STATUS_CHOICES = [
-        ('ACTIVE', 'Active'),
-        ('COMPLETED_TASKS', 'All tasks completed'),
-        ('PENDING_ASSESSMENT', 'Pending assessment'),
-        ('ASSESSMENT_ERROR', 'Assessment error'),
-        ('COMPLETED', 'Lesson completed')
-    ]
-
     student = models.ForeignKey(Student, on_delete=models.CASCADE, verbose_name=_("Student"))
     course = models.ForeignKey(Course, on_delete=models.CASCADE, verbose_name=_("Course"))
     adaptive_path_enabled = models.BooleanField(default=False, verbose_name=_("Адаптивный путь активен"))
+
     started_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Started At"))
     completed_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Completed At"))
 
@@ -42,21 +43,11 @@ class Enrollment(models.Model):
         related_name="active_enrollments"
     )
 
-    # # Прогресс и состояние
-    # progress_snapshot = models.ForeignKey(
-    #     SkillSnapshot,
-    #     on_delete=models.SET_NULL,
-    #     null=True,
-    #     blank=True,
-    #     verbose_name=_("Progress Snapshot"),
-    #     help_text=_("Последний зафиксированный снимок навыков")
-    # )
-
     lesson_status = models.CharField(
         max_length=20,
-        choices=LESSON_STATUS_CHOICES,
-        default='ACTIVE',
-        verbose_name=_("Lesson Status")
+        choices=LessonStatus.choices,
+        default=LessonStatus.ACTIVE,
+        verbose_name=_("Lesson Status"),
     )
     assessment_job_id = models.CharField(
         max_length=255,

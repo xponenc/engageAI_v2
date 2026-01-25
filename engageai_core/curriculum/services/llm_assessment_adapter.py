@@ -1,0 +1,180 @@
+import asyncio
+import json
+import logging
+
+from ai.llm.llm_factory import llm_factory
+from curriculum.models.assessment.assessment_result import AssessmentResult
+from curriculum.models.content.task import Task, ResponseFormat
+from curriculum.models.student.student_response import StudentTaskResponse
+from curriculum.services.base_assessment_adapter import AssessmentPort
+
+logger = logging.getLogger(__name__)
+
+SYSTEM_BLOCK = (
+    """Вы — эксперт по оценке английского языка по шкале CEFR. Оцените ответ студента **только по навыкам,
+     проверяемым заданием**. Используйте шкалу 0.0–1.0. Если навык не проверялся — укажите null.
+      Верните ТОЛЬКО валидный JSON по схеме:
+{
+  "task_id": число,
+  "cefr_target": "уровень (например, B1)",
+  "skill_evaluation": {
+    "grammar": {"score": число|null, "confidence": число|null, "evidence": []},
+    "vocabulary": {"score": число|null, "confidence": число|null, "evidence": []},
+    "reading": {"score": число|null, "confidence": число|null, "evidence": []},
+    "listening": {"score": число|null, "confidence": число|null, "evidence": []},
+    "writing": {"score": число|null, "confidence": число|null, "evidence": []},
+    "speaking": {"score": число|null, "confidence": число|null, "evidence": []}
+  },
+  "summary": {
+    "text": "1–3 предложения",
+    "advice": ["практический совет", "..."]
+  }
+}
+Никаких пояснений вне JSON. Только JSON."""
+)
+
+
+class LLMAssessmentAdapter(AssessmentPort):
+    """
+    Адаптер для оценки с использованием LLM через llm_factory
+    """
+
+    def __init__(self):
+        # Используем глобальный экземпляр llm_factory
+        self.llm_factory = llm_factory
+
+    def assess_task(self, task: Task, response: StudentTaskResponse) -> AssessmentResult:
+        """
+        Main entry point: assess a single task with LLM.
+        """
+        try:
+            prompt = self._build_prompt(task, response)
+            return self._call_llm(task, prompt)
+        except Exception as exc:
+            raise RuntimeError(f"LLM assessment failed: {exc}") from exc
+
+    # PROMPT CONSTRUCTION
+
+    def _build_context_block(self, task: Task, response: StudentTaskResponse) -> str:
+        prompt = task.content.get("prompt", "").strip()
+        expected_skills = set(task.content.get("expected_skills", []))
+
+        # Определяем текст ответа
+        student_text = response.response_text
+        if task.response_format == ResponseFormat.AUDIO:
+            student_text = getattr(response, "transcript", None)
+
+        # Обработка отсутствующего/некорректного ответа
+        if not student_text or not student_text.strip():
+            student_text = "[No valid student response provided]"
+
+        # Формируем контекст, ориентируясь на то, что модельу действительно нужно
+        lines = [
+            f"CEFR target level: {task.difficulty_cefr}",
+            "",
+            "Задание:",
+            prompt,
+            "",
+            "Skills to assess (ONLY these):",
+            ", ".join(sorted(expected_skills)) if expected_skills else "None specified",
+            "",
+            "Ответ студента:",
+            student_text.strip()
+        ]
+
+        return "\n".join(lines)
+
+    def _build_prompt(self, task: Task, response: StudentTaskResponse) -> str:
+        context_block = self._build_context_block(task, response)
+        return f"""
+    {context_block}
+
+    """
+
+    # LLM CALL
+    def _call_llm(self, task: Task, prompt: str) -> AssessmentResult:
+        # loop = asyncio.new_event_loop()
+        # result = loop.run_until_complete(
+        #     self.llm_factory.generate_json_response(
+        #         system_prompt=SYSTEM_BLOCK,
+        #         user_message=prompt,
+        #         conversation_history=[],
+        #         media_context=self._get_media_context(task),
+        #     )
+        # )
+        # return self._parse_llm_response(result)
+        result = self.llm_factory.generate_json_response(
+            system_prompt=SYSTEM_BLOCK,
+            user_message=prompt,
+            conversation_history=[],
+            media_context=self._get_media_context(task),
+        )
+        return self._parse_llm_response(result)
+
+    # RESPONSE PARSING
+
+    def _parse_llm_response(self, result) -> AssessmentResult:
+        """
+        Конвертация ответа LLM в валидный AssessmentResult
+        """
+
+        # result.response — это dict
+        llm_payload = result.response
+        print("_parse_llm_response llm_payload =", llm_payload)
+
+        raw = llm_payload.get("response")
+        print("_parse_llm_response raw =", raw)
+
+        if not raw or not isinstance(raw, str) or not raw.strip():
+            raise ValueError("Empty LLM response")
+
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError as e:
+            logger.error("LLM returned non-JSON:\n%s", raw)
+            raise RuntimeError("LLM returned invalid JSON") from e
+
+        print("_parse_llm_response parsed payload =", payload)
+
+        # Проверка наличия ключевых полей
+        if "skill_evaluation" not in payload or "summary" not in payload:
+            logger.warning(
+                "Invalid LLM response format for task_id %s: missing 'skill_evaluation' or 'summary'",
+                payload.get("task_id")
+            )
+            # Возвращаем нейтральный AssessmentResult
+            return AssessmentResult(
+                task_id=payload.get("task_id", -1),
+                cefr_target=payload.get("cefr_target", ""),
+                skill_evaluation={
+                    skill: {"score": 0.5, "confidence": 0.5, "evidence": []}
+                    for skill in ["grammar", "vocabulary", "reading", "listening", "writing", "speaking"]
+                },
+                summary={"text": "No valid assessment could be generated.", "advice": []},
+                metadata={"error": "invalid_llm_response", "raw_llm": payload}
+            )
+
+        # Валидация и создание AssessmentResult
+        return AssessmentResult(
+            task_id=payload.get("task_id"),
+            cefr_target=payload.get("cefr_target", ""),
+            skill_evaluation=payload["skill_evaluation"],
+            summary=payload["summary"],
+            metadata={"raw_llm": payload}  # сохраняем весь ответ для аудита
+        )
+
+    # MEDIA CONTEXT
+
+    def _get_media_context(self, task: Task) -> list[dict]:
+        if not hasattr(task, "media_files"):
+            return []
+
+        context = []
+        for media in task.media_files.all():
+            context.append(
+                {
+                    "type": media.media_type,
+                    "url": getattr(media.file, "url", None),
+                }
+            )
+        return context

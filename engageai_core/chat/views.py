@@ -810,10 +810,10 @@ class ChatContextMixin:
     Требует slug ассистента.
     """
 
-    def get_chat_context(self, request, slug="main_orchestrator"):
+    def get_chat_context(self, slug="main_orchestrator"):
         """Возвращает словарь контекста для шаблона чата"""
         chat_service = getattr(self, 'chat_service', None) or ChatService()
-        user_media_service = getattr(self, 'user_media_service', None) or UserMediaService(request.user)
+        user_media_service = getattr(self, 'user_media_service', None) or UserMediaService(self.request.user)
 
         # Получаем ассистента
         try:
@@ -825,7 +825,7 @@ class ChatContextMixin:
         # Получаем или создаем чат
         try:
             chat = chat_service.get_or_create_chat(
-                user=request.user,
+                user=self.request.user,
                 platform=ChatPlatform.WEB,
                 assistant_slug=slug,
                 scope=ChatScope.PRIVATE,
@@ -843,6 +843,14 @@ class ChatContextMixin:
             'max_file_size_mb': UserMediaService.MAX_FILE_SIZE // 1024 // 1024,
             'allowed_file_types': list(UserMediaService.ALLOWED_MIME_TYPES.keys()),
         }
+
+    def get_context_data(self, **kwargs):
+        """
+        Автоматически расширяет основной context
+        """
+        context = super().get_context_data(**kwargs)
+        context.update(self.get_chat_context())
+        return context
 
 
 class AiChatView(LoginRequiredMixin, View):

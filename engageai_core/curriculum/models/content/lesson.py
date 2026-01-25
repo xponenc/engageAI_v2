@@ -28,32 +28,20 @@ class Lesson(models.Model):
     title = models.CharField(max_length=200, verbose_name=_("Title"))
     description = models.TextField(verbose_name=_("Description"))
     order = models.PositiveIntegerField(verbose_name=_("Order"))
-    content = models.JSONField(
-        verbose_name=_("Content"),
-        help_text=_("Optional structured lesson instructions or narrative for AI")
-    )
-    theory_content = models.TextField(
-        blank=True,
-        verbose_name=_("Theory Content"),
-        help_text=_("HTML content with theory and explanations")
-    )
-    duration_minutes = models.PositiveIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(120)],
-        verbose_name=_("Duration (minutes)")
-    )
+    content = models.JSONField(verbose_name=_("Content"),
+                               help_text=_("Optional structured lesson instructions or narrative for AI"))
+    theory_content = models.TextField(verbose_name=_("Theory Content"), blank=True,
+                                      help_text=_("HTML content with theory and explanations"))
+    duration_minutes = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(120)],
+                                                   verbose_name=_("Duration (minutes)"))
     required_cefr = models.CharField(max_length=2, choices=CEFRLevel, verbose_name=_("Required CEFR"))
     learning_objectives = models.ManyToManyField(LearningObjective, verbose_name=_("Learning Objectives"))
-    skill_focus = models.JSONField(
-        default=list,
-        validators=[validate_skill_focus],
-        verbose_name=_("Skill Focus"),
-        help_text=_("e.g., ['listening', 'vocabulary']")
-    )
-    adaptive_parameters = models.JSONField(
-        default=dict,
-        verbose_name=_("Adaptive Parameters"),
-        help_text=_("e.g., {'min_correct_ratio': 0.7, 'max_items': 10}")
-    )
+    skill_focus = models.JSONField(default=list, validators=[validate_skill_focus], verbose_name=_("Skill Focus"),
+                                   help_text=_("e.g., ['listening', 'vocabulary']")
+                                   )
+    adaptive_parameters = models.JSONField(default=dict, verbose_name=_("Adaptive Parameters"),
+                                           help_text=_("e.g., {'min_correct_ratio': 0.7, 'max_items': 10}")
+                                           )
     is_remedial = models.BooleanField(verbose_name="дополнительные, корректирующие уроки", default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -67,4 +55,3 @@ class Lesson(models.Model):
 
     def __str__(self):
         return f"{self.course.title} → {self.title}"
-

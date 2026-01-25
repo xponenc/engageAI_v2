@@ -39,6 +39,7 @@ urlpatterns = [
     path('chat/', include('chat.urls', namespace='chat')),
     path('assistant/', include('ai_assistant.urls', namespace='assistant')),
     path('curriculum/', include('curriculum.urls', namespace='curriculum')),
+    path('wh/', include('word_helper.urls', namespace='word_helper')),
 ]
 
 

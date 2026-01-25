@@ -129,14 +129,20 @@ class PathGenerationService:
 
     @staticmethod
     def _get_available_lessons(course, level):
-        lessons = course.lessons.filter(is_active=True, level__in=[level, Lesson.get_next_level(level)])
+        next_level = PathGenerationService._get_next_cefr_level(level)
+
+        lessons = course.lessons.filter(
+            is_active=True,
+            required_cefr__in=[level, next_level]  # ← здесь required_cefr, а не level
+        )
+
         return [
             {
                 "id": l.id,
                 "title": l.title,
-                "level": l.level,
+                "level": l.required_cefr,  # ← required_cefr, а не level
                 "skill_focus": l.skill_focus,
-                "estimated_minutes": l.estimated_time or 25
+                "estimated_minutes": l.duration_minutes or 25
             }
             for l in lessons
         ]
@@ -192,7 +198,7 @@ class PathGenerationService:
                 "lesson_id": lesson.id,
                 "title": lesson.title,
                 "reason": f"Линейный шаг: фокус на {lesson.skill_focus}",
-                "estimated_minutes": lesson.estimated_time or 30,
+                "estimated_minutes": lesson.duration_minutes or 30,
                 "type": "core",
                 "prerequisites": [idx] if idx > 0 else [],  # Простая цепочка
                 "triggers": [],  # Нет адаптации в fallback

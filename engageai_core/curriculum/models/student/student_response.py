@@ -2,6 +2,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from curriculum.models.content.task import Task
+from curriculum.models.student.enrollment import Enrollment
 from users.models import Student
 
 
@@ -20,6 +21,7 @@ class StudentTaskResponse(models.Model):
     """
     student = models.ForeignKey(Student, on_delete=models.CASCADE, verbose_name=_("Student"))
     task = models.ForeignKey(Task, on_delete=models.CASCADE, verbose_name=_("Task"), related_name="student_response")
+    enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, null=True, blank=True)  # ← добавляем
     response_text = models.TextField(blank=True, verbose_name=_("Text Response"))
     audio_file = models.FileField(upload_to='responses/', blank=True, null=True, verbose_name=_("Audio Response"))
     transcript = models.TextField(blank=True, null=True, verbose_name=_("Audio Transcript"))
@@ -34,6 +36,7 @@ class StudentTaskResponse(models.Model):
             models.Index(fields=['task']),
             models.Index(fields=['submitted_at']),
         ]
+        unique_together = ['enrollment', 'task']  # Один ответ на задание в рамках enrollment
 
     def __str__(self):
         return f"Response by {self.student} to {self.task}"

@@ -140,7 +140,6 @@ MODEL_COSTS = {
 }
 
 
-
 @dataclass
 class LLMResponse:
     """Структура ответа от LLM"""
@@ -245,7 +244,8 @@ class LocalModelAdapter:
             import torch
             from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
         except ImportError as e:
-            raise ImportError("Missing dependencies for Hugging Face models. Install with: pip install transformers torch")
+            raise ImportError(
+                "Missing dependencies for Hugging Face models. Install with: pip install transformers torch")
 
         # Проверка доступности GPU
         if torch.cuda.is_available():
@@ -427,9 +427,9 @@ class LLMFactory:
     """
 
     def __init__(
-        self,
-        config: Optional[LLMConfig] = None,
-        **kwargs
+            self,
+            config: Optional[LLMConfig] = None,
+            **kwargs
     ):
         """
         Инициализация фабрики LLM
@@ -512,7 +512,8 @@ class LLMFactory:
             openai_api_key=self.config.openai_api_key
         )
 
-        logger.info(f"Initialized OpenAI models: primary={self.config.llm_model_name}, fallback={self.config.llm_fallback_model}")
+        logger.info(
+            f"Initialized OpenAI models: primary={self.config.llm_model_name}, fallback={self.config.llm_fallback_model}")
 
     def _init_local_models(self):
         """Инициализация локальных моделей"""
@@ -613,11 +614,11 @@ class LLMFactory:
             raise
 
     def _build_full_prompt(
-        self,
-        system_prompt: str,
-        user_message: str,
-        conversation_history: Optional[List[Dict[str, str]]] = None,
-        media_context: Optional[List[Dict[str, Any]]] = None
+            self,
+            system_prompt: str,
+            user_message: str,
+            conversation_history: Optional[List[Dict[str, str]]] = None,
+            media_context: Optional[List[Dict[str, Any]]] = None
     ) -> str:
         """
         Формирует полный промпт для кэширования
@@ -654,13 +655,13 @@ class LLMFactory:
         return "\n".join(parts)
 
     async def _generate_response(
-        self,
-        system_prompt: str,
-        user_message: str,
-        conversation_history: Optional[List[Dict[str, str]]] = None,
-        response_format: str = "json",
-        media_context: Optional[List[Dict[str, Any]]] = None,
-        timeout: int = 30
+            self,
+            system_prompt: str,
+            user_message: str,
+            conversation_history: Optional[List[Dict[str, str]]] = None,
+            response_format: str = "json",
+            media_context: Optional[List[Dict[str, Any]]] = None,
+            timeout: int = 30
     ) -> GenerationResult:
         """
         Генерирует ответ от LLM с полным отслеживанием метрик
@@ -758,7 +759,8 @@ class LLMFactory:
             input_tokens = token_usage.get('input_tokens', 0)
             output_tokens = token_usage.get('output_tokens', 0)
             model_used = result.get('model_used', self.config.llm_model_name)
-            cost = self._calculate_cost(input_tokens, output_tokens, model_used) if self.config.enable_cost_tracking else 0.0
+            cost = self._calculate_cost(input_tokens, output_tokens,
+                                        model_used) if self.config.enable_cost_tracking else 0.0
 
             generation_time = time.time() - start_time
 
@@ -787,12 +789,12 @@ class LLMFactory:
             )
 
     def _create_chain(
-        self,
-        system_prompt: str,
-        user_message: str,
-        conversation_history: Optional[List[Dict[str, str]]] = None,
-        response_format: str = "json",
-        media_context: Optional[List[Dict[str, str]]] = None
+            self,
+            system_prompt: str,
+            user_message: str,
+            conversation_history: Optional[List[Dict[str, str]]] = None,
+            response_format: str = "json",
+            media_context: Optional[List[Dict[str, str]]] = None
     ) -> Tuple:
         """
         Создает LangChain цепочку для генерации ответа
@@ -893,11 +895,11 @@ class LLMFactory:
         )
 
     async def generate_json_response(
-        self,
-        system_prompt: str,
-        user_message: str,
-        conversation_history: Optional[List[Dict[str, str]]] = None,
-        media_context: Optional[List[Dict[str, Any]]] = None
+            self,
+            system_prompt: str,
+            user_message: str,
+            conversation_history: Optional[List[Dict[str, str]]] = None,
+            media_context: Optional[List[Dict[str, Any]]] = None
     ) -> GenerationResult:
         """
         Генерирует структурированный JSON-ответ от LLM
@@ -920,10 +922,10 @@ class LLMFactory:
         )
 
     async def generate_text_response(
-        self,
-        system_prompt: str,
-        user_message: str,
-        conversation_history: Optional[List[Dict[str, str]]] = None
+            self,
+            system_prompt: str,
+            user_message: str,
+            conversation_history: Optional[List[Dict[str, str]]] = None
     ) -> GenerationResult:
         """
         Генерирует текстовый ответ от LLM
@@ -944,10 +946,10 @@ class LLMFactory:
         )
 
     async def generate_media_response(
-        self,
-        media_type: str,
-        prompt: str,
-        model_override: Optional[str] = None
+            self,
+            media_type: str,
+            prompt: str,
+            model_override: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Генерирует медиа-контент (изображения, аудио) с помощью специализированных моделей
@@ -984,9 +986,9 @@ class LLMFactory:
             }
 
     async def _generate_dalle_image(
-        self,
-        prompt: str,
-        model_override: Optional[str] = None
+            self,
+            prompt: str,
+            model_override: Optional[str] = None
     ) -> Dict[str, Any]:
         """Генерирует изображение с помощью DALL-E API"""
         try:
@@ -1038,9 +1040,9 @@ class LLMFactory:
             raise
 
     async def _generate_tts_audio(
-        self,
-        text: str,
-        model_override: Optional[str] = None
+            self,
+            text: str,
+            model_override: Optional[str] = None
     ) -> Dict[str, Any]:
         """Генерирует аудио с помощью TTS API"""
         try:
@@ -1085,6 +1087,7 @@ class LLMFactory:
         except Exception as e:
             logger.error(f"TTS generation error: {str(e)}")
             raise
+
 
 # Инициализация глобального экземпляра для использования в других модулях
 llm_factory = LLMFactory()

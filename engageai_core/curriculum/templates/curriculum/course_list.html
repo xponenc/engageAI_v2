@@ -46,9 +46,7 @@
                                     </a>
                                 </h3>
                                 <div class="course-card__level">
-                                    {{ course.get_target_cefr_from_display }}
-                                    →
-                                    {{ course.get_target_cefr_to_display }}
+                                  
                                 </div>
                             </header>
 
@@ -58,8 +56,8 @@
                                 </p>
 
                                 <div class="course-card__meta">
-                                    <span>📚 {{ course.ordered_lessons|length }} уроков</span>
-                                    <span>⏱ ~{{ course.estimated_duration }} мин</span>
+                                    <span>📚 {{ course.lesson_counter }} уроков</span>
+                                    <span>⏱ ~{{ course.total_duration }} мин</span>
                                 </div>
 
                                 {% if course.has_enrollment %}
@@ -185,11 +183,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}',
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                 }
             })
             .then(async response => {
                 const data = await response.json();
+                console.log(data)
                 if (!response.ok) {
                     // Обрабатываем ошибки от бэка
                     throw new Error(data.error || 'Неизвестная ошибка');

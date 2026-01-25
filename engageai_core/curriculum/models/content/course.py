@@ -1,9 +1,6 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from curriculum.models.systematization.learning_objective import LearningObjective
-from users.models import CEFRLevel
-
 
 class Course(models.Model):
     """
@@ -24,15 +21,11 @@ class Course(models.Model):
 
     title = models.CharField(max_length=200, verbose_name=_("Title"))
     description = models.TextField(verbose_name=_("Description"))
-    estimated_duration = models.PositiveIntegerField(
-        verbose_name=_("Estimated Duration (minutes)"),
-        help_text=_("Total estimated time to complete the course")
-    )
-    learning_objectives = models.ManyToManyField(LearningObjective, verbose_name=_("Learning Objectives"))
-    required_skills = models.JSONField(
-        default=list,
-        verbose_name=_("Required Skills"),
-        help_text=_("e.g., ['grammar:B1', 'listening:A2']")
+    professional_tags = models.ManyToManyField(
+        "curriculum.ProfessionalTag",
+        blank=True,
+        verbose_name=_("Professional Tags"),
+        help_text=_("Теги профессий, для которых курс релевантен (e.g., 'backend', 'qa')")
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

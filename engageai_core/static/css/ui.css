@@ -2149,3 +2149,10 @@ input:valid:not(:focus):not(:placeholder-shown) {
 .json__collapsed:hover {
     cursor: pointer;
 }
+
+.word-hover {
+    background: rgba(255, 220, 120, 0.55);
+    border-radius: 4px;
+    cursor: help;
+    transition: background 0.15s ease;
+}

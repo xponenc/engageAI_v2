@@ -22,6 +22,7 @@ class LessonEventType(models.TextChoices):
     ABANDON = "ABANDON", _("Покинул урок без завершения")
     ASSESSMENT_START = "ASSESSMENT_START", _("Начало оценки урока")
     ASSESSMENT_COMPLETE = "ASSESSMENT_COMPLETE", _("Завершение оценки урока")
+    ASSESSMENT_ERROR = "ASSESSMENT_ERROR", _("Ошибка оценки урока")
 
 
 class LessonEventLog(models.Model):

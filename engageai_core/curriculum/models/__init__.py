@@ -1,6 +1,6 @@
 # Assessment models
-# from .assessment.assessment import Assessment
-# from .assessment.student_response import StudentTaskResponse
+from .assessment.lesson_assesment import LessonAssessmentResult
+from .assessment.task_assessment import TaskAssessmentResult
 # from .assessment.diagnostic_session import DiagnosticSession
 
 # Content models

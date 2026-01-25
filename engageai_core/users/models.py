@@ -86,6 +86,15 @@ class CEFRLevel(models.TextChoices):
     C1 = "C1", "Advanced (C1)"
     C2 = "C2", "Proficiency (C2)"
 
+    @classmethod
+    def get_next(cls, current: str) -> str:
+        order = [choice.value for choice in cls]
+        try:
+            idx = order.index(current)
+            return order[min(idx + 1, len(order) - 1)]
+        except ValueError:
+            return cls.A1.value
+
 #
 # class StudyProfile(models.Model):
 #     """Профиль расширяющий данные по Telegram аккаунту пользователя"""

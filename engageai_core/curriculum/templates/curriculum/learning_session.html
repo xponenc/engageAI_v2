@@ -70,14 +70,16 @@
                 <input type="hidden" id="enrollment-id" value="{{ enrollment.id }}">
                 <input type="hidden" id="assessment-job-id" value="{{ enrollment.assessment_job_id }}">
             {% else %}
-
+                <span class="word-helper">I am a table when immutable</span> 
                 {% if lesson_theory %}
                 <section class="lesson-theory">
                     <h3 class="lesson-theory__title">Теория урока</h3>
                     <div class="lesson-theory__content">
                         {{ lesson_theory|safe }}
+                        
                     </div>
                 </section>
+
                 {% endif %}
 
                 <section class="lesson-tasks">

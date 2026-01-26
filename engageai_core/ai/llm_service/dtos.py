@@ -24,10 +24,17 @@ class GenerationMetrics(BaseModel):
     input_tokens: int = 0
     output_tokens: int = 0
     total_tokens: int = 0
-    cost_usd: float = 0.0
+    cost_usd: float = 1000.0
     generation_time_sec: float = 0.0
     model_used: str = ""
     cached: bool = False
+
+    def with_cost(self, cost_usd: float) -> "GenerationMetrics":
+        """
+        Возвращает копию метрик с обновлённой стоимостью.
+        Сохраняет неизменяемость оригинальных метрик (immutable pattern).
+        """
+        return self.model_copy(update={"cost_usd": cost_usd})
 
 
 @dataclass

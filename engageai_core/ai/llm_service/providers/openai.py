@@ -88,6 +88,8 @@ class OpenAIProvider(BaseProvider):
                 )
             )
 
+            print(f"OpenAIProvider {completion=}")
+
             if not completion.choices or not completion.choices[0].message.content:
                 raise ValueError("Empty response from OpenAI")
 

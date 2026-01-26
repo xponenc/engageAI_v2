@@ -129,10 +129,6 @@ class OpenAICostCalculator(CostCalculator):
                 model, input_tokens, (input_tokens / 1e6) * input_price,
                 output_tokens, (output_tokens / 1e6) * output_price
             )
-        input_price, output_price = self.PRICING.get(
-            model,
-            self.PRICING.get(self.default_model, (0.150, 0.600))  # fallback на gpt-4o-mini
-        )
 
         input_cost = (input_tokens / 1_000_000) * input_price
         output_cost = (output_tokens / 1_000_000) * output_price

@@ -27,7 +27,6 @@ from ..dtos import GenerationMetrics, GenerationResult, LLMResponse
 from ..interfaces import LLMProvider, CostCalculator
 
 
-
 class BaseProvider(LLMProvider, ABC):
     """
     Базовый класс для всех провайдеров (и облачных, и локальных).
@@ -60,24 +59,24 @@ class BaseProvider(LLMProvider, ABC):
         Обёртка для повторных попыток — используется почти всеми провайдерами.
         """
         async for attempt in AsyncRetrying(
-            stop=stop_after_attempt(max_attempts),
-            wait=wait_exponential(multiplier=1, min=min_wait, max=30),
-            retry=(
-                retry_if_exception_type((RateLimitError, APIConnectionError, APIError, httpx.TimeoutException))
-                | retry_if_exception_type(ConnectionError)
-            ),
-            reraise=True,
+                stop=stop_after_attempt(max_attempts),
+                wait=wait_exponential(multiplier=1, min=min_wait, max=30),
+                retry=(
+                        retry_if_exception_type((RateLimitError, APIConnectionError, APIError, httpx.TimeoutException))
+                        | retry_if_exception_type(ConnectionError)
+                ),
+                reraise=True,
         ):
             with attempt:
                 return await coro
 
     def _create_metrics(
-        self,
-        input_tokens: int = 0,
-        output_tokens: int = 0,
-        generation_time: float = 0.0,
-        cached: bool = False,
-        extra: Optional[Dict[str, Any]] = None,
+            self,
+            input_tokens: int = 0,
+            output_tokens: int = 0,
+            generation_time: float = 0.0,
+            cached: bool = False,
+            extra: Optional[Dict[str, Any]] = None,
     ) -> GenerationMetrics:
         """Удобный конструктор метрик"""
         return GenerationMetrics(
@@ -93,22 +92,22 @@ class BaseProvider(LLMProvider, ABC):
 
     # Дефолтные заглушки — переопределяются в конкретных провайдерах
     async def generate_text_stream(
-        self,
-        messages: List[Dict[str, str]],
-        *,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+            self,
+            messages: List[Dict[str, str]],
+            *,
+            temperature: Optional[float] = None,
+            max_tokens: Optional[int] = None,
     ) -> AsyncIterable[Tuple[str, GenerationMetrics]]:
         # По умолчанию — не поддерживается, можно реализовать fallback через generate_text
         raise NotImplementedError("Streaming not supported by this provider")
 
     async def generate_structured(
-        self,
-        messages: List[Dict[str, str]],
-        output_schema: type,
-        *,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+            self,
+            messages: List[Dict[str, str]],
+            output_schema: type,
+            *,
+            temperature: Optional[float] = None,
+            max_tokens: Optional[int] = None,
     ) -> Tuple[Any, GenerationMetrics]:
         # Базовая реализация: генерируем текст → парсим JSON → валидируем
         # В OpenAI можно сделать нативно, здесь — универсальный fallback
@@ -147,12 +146,12 @@ class ZeroCostCalculator(CostCalculator):
     """Для локальных моделей — стоимость всегда 0"""
 
     def calculate(
-        self,
-        model: str,
-        input_tokens: int,
-        output_tokens: int = 0,
-        extra_chars: int = 0,
-        image_count: int = 0,
+            self,
+            model: str,
+            input_tokens: int,
+            output_tokens: int = 0,
+            extra_chars: int = 0,
+            image_count: int = 0,
     ) -> float:
         return 0.0
 

@@ -4,6 +4,10 @@ import sys
 from pathlib import Path
 import json
 import logging
+from typing import Optional
+
+from asgiref.sync import sync_to_async
+from django.db import transaction, IntegrityError
 
 # --- добавляем корень проекта в PYTHONPATH ---
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -26,7 +30,6 @@ from curriculum.models.systematization.professional_tag import ProfessionalTag
 from curriculum.models.content.balance import CourseBalance, DEFAULT_COURSE_BALANCE
 from ai.llm_service.factory import llm_factory
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -43,28 +46,56 @@ class ContentGenerationService:
     def __init__(self):
         self.llm = llm_factory
 
-    def generate_course(self, theme: str, num_lessons: int = 60) -> Course:
+    async def generate_course(self, theme: str, num_lessons: int = 60) -> Course:
         """
         Генерирует курс с базовым балансом и привязкой тегов.
         """
-        # --- Шаг 1: Данные курса ---
-        course_data = self._generate_course_data(theme)
-        course = Course.objects.create(
-            title=course_data["title"],
-            description=course_data["description"],
-            is_active=True
-        )
-        logger.info(f"Создан курс: {course.title}")
+        # Курс
+        try:
+            course_data = await self._generate_course_data(theme)
+        except Exception as e:
+            logger.exception(
+                f"КРИТИЧЕСКАЯ ОШИБКА: не удалось сгенерировать данные курса для темы '{theme}'",
+                extra={
+                    "theme": theme,
+                    "error_type": type(e).__name__,
+                    "error_message": str(e)
+                }
+            )
+            raise  # ← позволяем ошибке всплыть для обработки на уровне вызова
+        try:
+            course = await sync_to_async(Course.objects.create)(
+                title=course_data["title"],
+                description=course_data["description"],
+                is_active=True
+            )
+            logger.info(f"Успешно создан курс: {course.title} (ID: {course.id})")
+        except Exception as e:
+            logger.exception(
+                f"Ошибка сохранения курса в БД для темы '{theme}'",
+                extra={"theme": theme, "course_data": course_data}
+            )
+            raise
 
-        return
+        # Теги
+        try:
+            tags = await self._generate_professional_tags(theme=theme, course=course)
+        except Exception as e:
+            logger.exception(
+                f"КРИТИЧЕСКАЯ ОШИБКА: не удалось теги для курса для темы '{course}'",
+                extra={
+                    "course": course,
+                    "error_type": type(e).__name__,
+                    "error_message": str(e)
+                }
+            )
+            raise
 
-        # --- Шаг 2: Теги ---
-        tags = self._generate_professional_tags(theme)
-        course.professional_tags.set(tags)
+        await sync_to_async(course.professional_tags.set)(tags)
         logger.info(f"Привязано тегов: {len(tags)}")
 
-        # --- Шаг 3: CourseBalance ---
-        CourseBalance.objects.create(
+        # Баланс уроков курса
+        await sync_to_async(CourseBalance.objects.create)(
             course=course,
             total_lessons=DEFAULT_COURSE_BALANCE["total_lessons"],
             level_distribution=DEFAULT_COURSE_BALANCE["levels"],
@@ -72,18 +103,19 @@ class ContentGenerationService:
             frozen=True
         )
 
-        # --- Шаг 4: Генерация уроков ---
-        self._generate_lessons(course)
+        # Генерация уроков ---
+        await self._generate_lessons(course)
 
         return course
 
-    def generate_lesson(
+    async def generate_lesson(
             self,
             course: Course,
             order: int,
             level: str,
             skill_focus: list[str],
-            theme_tags: list[str]
+            theme_tags: list[str],
+            user: Optional['User'] = None
     ) -> Lesson:
         """
         Универсальный генератор одного урока.
@@ -91,7 +123,9 @@ class ContentGenerationService:
         """
         tags_str = ""
         if course:
-            tags_str = ', '.join(t.name for t in course.professional_tags.all())
+            tags = await sync_to_async(list)(course.professional_tags.all())
+            # tags_str = ', '.join(t.name for t in course.professional_tags.all())
+            tags_str = ", ".join(t.name for t in tags)
         if theme_tags:
             tags_str += f", {', '.join(theme_tags)}" if tags_str else ', '.join(theme_tags)
 
@@ -105,9 +139,8 @@ class ContentGenerationService:
         else:
             focus_str = ("Balance skills: grammar, vocabulary, reading, listening,"
                          " writing, speaking. Choose 1–3 relevant skills")
-
-        prompt = f"""
-               You are an expert English curriculum designer.
+        system_prompt = """You are an expert English curriculum designer. """
+        user_prompt = f"""
                Generate ONE lesson for course: 
                "{course.title if course else 'Adaptive professional English'}".
                Lesson CEFR level: {level}
@@ -137,47 +170,95 @@ class ContentGenerationService:
                    }}
                ]
                """
-        print(prompt)
-        response = asyncio.run(self.llm.generate_json_response(
-            system_prompt=prompt,
-            user_message=""
-        ))
-        print(response)
-        json_text = response.response.get("response", "").strip()
-        data = json.loads(json_text)[0]  # Только один урок
-        print(data)
-
-        # Создаём Lesson
-        lesson = Lesson.objects.create(
-            course=course,
-            order=order,
-            title=data["title"],
-            description=data["description"],
-            duration_minutes=data["duration_minutes"],
-            required_cefr=level,
-            skill_focus=data["skill_focus"],
-            content=data["theory_content"],
-            is_active=True,
-            is_remedial=False
+        context = {
+            "course_id": course.pk,
+            "user_id": user.pk if user else None,
+        }
+        result = await self.llm.generate_json_response(
+            system_prompt=system_prompt,
+            user_message=user_prompt,
+            temperature=0.2,
+            context=context
         )
 
-        # Привязка learning objectives
-        for obj_data in data.get("learning_objectives", []):
-            obj, _ = LearningObjective.objects.get_or_create(
-                identifier=obj_data["identifier"],
-                defaults={
-                    "name": obj_data["name"],
-                    "cefr_level": obj_data["cefr_level"],
-                    "skill_domain": obj_data["skill_domain"]
+        if result.error:
+            logger.error(
+                f"Ошибка генерации урока для курса '{course}': {result.error}",
+                extra={"raw_response": result.raw_provider_response}
+            )
+            raise ValueError(f"Не удалось сгенерировать урок: {result.error}")
+        lesson_data = result.response.message
+        if not isinstance(lesson_data, dict):
+            logger.error(
+                f"Некорректный формат ответа для генерации урока к курсу '{course}': message не является словарём",
+                extra={
+                    "message_type": type(lesson_data).__name__,
+                    "message_value": str(lesson_data)[:200],
+                    "raw_response": result.raw_provider_response[:300] if result.raw_provider_response else None
                 }
             )
-            lesson.learning_objectives.add(obj)
+            raise ValueError("Ответ не является JSON-объектом")
 
-        logger.info(f"Создан урок: {lesson.title} ({level})")
+        print(lesson_data)
+
+        # Создаём Lesson
+        try:
+            with transaction.atomic():
+                lesson = await sync_to_async(Lesson.objects.create)(
+                    course=course,
+                    order=order,
+                    title=lesson_data["title"],
+                    description=lesson_data["description"],
+                    duration_minutes=lesson_data["duration_minutes"],
+                    required_cefr=level,
+                    skill_focus=lesson_data["skill_focus"],
+                    content=lesson_data["theory_content"],
+                    is_active=True,
+                    is_remedial=False
+                )
+                # Создание learning objectives
+                objectives_to_add = []
+                for obj_data in lesson_data.get("learning_objectives", []):
+                    obj, _ = await sync_to_async(LearningObjective.objects.get_or_create)(
+                        identifier=obj_data["identifier"],
+                        defaults={
+                            "name": obj_data["name"],
+                            "cefr_level": obj_data["cefr_level"],
+                            "skill_domain": obj_data["skill_domain"]
+                        }
+                    )
+                    objectives_to_add.append(obj)
+
+                # Bulk-добавление связей
+                if objectives_to_add:
+                    lesson.learning_objectives.add(*objectives_to_add)
+
+        except IntegrityError as e:
+            logger.exception(
+                "DB integrity error during lesson creation",
+                extra={"course_id": course.pk, "level": level, "lesson_data": lesson_data}
+            )
+            raise ValueError("Database error: lesson creation failed") from e
+        except Exception as e:
+            logger.exception(
+                "Unexpected error in lesson generation",
+                extra={"course_id": course.pk, "level": level, "lesson_data": lesson_data}
+            )
+            raise
+
+        logger.info("Lesson created successfully", extra={
+            "lesson_id": lesson.pk,
+            "course": course.title,
+            "level": level,
+            "objectives_count": len(objectives_to_add)
+        })
+
         return lesson
 
-    def _generate_course_data(self, theme: str) -> dict:
-        prompt = f"""
+    async def _generate_course_data(self, theme: str) -> dict:
+        prompt = ("Ты опытный и талантливый проектировщик курсов повышения уровня английского языка. "
+                  "Выполни задание и ответь строго JSON")
+        user_message = f"""
         Сгенерируй название и описание курса по теме "{theme}".
         Курс универсальный — уроки от A2 до C1, адаптивный путь под уровень студента.
         Баланс навыков: примерно равное покрытие grammar, vocabulary, listening, reading, writing, speaking.
@@ -189,21 +270,38 @@ class ContentGenerationService:
         }}
         """
 
-        print(prompt)
-
-        response = asyncio.run(self.llm.generate_json_response(
+        result = await self.llm.generate_json_response(
             system_prompt=prompt,
-            user_message="",
-        ))
-        print(response)
-        json_text = response.response.get("response", "").strip()
-        data = json.loads(json_text)
+            user_message=user_message,
+            temperature=0.3,
+        )
+
+        if result.error:
+            logger.error(
+                f"Ошибка генерации данных курса для темы '{theme}': {result.error}",
+                extra={"raw_response": result.raw_provider_response}
+            )
+            raise ValueError(f"Не удалось сгенерировать курс: {result.error}")
+        data = result.response.message
+        if not isinstance(data, dict):
+            logger.error(
+                f"Некорректный формат ответа для генерации курса на тему '{theme}': message не является словарём",
+                extra={
+                    "message_type": type(data).__name__,
+                    "message_value": str(data)[:200],
+                    "raw_response": result.raw_provider_response[:300] if result.raw_provider_response else None
+                }
+            )
+            raise ValueError("Ответ не является JSON-объектом")
+
         print(data)
 
         return data
 
-    def _generate_professional_tags(self, theme: str) -> list[ProfessionalTag]:
-        prompt = f"""
+    async def _generate_professional_tags(self, theme: str, course: Course) -> list[ProfessionalTag]:
+        system_prompt = ("Ты опытный и талантливый проектировщик курсов повышения уровня английского языка. "
+                         "Выполни задание и ответь строго JSON")
+        user_message = f"""
         Придумай 8–12 коротких профессиональных тегов для темы курса "{theme}".
         Теги должны быть релевантны IT, бизнесу или профессии (backend, qa, standup-meetings, ticket-writing и т.д.).
         Короткие, уникальные, без пробелов.
@@ -211,31 +309,46 @@ class ContentGenerationService:
         Верни ТОЛЬКО JSON:
         {{"tags": ["backend", "devops", "standup", ...]}}
         """
-        print(prompt)
-        response = asyncio.run(self.llm.generate_json_response(
-            system_prompt=prompt,
-            user_message="",
-        ))
-        print(response)
-        json_text = response.response.get("response", "").strip()
-        data = json.loads(json_text)
-        print(data)
+
+        result = await self.llm.generate_json_response(
+            system_prompt=system_prompt,
+            user_message=user_message,
+            context={"course_id": course.pk},
+            temperature=0.4,
+        )
+
+        if result.error:
+            logger.error(
+                f"Ошибка генерации тегов для курса '{course}': {result.error}",
+                extra={"raw_response": result.raw_provider_response}
+            )
+            raise ValueError(f"Не удалось сгенерировать теги: {result.error}")
+        data = result.response.message
+        if not isinstance(data, dict):
+            logger.error(
+                f"Некорректный формат ответа генерации тегов для курса '{course}': message не является словарём",
+                extra={
+                    "message_type": type(data).__name__,
+                    "message_value": str(data)[:200],
+                    "raw_response": result.raw_provider_response[:300] if result.raw_provider_response else None
+                }
+            )
+            raise ValueError("Ответ не является JSON-объектом")
 
         tags = []
         for name in data["tags"]:
-            tag, created = ProfessionalTag.objects.get_or_create(
+            tag, created = await sync_to_async(ProfessionalTag.objects.get_or_create)(
                 name=name,
                 defaults={"description": f"Тег для темы {theme}"}
             )
             tags.append(tag)
-        print(tags)
         return tags
 
-    def _generate_lessons(self, course: Course):
+    async def _generate_lessons(self, course: Course):
         """
         Генерирует все уроки курса на основе CourseBalance.
         """
-        course_balance = CourseBalance.objects.get(course=course)
+        course_balance = await sync_to_async(CourseBalance.objects.get)(course=course)
         last_order = 0
 
         # Генерация по уровням
@@ -250,12 +363,13 @@ class ContentGenerationService:
                 skill_focus = [s for s, pct in sorted_skills[:3]]
 
                 # Генерация урока
-                lesson = self.generate_lesson(
+                tags = await sync_to_async(list)(course.professional_tags.all())
+                lesson = await self.generate_lesson(
                     course=course,
                     order=last_order,
                     level=level,
                     skill_focus=skill_focus,
-                    theme_tags=[t.name for t in course.professional_tags.all()]
+                    theme_tags=[t.name for t in tags]
                 )
                 last_order += 1
                 break
@@ -266,4 +380,4 @@ class ContentGenerationService:
 
 if __name__ == "__main__":
     generator = ContentGenerationService()
-    generator.generate_course(theme="AI, LLM", num_lessons=60)
+    asyncio.run(generator.generate_course(theme="AI, LLM", num_lessons=60))

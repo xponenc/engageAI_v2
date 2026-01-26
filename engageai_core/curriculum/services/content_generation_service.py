@@ -2,17 +2,13 @@ import asyncio
 import os
 import sys
 from pathlib import Path
-
-from curriculum.models.content.balance import CourseBalance, DEFAULT_COURSE_BALANCE
+import json
+import logging
 
 # --- добавляем корень проекта в PYTHONPATH ---
 BASE_DIR = Path(__file__).resolve().parents[2]
-print(BASE_DIR)
-# parents[3]:
-# services → curriculum → engageai_core → engageai_v2
 
 sys.path.insert(0, str(BASE_DIR))
-print(sys.path[0])
 
 os.environ.setdefault(
     "DJANGO_SETTINGS_MODULE",
@@ -23,15 +19,13 @@ import django
 
 django.setup()
 
-from django.db import models
-
-from ai.llm.llm_factory import llm_factory
 from curriculum.models import LearningObjective
 from curriculum.models.content.course import Course
 from curriculum.models.content.lesson import Lesson
 from curriculum.models.systematization.professional_tag import ProfessionalTag
-import json
-import logging
+from curriculum.models.content.balance import CourseBalance, DEFAULT_COURSE_BALANCE
+from ai.llm_service.factory import llm_factory
+
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +55,8 @@ class ContentGenerationService:
             is_active=True
         )
         logger.info(f"Создан курс: {course.title}")
+
+        return
 
         # --- Шаг 2: Теги ---
         tags = self._generate_professional_tags(theme)
@@ -141,13 +137,15 @@ class ContentGenerationService:
                    }}
                ]
                """
-
+        print(prompt)
         response = asyncio.run(self.llm.generate_json_response(
             system_prompt=prompt,
             user_message=""
         ))
+        print(response)
         json_text = response.response.get("response", "").strip()
         data = json.loads(json_text)[0]  # Только один урок
+        print(data)
 
         # Создаём Lesson
         lesson = Lesson.objects.create(
@@ -158,7 +156,7 @@ class ContentGenerationService:
             duration_minutes=data["duration_minutes"],
             required_cefr=level,
             skill_focus=data["skill_focus"],
-            theory_content=data["theory_content"],
+            content=data["theory_content"],
             is_active=True,
             is_remedial=False
         )
@@ -254,12 +252,13 @@ class ContentGenerationService:
                 # Генерация урока
                 lesson = self.generate_lesson(
                     course=course,
-                    order=last_order + 1,
+                    order=last_order,
                     level=level,
                     skill_focus=skill_focus,
                     theme_tags=[t.name for t in course.professional_tags.all()]
                 )
                 last_order += 1
+                break
 
     # def _generate_tasks(self, lesson: Lesson, num_tasks: int = 4):
     #     ...

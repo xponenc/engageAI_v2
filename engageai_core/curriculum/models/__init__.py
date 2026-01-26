@@ -4,6 +4,7 @@ from .assessment.task_assessment import TaskAssessmentResult
 # from .assessment.diagnostic_session import DiagnosticSession
 
 # Content models
+from .content.balance import CourseBalance
 from .content.course import Course
 from .content.lesson import Lesson
 from .content.task import Task

@@ -183,6 +183,9 @@ class UserProfileView(LoginRequiredMixin, ChatContextMixin, DetailView):
     template_name = "users/profile.html"
     queryset = User.objects.select_related("profile", "student")
 
+    def get_object(self, queryset=None):
+        return self.request.user
+
     def dispatch(self, request, *args, **kwargs):
         user = self.get_object()
         if not hasattr(user, 'profile') or user.profile is None:
@@ -191,7 +194,6 @@ class UserProfileView(LoginRequiredMixin, ChatContextMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update(self.get_chat_context(request=self.request))
         user = self.object
         profile = getattr(user, "telegram_profile", None)
 

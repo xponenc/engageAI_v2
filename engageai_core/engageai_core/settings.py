@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'ai_assistant',
     'curriculum',
     'word_helper',
+    'llm_logger',
 ]
 
 if DEBUG:

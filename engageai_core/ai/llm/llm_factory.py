@@ -1,4 +1,3 @@
-# engageai_core/ai/llm/llm_factory.py
 """
 LLMFactory - фабрика для управления языковыми моделями через LangChain
 
@@ -27,12 +26,13 @@ LLMFactory - фабрика для управления языковыми мо�
 - Llama.cpp требует компиляции с поддержкой CUDA для GPU-ускорения
 - Hugging Face модели требуют достаточного объема VRAM
 """
-
+import asyncio
 import os
 import hashlib
 import time
 import logging
 import json
+from decimal import Decimal
 from typing import Dict, Any, Optional, List, Tuple
 from dataclasses import dataclass
 from collections import defaultdict
@@ -65,6 +65,15 @@ from openai import OpenAIError, RateLimitError, APIConnectionError, APIError
 from ai.config import LLMConfig
 
 logger = logging.getLogger(__name__)
+
+# Импорт модели для логирования
+try:
+    from llm_logger.models import LogLLMRequest
+    DJANGO_AVAILABLE = True
+except ImportError:
+    DJANGO_AVAILABLE = False
+    logger.warning("Django models not available. LLM logging will be disabled.")
+
 
 # Данные для расчета стоимости токенов (только для OpenAI)
 MODEL_COSTS = {
@@ -502,7 +511,7 @@ class LLMFactory:
             temperature=self.config.llm_temperature,
             max_tokens=self.config.llm_max_tokens,
             openai_api_key=self.config.openai_api_key,
-            streaming=True
+            streaming=False
         )
 
         self.fallback_llm = ChatOpenAI(
@@ -661,7 +670,10 @@ class LLMFactory:
             conversation_history: Optional[List[Dict[str, str]]] = None,
             response_format: str = "json",
             media_context: Optional[List[Dict[str, Any]]] = None,
-            timeout: int = 30
+            timeout: int = 30,
+            context: Optional[Dict[str, Any]] = None,
+            model_override: Optional[str] = None,
+            temperature_override: Optional[float] = None
     ) -> GenerationResult:
         """
         Генерирует ответ от LLM с полным отслеживанием метрик
@@ -679,6 +691,7 @@ class LLMFactory:
         """
         start_time = time.time()
         cached = False
+        context = context or {}
 
         # Формируем полный промпт
         full_prompt = self._build_full_prompt(system_prompt, user_message, conversation_history, media_context)
@@ -728,6 +741,10 @@ class LLMFactory:
 
             # Для OpenAI используем полную цепочку
             # Создаем цепочку в зависимости от формата ответа
+            # Определяем используемые параметры
+            model_to_use = model_override or self.config.llm_model_name
+            temperature_to_use = temperature_override or self.config.llm_temperature
+
             print(f"{system_prompt=}")
             print(f"{user_message=}")
             print(f"{conversation_history=}")
@@ -738,7 +755,9 @@ class LLMFactory:
                 user_message,
                 conversation_history,
                 response_format,
-                media_context
+                media_context,
+                model_override=model_override,
+                temperature_override=temperature_override
             )
 
             # Пытаемся сгенерировать ответ основной моделью
@@ -764,7 +783,7 @@ class LLMFactory:
 
             generation_time = time.time() - start_time
 
-            return GenerationResult(
+            generation_result = GenerationResult(
                 response=response,
                 token_usage=token_usage,
                 cost=cost,
@@ -773,20 +792,46 @@ class LLMFactory:
                 cached=cached
             )
 
+            # Логирование успешного запроса
+            await self._log_llm_request(
+                system_prompt=system_prompt,
+                user_message=user_message,
+                generation_result=generation_result,
+                context={
+                    **context,
+                    'conversation_history': conversation_history,
+                    'media_context': media_context,
+                    'response_format': response_format
+                },
+                status='SUCCESS'
+            )
+
+            return generation_result
+
         except Exception as e:
             logger.exception(f"Failed to generate response after retries: {str(e)}")
             # Fallback на статический ответ при полном провале
-            return GenerationResult(
+            failed_result = GenerationResult(
                 response=LLMResponse(
                     message="Извините, сейчас я не могу обработать ваш запрос. Пожалуйста, попробуйте позже.",
-                    agent_state={"engagement_change": -1}
+                    agent_state={"error": str(e)}
                 ),
                 token_usage={"input_tokens": 0, "output_tokens": 0},
                 cost=0.0,
                 generation_time=time.time() - start_time,
-                model_used="fallback",
+                model_used=model_override or self.config.llm_model_name,
                 cached=False
             )
+            await self._log_llm_request(
+                system_prompt=system_prompt,
+                user_message=user_message,
+                generation_result=failed_result,
+                context=context,
+                status='ERROR',
+                error_message=str(e)
+            )
+            return failed_result
+
 
     def _create_chain(
             self,
@@ -794,7 +839,9 @@ class LLMFactory:
             user_message: str,
             conversation_history: Optional[List[Dict[str, str]]] = None,
             response_format: str = "json",
-            media_context: Optional[List[Dict[str, str]]] = None
+            media_context: Optional[List[Dict[str, str]]] = None,
+            model_override: Optional[str] = None,
+            temperature_override: Optional[float] = None
     ) -> Tuple:
         """
         Создает LangChain цепочку для генерации ответа
@@ -809,6 +856,17 @@ class LLMFactory:
         Returns:
             Кортеж (chain, input_data)
         """
+        if model_override or temperature_override:
+            # Создаем временную LLM с переопределенными параметрами
+            llm = ChatOpenAI(
+                model_name=model_override if model_override else self.config.llm_model_name,
+                temperature=temperature_override if temperature_override else self.config.llm_temperature,
+                max_tokens=self.config.llm_max_tokens,
+                openai_api_key=self.config.openai_api_key,
+                streaming=True
+            )
+        else:
+            llm = self.llm
         # Подготовка истории сообщений
         messages = []
 
@@ -851,10 +909,10 @@ class LLMFactory:
             #     SystemMessage(content=f"ВАЖНО: Ответ должен быть строго в формате JSON: {format_instructions}")
             # ]
             # chain = full_prompt | self.llm | parser
-            chain = prompt_template | self.llm | parser
+            chain = prompt_template | llm | parser
 
         else:
-            chain = prompt_template | self.llm | parser
+            chain = prompt_template | llm | parser
 
         input_data = {"input": user_message}
 
@@ -899,7 +957,10 @@ class LLMFactory:
             system_prompt: str,
             user_message: str,
             conversation_history: Optional[List[Dict[str, str]]] = None,
-            media_context: Optional[List[Dict[str, Any]]] = None
+            media_context: Optional[List[Dict[str, Any]]] = None,
+            context: Optional[Dict[str, Any]] = None,
+            model_override: Optional[str] = None,
+            temperature_override: Optional[float] = None
     ) -> GenerationResult:
         """
         Генерирует структурированный JSON-ответ от LLM
@@ -909,6 +970,7 @@ class LLMFactory:
             user_message: Сообщение пользователя
             conversation_history: История диалога
             media_context: Контекст медиафайлов
+            context: Контекст для логирования (user_id, course_id, lesson_id и др.)
 
         Returns:
             GenerationResult с ответом и метаданными
@@ -918,14 +980,20 @@ class LLMFactory:
             user_message=user_message,
             conversation_history=conversation_history,
             response_format="json",
-            media_context=media_context
+            media_context=media_context,
+            context=context,
+            model_override=model_override,
+            temperature_override=temperature_override
         )
 
     async def generate_text_response(
             self,
             system_prompt: str,
             user_message: str,
-            conversation_history: Optional[List[Dict[str, str]]] = None
+            conversation_history: Optional[List[Dict[str, str]]] = None,
+            context: Optional[Dict[str, Any]] = None,
+            model_override: Optional[str] = None,
+            temperature_override: Optional[float] = None
     ) -> GenerationResult:
         """
         Генерирует текстовый ответ от LLM
@@ -934,6 +1002,7 @@ class LLMFactory:
             system_prompt: Системный промпт для модели
             user_message: Сообщение пользователя
             conversation_history: История диалога
+            context: Контекст для логирования (user_id, course_id, lesson_id и др.)
 
         Returns:
             GenerationResult с ответом и метаданными
@@ -942,7 +1011,10 @@ class LLMFactory:
             system_prompt=system_prompt,
             user_message=user_message,
             conversation_history=conversation_history,
-            response_format="text"
+            response_format="text",
+            context=context,
+            model_override=model_override,
+            temperature_override=temperature_override
         )
 
     async def generate_media_response(
@@ -1087,6 +1159,99 @@ class LLMFactory:
         except Exception as e:
             logger.error(f"TTS generation error: {str(e)}")
             raise
+
+    async def _log_llm_request(
+            self,
+            system_prompt: str,
+            user_message: str,
+            generation_result: GenerationResult,
+            context: Optional[Dict[str, Any]] = None,
+            status: str = 'SUCCESS',
+            error_message: str = ''
+    ) -> Optional[LogLLMRequest]:
+        """
+        Асинхронное логирование запроса к LLM в Django ORM
+        """
+        if not DJANGO_AVAILABLE or not self.config.enable_cost_tracking:
+            return None
+
+        try:
+            # Получаем контекст из переданных параметров или из конфигурации
+            context = context or {}
+
+            # Ограничиваем размер промпта и ответа для БД
+            max_prompt_length = 10000
+            max_response_length = 5000
+
+            # Формируем полный промпт как в _build_full_prompt
+            full_prompt = self._build_full_prompt(
+                system_prompt,
+                user_message,
+                context.get('conversation_history'),
+                context.get('media_context')
+            )
+
+            # Получаем токены и стоимость из результата генерации
+            token_usage = generation_result.token_usage
+            cost = generation_result.cost
+
+            # Расчет стоимости по входу/выходу (приблизительно)
+            total_tokens = token_usage.get('input_tokens', 0) + token_usage.get('output_tokens', 0)
+            if total_tokens > 0:
+                input_ratio = token_usage.get('input_tokens', 0) / total_tokens
+                output_ratio = token_usage.get('output_tokens', 0) / total_tokens
+                cost = Decimal(str(cost))
+                cost_in = cost * Decimal(str(input_ratio))
+                cost_out = cost * Decimal(str(output_ratio))
+            else:
+                cost_in = cost_out = 0
+
+            # Подготовка данных для сохранения
+            print("log_data", generation_result)
+            log_data = {
+                'model_name': generation_result.model_used,
+                'prompt': full_prompt[:max_prompt_length],
+                'response': json.dumps(generation_result.response, ensure_ascii=False, indent=2)[:max_response_length],
+                'tokens_in': token_usage.get('input_tokens', 0),
+                'tokens_out': token_usage.get('output_tokens', 0),
+                'cost_in': cost_in,
+                'cost_out': cost_out,
+                'cost_total': cost,
+                'duration_sec': generation_result.generation_time,
+                'status': status,
+                'error_message': error_message[:1000] if error_message else '',
+                'metadata': {
+                    'cached': generation_result.cached,
+                    'response_format': context.get('response_format', 'json'),
+                    'temperature': self.config.llm_temperature,
+                    'max_tokens': self.config.llm_max_tokens,
+                }
+            }
+
+            # Добавление контекстных связей
+            if 'user_id' in context and context['user_id']:
+                log_data['user_id'] = int(context['user_id'])
+            if 'course_id' in context and context['course_id']:
+                log_data['course_id'] = int(context['course_id'])
+            if 'lesson_id' in context and context['lesson_id']:
+                log_data['lesson_id'] = int(context['lesson_id'])
+
+            # Асинхронное сохранение в БД через отдельный тред
+            loop = asyncio.get_running_loop()
+            log_entry = await loop.run_in_executor(None, self._sync_save_log, log_data)
+            return log_entry
+
+        except Exception as e:
+            logger.error(f"Failed to log LLM request: {str(e)}")
+            return None
+
+    def _sync_save_log(self, log_data: Dict[str, Any]) -> Optional[LogLLMRequest]:
+        """Синхронное сохранение лога в Django ORM (выполняется в отдельном треде)"""
+        try:
+            return LogLLMRequest.objects.create(**log_data)
+        except Exception as e:
+            logger.error(f"Database error while saving LLM log: {str(e)}")
+            return None
 
 
 # Инициализация глобального экземпляра для использования в других модулях

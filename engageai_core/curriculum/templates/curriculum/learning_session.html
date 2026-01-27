@@ -20,23 +20,39 @@
             <h1 class="learning-header__title">
                 {{ enrollment.course.title }}
             </h1>
-            <h2 class="learning-header__subtitle">
-                {{ learning_state.current_lesson.title }}
-            </h2>
             <div class="learning-header__meta">
-                Урок {{ learning_state.current_lesson.order }}
-                из {{ progress_details.total_lessons }}
+                Урок {{ progress.current_lesson }}
+                из {{ progress.total_lessons }}
             </div>
+            <h2 class="learning-header__subtitle">
+                {{ lesson.title }}
+            </h2>
             <article class="progress-card mb-3">
-                <div class="progress-card__title">Прогресс</div>
+                <div class="progress-card__title">Прогресс курса</div>
                 <div class="progress-bar">
                     <div class="progress-bar__value"
-                            style="width: {{ progress_details.progress_percent|floatformat:0 }}%"></div>
+                            style="width: {{ progress.progress_percent|floatformat:0 }}%"></div>
                 </div>
                 <div class="progress-card__percent">
-                    {{ progress_details.progress_percent|floatformat:0 }}%
+                    {{ progress.progress_percent|floatformat:0 }}%
                 </div>
             </article>
+            {% if lesson.description %}
+            <div class="learning-header__description">
+                <h3>Цель урока</h3>  
+                {{ lesson.description }}
+                <ul>
+                    {% for objective in lesson.learning_objectives.all %}
+                        <li>
+                            Skill: {{ objective.skill_domain }} - {{ objective.name }}
+                            <p>{{ objective.description }}</p>
+                        </li>
+                    
+                    {% endfor %}
+
+                </ul>
+            </div>
+            {% endif %}
         </header>
 
 
@@ -70,15 +86,25 @@
                 <input type="hidden" id="enrollment-id" value="{{ enrollment.id }}">
                 <input type="hidden" id="assessment-job-id" value="{{ enrollment.assessment_job_id }}">
             {% else %}
-                <span class="word-helper">I am a table when immutable</span> 
-                {% if lesson_theory %}
-                <section class="lesson-theory">
-                    <h3 class="lesson-theory__title">Теория урока</h3>
-                    <div class="lesson-theory__content">
-                        {{ lesson_theory|safe }}
-                        
-                    </div>
-                </section>
+                {% if lesson.content %}
+                    <section class="lesson-theory">
+                        <h3 class="lesson-theory__title">Lesson Theory</h3>
+                        <div class="lesson-theory__content word-helper">
+                            {{ lesson.content|safe }}
+                            
+                        </div>
+                    </section>
+
+                {% endif %}
+
+                {% if lesson.content_ru %}
+                    <section class="lesson-theory">
+                        <h3 class="lesson-theory__title">Теория урока</h3>
+                        <div class="lesson-theory__content word-helper">
+                            {{ lesson.content_ru|safe }}
+                            
+                        </div>
+                    </section>
 
                 {% endif %}
 

@@ -28,8 +28,10 @@ class Lesson(models.Model):
     title = models.CharField(max_length=200, verbose_name=_("Title"))
     description = models.TextField(verbose_name=_("Description"))
     order = models.PositiveIntegerField(verbose_name=_("Order"))
-    content = models.JSONField(verbose_name=_("Content"),
+    content = models.TextField(verbose_name=_("Content"),
                                help_text=_("Optional structured lesson instructions or narrative for AI"))
+    content_ru = models.TextField(verbose_name=_("Content"),
+                               help_text=_("Field 'content' in Russian lang"), blank=True)
     theory_content = models.TextField(verbose_name=_("Theory Content"), blank=True,
                                       help_text=_("HTML content with theory and explanations"))
     duration_minutes = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(120)],

@@ -89,8 +89,6 @@ class DefaultPromptBuilder(PromptBuilder):
             full_system += (
                 "\n\nВАЖНО: Ответь строго в формате JSON. "
                 "Не добавляй никакой дополнительный текст вне JSON-структуры. "
-                "Структура ответа: "
-                '{"message": "текст для пользователя", "agent_state": {...}}'
             )
 
         messages.append({"role": "system", "content": full_system})

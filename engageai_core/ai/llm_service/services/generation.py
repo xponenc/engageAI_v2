@@ -110,7 +110,6 @@ class GenerationService:
                 conversation_history=conversation_history,
                 media_context=media_context,
             )
-            print(f"{messages=}")
 
             # 2. Генерация
             text, base_metrics = await self._generate_with_fallback(
@@ -119,15 +118,11 @@ class GenerationService:
                 max_tokens=max_tokens,
                 response_format="json_object" if self.provider.supports_json_mode else "text",
             )
-            print(f"{text=}")
-            print(f"{base_metrics=}")
 
             # 3. Парсинг и валидация
             parsed = self._parse_json_response(text)
 
             print(f"{parsed=}")
-
-            print(f"{self.cost_calculator=}")
 
             # 4. Расчёт стоимости (если не локально)
             cost = self.cost_calculator.calculate(
@@ -137,7 +132,6 @@ class GenerationService:
             )
             # 5. Обогащаем метрики стоимостью
             metrics = base_metrics.with_cost(cost)
-            print(f"{metrics=}")
 
             # 6. Формируем ответ
             response = LLMResponse(

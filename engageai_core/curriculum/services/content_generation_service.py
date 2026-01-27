@@ -64,11 +64,7 @@ class ContentGenerationService:
             )
             raise  # ← позволяем ошибке всплыть для обработки на уровне вызова
         try:
-            course = await sync_to_async(Course.objects.create)(
-                title=course_data["title"],
-                description=course_data["description"],
-                is_active=True
-            )
+            course = await self._create_course(course_data=course_data)
             logger.info(f"Успешно создан курс: {course.title} (ID: {course.id})")
         except Exception as e:
             logger.exception(
@@ -79,7 +75,7 @@ class ContentGenerationService:
 
         # Теги
         try:
-            tags = await self._generate_professional_tags(theme=theme, course=course)
+            tags_data = await self._generate_professional_tags_data(theme=theme, course=course)
         except Exception as e:
             logger.exception(
                 f"КРИТИЧЕСКАЯ ОШИБКА: не удалось теги для курса для темы '{course}'",
@@ -91,8 +87,15 @@ class ContentGenerationService:
             )
             raise
 
-        await sync_to_async(course.professional_tags.set)(tags)
-        logger.info(f"Привязано тегов: {len(tags)}")
+        try:
+            tags = await self._create_tags(tags_data=tags_data, course=course)
+            logger.info(f"Успешно обработаны теги для курса: {course.title} (ID: {course.id})")
+        except Exception as e:
+            logger.exception(
+                f"Ошибка сохранения тегов в БД для курса '{course}'",
+                extra={"theme": theme, "course": course, "tags_data": tags_data}
+            )
+            raise
 
         # Баланс уроков курса
         await sync_to_async(CourseBalance.objects.create)(
@@ -108,6 +111,153 @@ class ContentGenerationService:
 
         return course
 
+    # async def generate_lesson(
+    #         self,
+    #         course: Course,
+    #         order: int,
+    #         level: str,
+    #         skill_focus: list[str],
+    #         theme_tags: list[str],
+    #         user: Optional['User'] = None
+    # ) -> Lesson:
+    #     """
+    #     Универсальный генератор одного урока.
+    #     Можно использовать как для базовой генерации, так и для адаптивного урока.
+    #     """
+    #     tags_str = ""
+    #     if course:
+    #         tags = await sync_to_async(list)(course.professional_tags.all())
+    #         # tags_str = ', '.join(t.name for t in course.professional_tags.all())
+    #         tags_str = ", ".join(t.name for t in tags)
+    #     if theme_tags:
+    #         tags_str += f", {', '.join(theme_tags)}" if tags_str else ', '.join(theme_tags)
+    #
+    #     theme_str = ""
+    #     if theme_tags:
+    #         theme_str = f"Theme: professional, tags: {tags_str}."
+    #
+    #     if skill_focus:
+    #         focus_str = (f"Pay special attention to the following skills: {', '.join(skill_focus)}. "
+    #                      f"These skills should dominate this lesson.")
+    #     else:
+    #         focus_str = ("Balance skills: grammar, vocabulary, reading, listening,"
+    #                      " writing, speaking. Choose 1–3 relevant skills")
+    #     system_prompt = """You are an expert English curriculum designer. """
+    #     user_prompt = f"""
+    #            Generate ONE lesson for course:
+    #            "{course.title if course else 'Adaptive professional English'}".
+    #            Lesson CEFR level: {level}
+    #            {theme_str}
+    #            {focus_str}
+    #
+    #            Rules:
+    #            - skill_focus: array of EXACTLY these values only: grammar, vocabulary, reading, listening, writing, speaking. No more than 3.
+    #            - learning_objectives: 1 to 3 objectives per lesson.
+    #              Use format: {{"identifier": "grammar-A2-01", "name": "Use Present Simple for routines", "cefr_level": "A2", "skill_domain": "grammar"}}
+    #              Do NOT invent fake identifiers — use logical ones like grammar-A2-01, vocabulary-B1-03, etc.
+    #            - theory_content: detailed lesson theory in English (HTML or Markdown, 1000–1500 characters): explanation, examples, key phrases, tables, dialogues.
+    #            - All text (title, description, theory_content, objective names) must be in ENGLISH.
+    #
+    #            Return ONLY a valid JSON (no comments, no text):
+    #            [
+    #                {{
+    #                    "title": "short, attractive title in English",
+    #                    "description": "150–250 characters in English",
+    #                    "duration_minutes": int (20–40),
+    #                    "skill_focus": ["grammar", "vocabulary"],
+    #                    "theory_content": "HTML or Markdown text of the theory in English (1000–1500 characters)",
+    #                    "learning_objectives": [
+    #                        {{"identifier": "grammar-A2-01", "name": "Use Present Simple for routines", "cefr_level": "A2", "skill_domain": "grammar"}},
+    #                        ...
+    #                    ]
+    #                }}
+    #            ]
+    #            """
+    #     context = {
+    #         "course_id": course.pk,
+    #         "user_id": user.pk if user else None,
+    #     }
+    #     result = await self.llm.generate_json_response(
+    #         system_prompt=system_prompt,
+    #         user_message=user_prompt,
+    #         temperature=0.2,
+    #         context=context
+    #     )
+    #
+    #     if result.error:
+    #         logger.error(
+    #             f"Ошибка генерации урока для курса '{course}': {result.error}",
+    #             extra={"raw_response": result.raw_provider_response}
+    #         )
+    #         raise ValueError(f"Не удалось сгенерировать урок: {result.error}")
+    #     lesson_data = result.response.message
+    #     if not isinstance(lesson_data, dict):
+    #         logger.error(
+    #             f"Некорректный формат ответа для генерации урока к курсу '{course}': message не является словарём",
+    #             extra={
+    #                 "message_type": type(lesson_data).__name__,
+    #                 "message_value": str(lesson_data)[:200],
+    #                 "raw_response": result.raw_provider_response[:300] if result.raw_provider_response else None
+    #             }
+    #         )
+    #         raise ValueError("Ответ не является JSON-объектом")
+    #
+    #     print(lesson_data)
+    #
+    #     # Создаём Lesson
+    #     try:
+    #         with transaction.atomic():
+    #             lesson = await sync_to_async(Lesson.objects.create)(
+    #                 course=course,
+    #                 order=order,
+    #                 title=lesson_data["title"],
+    #                 description=lesson_data["description"],
+    #                 duration_minutes=lesson_data["duration_minutes"],
+    #                 required_cefr=level,
+    #                 skill_focus=lesson_data["skill_focus"],
+    #                 content=lesson_data["theory_content"],
+    #                 is_active=True,
+    #                 is_remedial=False
+    #             )
+    #             # Создание learning objectives
+    #             objectives_to_add = []
+    #             for obj_data in lesson_data.get("learning_objectives", []):
+    #                 obj, _ = await sync_to_async(LearningObjective.objects.get_or_create)(
+    #                     identifier=obj_data["identifier"],
+    #                     defaults={
+    #                         "name": obj_data["name"],
+    #                         "cefr_level": obj_data["cefr_level"],
+    #                         "skill_domain": obj_data["skill_domain"]
+    #                     }
+    #                 )
+    #                 objectives_to_add.append(obj)
+    #
+    #             # Bulk-добавление связей
+    #             if objectives_to_add:
+    #                 lesson.learning_objectives.add(*objectives_to_add)
+    #
+    #     except IntegrityError as e:
+    #         logger.exception(
+    #             "DB integrity error during lesson creation",
+    #             extra={"course_id": course.pk, "level": level, "lesson_data": lesson_data}
+    #         )
+    #         raise ValueError("Database error: lesson creation failed") from e
+    #     except Exception as e:
+    #         logger.exception(
+    #             "Unexpected error in lesson generation",
+    #             extra={"course_id": course.pk, "level": level, "lesson_data": lesson_data}
+    #         )
+    #         raise
+    #
+    #     logger.info("Lesson created successfully", extra={
+    #         "lesson_id": lesson.pk,
+    #         "course": course.title,
+    #         "level": level,
+    #         "objectives_count": len(objectives_to_add)
+    #     })
+    #
+    #     return lesson
+
     async def generate_lesson(
             self,
             course: Course,
@@ -118,140 +268,32 @@ class ContentGenerationService:
             user: Optional['User'] = None
     ) -> Lesson:
         """
-        Универсальный генератор одного урока.
-        Можно использовать как для базовой генерации, так и для адаптивного урока.
+        Оркестратор: LLM → DB
         """
-        tags_str = ""
-        if course:
-            tags = await sync_to_async(list)(course.professional_tags.all())
-            # tags_str = ', '.join(t.name for t in course.professional_tags.all())
-            tags_str = ", ".join(t.name for t in tags)
-        if theme_tags:
-            tags_str += f", {', '.join(theme_tags)}" if tags_str else ', '.join(theme_tags)
 
-        theme_str = ""
-        if theme_tags:
-            theme_str = f"Theme: professional, tags: {tags_str}."
-
-        if skill_focus:
-            focus_str = (f"Pay special attention to the following skills: {', '.join(skill_focus)}. "
-                         f"These skills should dominate this lesson.")
-        else:
-            focus_str = ("Balance skills: grammar, vocabulary, reading, listening,"
-                         " writing, speaking. Choose 1–3 relevant skills")
-        system_prompt = """You are an expert English curriculum designer. """
-        user_prompt = f"""
-               Generate ONE lesson for course: 
-               "{course.title if course else 'Adaptive professional English'}".
-               Lesson CEFR level: {level}
-               {theme_str}
-               {focus_str}
-
-               Rules:
-               - skill_focus: array of EXACTLY these values only: grammar, vocabulary, reading, listening, writing, speaking. No more than 3.
-               - learning_objectives: 1 to 3 objectives per lesson.
-                 Use format: {{"identifier": "grammar-A2-01", "name": "Use Present Simple for routines", "cefr_level": "A2", "skill_domain": "grammar"}}
-                 Do NOT invent fake identifiers — use logical ones like grammar-A2-01, vocabulary-B1-03, etc.
-               - theory_content: detailed lesson theory in English (HTML or Markdown, 1000–1500 characters): explanation, examples, key phrases, tables, dialogues.
-               - All text (title, description, theory_content, objective names) must be in ENGLISH.
-
-               Return ONLY a valid JSON (no comments, no text):
-               [
-                   {{
-                       "title": "short, attractive title in English",
-                       "description": "150–250 characters in English",
-                       "duration_minutes": int (20–40),
-                       "skill_focus": ["grammar", "vocabulary"],
-                       "theory_content": "HTML or Markdown text of the theory in English (1000–1500 characters)",
-                       "learning_objectives": [
-                           {{"identifier": "grammar-A2-01", "name": "Use Present Simple for routines", "cefr_level": "A2", "skill_domain": "grammar"}},
-                           ...
-                       ]
-                   }}
-               ]
-               """
-        context = {
-            "course_id": course.pk,
-            "user_id": user.pk if user else None,
-        }
-        result = await self.llm.generate_json_response(
-            system_prompt=system_prompt,
-            user_message=user_prompt,
-            temperature=0.2,
-            context=context
+        lesson_data = await self._llm_generate_lesson_data(
+            course=course,
+            level=level,
+            skill_focus=skill_focus,
+            theme_tags=theme_tags,
+            user=user,
         )
 
-        if result.error:
-            logger.error(
-                f"Ошибка генерации урока для курса '{course}': {result.error}",
-                extra={"raw_response": result.raw_provider_response}
-            )
-            raise ValueError(f"Не удалось сгенерировать урок: {result.error}")
-        lesson_data = result.response.message
-        if not isinstance(lesson_data, dict):
-            logger.error(
-                f"Некорректный формат ответа для генерации урока к курсу '{course}': message не является словарём",
-                extra={
-                    "message_type": type(lesson_data).__name__,
-                    "message_value": str(lesson_data)[:200],
-                    "raw_response": result.raw_provider_response[:300] if result.raw_provider_response else None
-                }
-            )
-            raise ValueError("Ответ не является JSON-объектом")
+        lesson = await self._create_lesson_from_data(
+            course=course,
+            order=order,
+            level=level,
+            lesson_data=lesson_data,
+        )
 
-        print(lesson_data)
-
-        # Создаём Lesson
-        try:
-            with transaction.atomic():
-                lesson = await sync_to_async(Lesson.objects.create)(
-                    course=course,
-                    order=order,
-                    title=lesson_data["title"],
-                    description=lesson_data["description"],
-                    duration_minutes=lesson_data["duration_minutes"],
-                    required_cefr=level,
-                    skill_focus=lesson_data["skill_focus"],
-                    content=lesson_data["theory_content"],
-                    is_active=True,
-                    is_remedial=False
-                )
-                # Создание learning objectives
-                objectives_to_add = []
-                for obj_data in lesson_data.get("learning_objectives", []):
-                    obj, _ = await sync_to_async(LearningObjective.objects.get_or_create)(
-                        identifier=obj_data["identifier"],
-                        defaults={
-                            "name": obj_data["name"],
-                            "cefr_level": obj_data["cefr_level"],
-                            "skill_domain": obj_data["skill_domain"]
-                        }
-                    )
-                    objectives_to_add.append(obj)
-
-                # Bulk-добавление связей
-                if objectives_to_add:
-                    lesson.learning_objectives.add(*objectives_to_add)
-
-        except IntegrityError as e:
-            logger.exception(
-                "DB integrity error during lesson creation",
-                extra={"course_id": course.pk, "level": level, "lesson_data": lesson_data}
-            )
-            raise ValueError("Database error: lesson creation failed") from e
-        except Exception as e:
-            logger.exception(
-                "Unexpected error in lesson generation",
-                extra={"course_id": course.pk, "level": level, "lesson_data": lesson_data}
-            )
-            raise
-
-        logger.info("Lesson created successfully", extra={
-            "lesson_id": lesson.pk,
-            "course": course.title,
-            "level": level,
-            "objectives_count": len(objectives_to_add)
-        })
+        logger.info(
+            "Lesson created",
+            extra={
+                "lesson_id": lesson.pk,
+                "course_id": course.pk,
+                "level": level,
+            }
+        )
 
         return lesson
 
@@ -298,7 +340,16 @@ class ContentGenerationService:
 
         return data
 
-    async def _generate_professional_tags(self, theme: str, course: Course) -> list[ProfessionalTag]:
+    @sync_to_async
+    def _create_course(self, course_data:dict):
+        course = Course.objects.create(
+            title=course_data["title"],
+            description=course_data["description"],
+            is_active=True
+        )
+        return course
+
+    async def _generate_professional_tags_data(self, theme: str, course: Course) -> list[ProfessionalTag]:
         system_prompt = ("Ты опытный и талантливый проектировщик курсов повышения уровня английского языка. "
                          "Выполни задание и ответь строго JSON")
         user_message = f"""
@@ -335,13 +386,35 @@ class ContentGenerationService:
             )
             raise ValueError("Ответ не является JSON-объектом")
 
+        try:
+            tags_data = data["tags"]
+        except IndexError:
+            logger.error(
+                f"Некорректный формат ответа генерации тегов для курса '{course}': не найден ключ 'tags'",
+                extra={
+                    "message_type": type(data).__name__,
+                    "message_value": str(data)[:200],
+                    "raw_response": result.raw_provider_response[:300] if result.raw_provider_response else None
+                }
+            )
+            raise ValueError(f"Не удалось сгенерировать теги: не найден ключ 'tags' в {data}")
+
+        return tags_data
+
+
+    @sync_to_async
+    def _create_tags(self, tags_data: list, course: Course):
         tags = []
-        for name in data["tags"]:
-            tag, created = await sync_to_async(ProfessionalTag.objects.get_or_create)(
+        for name in tags_data:
+            tag, created = ProfessionalTag.objects.get_or_create(
                 name=name,
-                defaults={"description": f"Тег для темы {theme}"}
+                defaults={"description": f""}
             )
             tags.append(tag)
+            if created:
+                logger.info(f"Создан тег: {tag}")
+        course.professional_tags.set(tags)
+        logger.info(f"Привязано тегов к курсу {course}: {len(tags)}")
         return tags
 
     async def _generate_lessons(self, course: Course):
@@ -372,7 +445,143 @@ class ContentGenerationService:
                     theme_tags=[t.name for t in tags]
                 )
                 last_order += 1
-                break
+                if last_order == 1: # TODO временная заглушка
+                    return
+
+    async def _llm_generate_lesson_data(
+            self,
+            course: Course,
+            level: str,
+            skill_focus: list[str],
+            theme_tags: list[str],
+            user: Optional['User'] = None
+    ) -> dict:
+        """
+        ТОЛЬКО генерация данных урока через LLM + валидация формата
+        """
+        tags_str = ""
+        if course:
+            tags = await sync_to_async(list)(course.professional_tags.all())
+            # tags_str = ', '.join(t.name for t in course.professional_tags.all())
+            tags_str = ", ".join(t.name for t in tags)
+        if theme_tags:
+            tags_str += f", {', '.join(theme_tags)}" if tags_str else ', '.join(theme_tags)
+
+        theme_str = ""
+        if theme_tags:
+            theme_str = f"Theme: professional, tags: {tags_str}."
+
+        if skill_focus:
+            focus_str = (f"Pay special attention to the following skills: {', '.join(skill_focus)}. "
+                         f"These skills should dominate this lesson.")
+        else:
+            focus_str = ("Balance skills: grammar, vocabulary, reading, listening,"
+                         " writing, speaking. Choose 1–3 relevant skills")
+        system_prompt = """You are an expert English curriculum designer. """
+        user_prompt = f"""
+               Generate ONE lesson for course: 
+               "{course.title if course else 'Adaptive professional English'}".
+               Lesson CEFR level: {level}
+               {theme_str}
+               {focus_str}
+
+               Rules:
+               - skill_focus: array of EXACTLY these values only: grammar, vocabulary, reading, listening, writing, speaking. No more than 3.
+               - learning_objectives: 1 to 3 objectives per lesson.
+                 Use format: {{"name": "Use Present Simple for routines", "cefr_level": "A2", "skill_domain": "grammar", "description": "Detailed explanation for methodologists"}}
+                 Do NOT invent fake identifiers — use logical ones like grammar-A2-01, vocabulary-B1-03, etc.
+               - theory_content: detailed lesson theory in English (HTML, 1500–2000 characters): explanation, examples, key phrases, tables, dialogues.
+               - All text (title, description, theory_content, objective names) must be in ENGLISH.
+
+               Return ONLY a valid JSON (no comments, no text):
+               [
+                   {{
+                       "title": "short, attractive title in English",
+                       "description": "150–250 characters in English",
+                       "duration_minutes": int (20–40),
+                       "skill_focus": ["grammar", "vocabulary"],
+                       "theory_content": "HTML or Markdown text of the theory in English (1000–1500 characters)",
+                       "theory_content_ru": "HTML or Markdown — an exact translation of theory_content into Russian (same length, same formatting, do not translate important terms, you can limit yourself to translating explanations)",
+                       "learning_objectives": [
+                           {{"name": "Use Present Simple for routines", "cefr_level": "A2", "skill_domain": "grammar", "description": "Detailed explanation for methodologists"}},
+                           ...
+                       ]
+                   }}
+               ]
+               """
+        context = {
+            "course_id": course.pk,
+            "user_id": user.pk if user else None,
+        }
+
+        result = await self.llm.generate_json_response(
+            system_prompt=system_prompt,
+            user_message=user_prompt,
+            temperature=0.2,
+            context=context
+        )
+
+        if result.error:
+            raise ValueError(f"LLM error: {result.error}")
+
+        data = result.response.message
+
+        if not isinstance(data, dict):
+            raise ValueError("LLM returned non-dict JSON")
+
+        return data
+
+    @sync_to_async
+    @transaction.atomic
+    def _create_lesson_from_data(
+            self,
+            *,
+            course: Course,
+            order: int,
+            level: str,
+            lesson_data: dict
+    ) -> Lesson:
+        """
+        ТОЛЬКО сохранение данных в БД
+        """
+        lesson = Lesson.objects.create(
+            course=course,
+            order=order,
+            title=lesson_data["title"],
+            description=lesson_data["description"],
+            duration_minutes=lesson_data["duration_minutes"],
+            required_cefr=level,
+            skill_focus=lesson_data["skill_focus"],
+            content=lesson_data["theory_content"],
+            content_ru=lesson_data["theory_content_ru"],
+            is_active=True,
+            is_remedial=False,
+        )
+
+        objectives = []
+        for obj_data in lesson_data.get("learning_objectives", []):
+            name = obj_data["name"]
+            cefr_level = obj_data["cefr_level"]
+            skill_domain = obj_data["skill_domain"]
+            description = obj_data["description"]
+            order_in_level = LearningObjective.objects.filter(cefr_level=cefr_level, skill_domain=skill_domain).count()
+            obj = LearningObjective.objects.filter(cefr_level=cefr_level, skill_domain=skill_domain, name=name).first()
+            if not obj:
+                order_in_level += 1
+                obj = LearningObjective.objects.create(
+                    name=name,
+                    cefr_level=cefr_level,
+                    skill_domain=skill_domain,
+                    order_in_level=order_in_level,
+                    description=description,
+                )
+                print(f"Создан", obj)
+            objectives.append(obj)
+
+        if objectives:
+            lesson.learning_objectives.add(*objectives)
+
+        return lesson
 
     # def _generate_tasks(self, lesson: Lesson, num_tasks: int = 4):
     #     ...

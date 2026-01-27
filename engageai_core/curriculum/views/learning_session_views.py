@@ -440,11 +440,12 @@ class LearningSessionView(LoginRequiredMixin, ChatContextMixin, TemplateView):
             current_node=current_node,
             next_node=enrollment.learning_path.next_node,
             path_type=enrollment.learning_path.path_type,
-            progress_percent=self._calculate_path_progress(enrollment.learning_path),
+            progress=self._get_progress_data(enrollment.learning_path, current_node),
             lesson_form=lesson_form,
             is_preview=current_node.get("type") == "preview",
             recommended_reason=current_node.get("reason", ""),
         )
+        print(context)
         return self.render_to_response(context)
 
     def post(self, request, pk):
@@ -743,11 +744,55 @@ class LearningSessionView(LoginRequiredMixin, ChatContextMixin, TemplateView):
                     audio_file=audio_file,
                 )
 
-    def _calculate_path_progress(self, learning_path):
+    # def _calculate_path_progress(self, learning_path):
+    #     if not learning_path.nodes:
+    #         return 0
+    #     completed = sum(1 for n in learning_path.nodes if n["status"] == "completed")
+    #     print(learning_path.nodes)
+    #     return round((completed / len(learning_path.nodes)) * 100, 1)
+
+    def _get_progress_data(self, learning_path, current_node):
+        """
+        Возвращает словарь с данными для отображения прогресса:
+        - progress_percent: общий процент завершения пути
+        - progress_details.total_lessons: общее количество уроков (без preview-нод)
+        - learning_state.current_lesson.order: порядковый номер текущего урока
+        """
         if not learning_path.nodes:
-            return 0
-        completed = sum(1 for n in learning_path.nodes if n["status"] == "completed")
-        return round((completed / len(learning_path.nodes)) * 100, 1)
+            return {
+                "progress_percent": 0,
+                "total_lessons": 0,
+                "current_lesson": 0
+            }
+
+        # Фильтруем только учебные ноды (исключаем preview и служебные)
+        lesson_nodes = [
+            node for node in learning_path.nodes
+        ]
+
+        # 1. Общий прогресс по всем нодам (включая preview)
+        completed_count = sum(1 for n in learning_path.nodes if n["status"] == "completed")
+        total_nodes = len(learning_path.nodes)
+        progress_percent = round((completed_count / total_nodes) * 100, 1) if total_nodes else 0
+
+        # 2. Порядковый номер текущего урока среди учебных материалов
+        try:
+            current_index = next(
+                i for i, node in enumerate(lesson_nodes)
+                if node.get("id") == current_node.get("id")
+            )
+            current_order = current_index + 1  # нумерация с 1
+        except StopIteration:
+            current_order = 1  # если не найден - считаем первым
+
+        # 3. Общее количество учебных уроков
+        total_lessons = len(lesson_nodes)
+
+        return {
+            "progress_percent": progress_percent,
+            "total_lessons": total_nodes,
+            "current_lesson":  current_order
+        }
 
     def _handle_error(self, request, error_msg, status_code=400):
         """Единая обработка ошибок для AJAX и обычных запросов"""

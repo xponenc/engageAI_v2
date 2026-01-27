@@ -108,5 +108,103 @@ TASK_CONTENT_SCHEMAS = {
             }
         },
         "description": "Задание с кратким текстовым ответом (1-3 слова)"
-    }
+    },
+    "free_text_v1": {
+        "name": "Free Text Response v1",
+        "supported_formats": [ResponseFormat.FREE_TEXT],
+        "required": {"prompt", "min_words", "max_words"},
+        "optional": {"context_prompt", "sample_response"},
+        "validation_rules": {
+            "prompt": {
+                "type": "str",
+                "min_length": 10,
+                "max_length": 500
+            },
+            "context_prompt": {
+                "type": "str",
+                "min_length": 5,
+                "max_length": 300,
+                "optional": True
+            },
+            "sample_response": {
+                "type": "str",
+                "min_length": 20,
+                "max_length": 1000,
+                "optional": True
+            },
+            "min_words": {
+                "type": "int",
+                "min": 20,
+                "max": 500
+            },
+            "max_words": {
+                "type": "int",
+                "min": 50,
+                "max": 1000
+            }
+        },
+        "description": "Writing exercise with extended text response",
+        "example": {
+            "prompt": "Write an email to your manager requesting a day off next week",
+            "context_prompt": "You need to attend a family event. Be polite and professional.",
+            "min_words": 80,
+            "max_words": 150,
+            "sample_response": "Dear Mr. Smith, I would like to request a day off on Friday, January 15th to attend a family event. I will ensure all my current tasks are completed before then..."
+        }
+    },
+    "audio_v1": {
+        "name": "Audio Response Task v1",
+        "supported_formats": [ResponseFormat.AUDIO],
+        "required": {"prompt", "min_duration_sec", "max_duration_sec"},
+        "optional": {"context_prompt", "sample_transcript", "max_attempts", "transcription_required"},
+        "validation_rules": {
+            "prompt": {
+                "type": "str",
+                "min_length": 10,
+                "max_length": 500
+            },
+            "context_prompt": {
+                "type": "str",
+                "min_length": 5,
+                "max_length": 300,
+                "optional": True
+            },
+            "sample_transcript": {
+                "type": "str",
+                "min_length": 20,
+                "max_length": 1000,
+                "optional": True
+            },
+            "min_duration_sec": {
+                "type": "int",
+                "min": 10,
+                "max": 300
+            },
+            "max_duration_sec": {
+                "type": "int",
+                "min": 20,
+                "max": 600
+            },
+            "max_attempts": {
+                "type": "int",
+                "min": 1,
+                "max": 10,
+                "default": 3
+            },
+            "transcription_required": {
+                "type": "bool",
+                "default": True
+            }
+        },
+        "description": "Speaking exercise where student records audio response",
+        "example": {
+            "prompt": "Describe your current project at work in 45 seconds",
+            "context_prompt": "Imagine you're explaining it to a new colleague in a 1:1 meeting",
+            "min_duration_sec": 30,
+            "max_duration_sec": 60,
+            "sample_transcript": "I'm currently working on an AI-powered customer support bot. My main responsibility is fine-tuning the LLM responses to handle edge cases...",
+            "max_attempts": 3,
+            "transcription_required": True
+        }
+    },
 }

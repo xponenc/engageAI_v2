@@ -9,6 +9,7 @@ from curriculum.models.content.course import Course
 from curriculum.models.content.balance import CourseBalance, DEFAULT_COURSE_BALANCE
 from curriculum.models.systematization.professional_tag import ProfessionalTag
 from curriculum.services.content_generation.base_generator import BaseContentGenerator
+from llm_logger.models import LLMRequestType
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +63,7 @@ class CourseGenerationService(BaseContentGenerator):
 
         # Шаг 3: Генерация тегов
         try:
-            tags_data = await self._generate_professional_tags_data(theme, course)
+            tags_data = await self._generate_professional_tags_data(theme=theme, course=course, user_id=user_id)
         except Exception as e:
             self.logger.exception(
                 f"КРИТИЧЕСКАЯ ОШИБКА: не удалось сгенерировать теги для курса '{course.title}'",
@@ -123,7 +124,8 @@ class CourseGenerationService(BaseContentGenerator):
             }}
         """
         context = {
-            "user_id": user_id
+            "user_id": user_id,
+            "request_type": LLMRequestType.COURSE_GENERATION.value,
         }
 
         return await self._safe_llm_call(system_prompt=system_prompt, user_message=user_message,
@@ -138,7 +140,7 @@ class CourseGenerationService(BaseContentGenerator):
             is_active=True
         )
 
-    async def _generate_professional_tags_data(self, theme: str, course: Course) -> list[str]:
+    async def _generate_professional_tags_data(self, theme: str, course: Course, user_id: Optional[int] = None,) -> list[str]:
         system_prompt = """
         You are an expert curriculum designer for professional English courses.
 
@@ -184,10 +186,14 @@ class CourseGenerationService(BaseContentGenerator):
           ]
         }}
         """
-
+        context = {
+            "user_id": user_id,
+            "course_id": course.pk,
+            "request_type": LLMRequestType.COURSE_GENERATION.value,
+        }
         data = await self._safe_llm_call(
-            system_prompt, user_message, temperature=0.4,
-            context={"course_id": course.pk}, response_format=dict
+            system_prompt=system_prompt, user_message=user_message, temperature=0.4,
+            context=context, response_format=dict
         )
 
         if "tags" not in data or not isinstance(data["tags"], list):

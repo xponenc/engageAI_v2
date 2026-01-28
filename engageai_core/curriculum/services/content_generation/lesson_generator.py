@@ -10,6 +10,7 @@ from curriculum.models import Course
 from curriculum.models.content.lesson import Lesson
 from curriculum.models.systematization.learning_objective import LearningObjective
 from curriculum.services.content_generation.base_generator import BaseContentGenerator
+from llm_logger.models import LLMRequestType
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +141,7 @@ class LessonGenerationService(BaseContentGenerator):
         context = {
             "course_id": course.pk,
             "user_id": user_id,
+            "request_type": LLMRequestType.LESSON_GENERATION.value,
         }
 
         print(user_prompt)

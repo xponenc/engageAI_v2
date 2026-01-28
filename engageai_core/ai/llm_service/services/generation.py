@@ -146,6 +146,7 @@ class GenerationService:
             )
 
             await llm_logging_service.log_request(
+                provider=self.provider.__class__.__name__,
                 system_prompt=system_prompt,
                 user_message=user_message,
                 generation_result=result,
@@ -175,6 +176,7 @@ class GenerationService:
                 error=exc,
             )
             await llm_logging_service.log_request(
+                provider=self.provider.__class__.__name__,
                 system_prompt=system_prompt,
                 user_message=user_message,
                 generation_result=result,  # даже при ошибке

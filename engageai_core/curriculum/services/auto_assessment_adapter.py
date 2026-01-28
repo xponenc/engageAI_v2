@@ -1,7 +1,7 @@
 import json
 import logging
 
-from c_old.domain.value_objects.assessment_result import AssessmentResult
+from curriculum.models.assessment.assessment_result import AssessmentResult
 from curriculum.models.content.response_format import ResponseFormat
 from curriculum.models.content.task import Task
 from curriculum.models.student.student_response import StudentTaskResponse

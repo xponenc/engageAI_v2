@@ -82,7 +82,7 @@ class OpenAICostCalculator(CostCalculator):
         extra_chars: int = 0,          # для TTS — количество символов
         image_count: int = 0,
         image_quality: str = "standard",
-    ) -> float:
+    ) -> dict:
         """
         Рассчитывает стоимость одного запроса в USD.
 
@@ -96,25 +96,63 @@ class OpenAICostCalculator(CostCalculator):
 
         Returns:
             Стоимость в долларах США (с точностью до 6 знаков)
+            {
+                "cost_total": round(total, 6),
+                "cost_in": round(input_cost, 6),
+                "cost_out": round(output_cost, 6),
+            }
         """
         model = model.lower()
 
-        # 1. TTS — стоимость за символы
+        # 1. TTS — стоимость за символы # TODO смотреть подробнее
         if model.startswith("tts-"):
-            price_per_m_chars = self.PRICING.get(model, (15.00, 0.00))[0]
-            cost = (extra_chars / 1_000_000) * price_per_m_chars
-            return round(cost, 6)
-
-        # 2. Image generation — фиксированная цена за картинку
-        if model.startswith("dall-e-"):
-            if model == "dall-e-3":
-                base_price = 0.040 if image_quality == "standard" else 0.080
-            elif model == "dall-e-2":
-                base_price = 0.020  # 1024×1024
+            if model in self.PRICING:
+                price_per_m_chars, output_price = self.PRICING.get(model, (15.00, 0.00))[0]
             else:
-                base_price = 0.040
+                price_per_m_chars, output_price = self.UNKNOWN_MODEL_PRICE
+                logger.warning(
+                    "НЕИЗВЕСТНАЯ МОДЕЛЬ OpenAI: %r\n"
+                    "→ fallback на САМУЮ ДОРОГУЮ цену ($150/$600 за 1M токенов)\n"
+                    "→ ОБНОВИТЕ PRICING в OpenAICostCalculator!\n"
+                    "Текущий расчёт: input=%d → $%.4f, output=%d → $%.4f",
+                    model, input_tokens, (input_tokens / 1e6) * price_per_m_chars,
+                    output_tokens, (output_tokens / 1e6) * output_price
+                )
 
-            return round(image_count * base_price, 6)
+            cost_in = (extra_chars / 1_000_000) * price_per_m_chars
+            cost_out = 0.0  # TTS не имеет выходных токенов в классическом понимании
+            total = cost_in + cost_out
+
+            return {
+                "cost_in": round(cost_in, 6),
+                "cost_out": round(cost_out, 6),
+                "cost_total": round(total, 6),
+            }
+
+        # 2. Image generation — фиксированная цена за картинку # TODO смотреть подробнее
+        if model.startswith("dall-e-"):
+            if model in self.PRICING:
+                input_price, output_price = self.PRICING[model]
+            else:
+                input_price, output_price = self.UNKNOWN_MODEL_PRICE
+                logger.warning(
+                    "НЕИЗВЕСТНАЯ МОДЕЛЬ OpenAI: %r\n"
+                    "→ fallback на САМУЮ ДОРОГУЮ цену ($150/$600 за 1M токенов)\n"
+                    "→ ОБНОВИТЕ PRICING в OpenAICostCalculator!\n"
+                    "Текущий расчёт: input=%d → $%.4f, output=%d → $%.4f",
+                    model, input_tokens, (input_tokens / 1e6) * input_price,
+                    output_tokens, (output_tokens / 1e6) * output_price
+                )
+
+            cost_out = image_count * input_price
+            cost_in = 0.0  # Промпт для DALL-E обычно не тарифицируется отдельно
+            total = cost_in + cost_out
+
+            return {
+                "cost_in": round(cost_in, 6),
+                "cost_out": round(cost_out, 6),
+                "cost_total": round(total, 6),
+            }
 
         # 3. Обычные текстовые / chat модели
         if model in self.PRICING:
@@ -134,7 +172,11 @@ class OpenAICostCalculator(CostCalculator):
         output_cost = (output_tokens / 1_000_000) * output_price
 
         total = input_cost + output_cost
-        return round(total, 6)
+        return {
+            "cost_total": round(total, 6),
+            "cost_in": round(input_cost, 6),
+            "cost_out": round(output_cost, 6),
+        }
 
 
 class ZeroCostCalculator(CostCalculator):
@@ -151,8 +193,12 @@ class ZeroCostCalculator(CostCalculator):
         extra_chars: int = 0,
         image_count: int = 0,
         image_quality: str = "standard",
-    ) -> float:
-        return 0.0
+    ) -> dict:
+        return {
+            "cost_total": 0.0,
+            "cost_in": 0.0,
+            "cost_out": 0.0,
+        }
 
 
 # Удобные экземпляры для быстрого использования

@@ -1,0 +1,163 @@
+<!-- templates/analytics/llm_cost_analysis.html -->
+<div class="container-fluid">
+    <h1>Глубокий анализ стоимости</h1>
+    
+    <!-- Прогноз расходов -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Неделя</h5>
+                    <h2>${{ weekly_cost|floatformat:2 }}</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Месяц (прогноз)</h5>
+                    <h2 class="text-danger">${{ monthly_projection|floatformat:2 }}</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Год (прогноз)</h5>
+                    <h2 class="text-danger">${{ yearly_projection|floatformat:2 }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Стоимость по модулям -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h3>Стоимость по модулям</h3>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Модуль</th>
+                        <th>Запросов</th>
+                        <th>Стоимость</th>
+                        <th>Средняя стоимость</th>
+                        <th>Доля в бюджете</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in module_costs %}
+                    <tr>
+                        <td>{{ stat.request_type }}</td>
+                        <td>{{ stat.requests }}</td>
+                        <td>${{ stat.total_cost|floatformat:5 }}</td>
+                        <td>${{ stat.avg_cost|floatformat:6 }}</td>
+                        <td>
+                            <div class="progress">
+                                <div class="progress-bar" style="width: {{ stat.cost_share }}%">
+                                    {{ stat.cost_share|floatformat:1 }}%
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Стоимость по моделям -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h3>Стоимость по моделям LLM</h3>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Модель</th>
+                        <th>Запросов</th>
+                        <th>Стоимость</th>
+                        <th>Средняя стоимость</th>
+                        <th>Стоимость/1к токенов</th>
+                        <th>Доля в бюджете</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in model_costs %}
+                    <tr>
+                        <td><code>{{ stat.model_name }}</code></td>
+                        <td>{{ stat.requests }}</td>
+                        <td>${{ stat.total_cost|floatformat:5 }}</td>
+                        <td>${{ stat.avg_cost|floatformat:6 }}</td>
+                        <td>${{ stat.cost_per_1k_tokens|floatformat:5 }}</td>
+                        <td>{{ stat.cost_share|floatformat:1 }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Тренд по неделям -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h3>Тренд стоимости по неделям</h3>
+            <canvas id="costTrendChart"></canvas>
+        </div>
+    </div>
+    
+    <script>
+        // Chart.js для тренда
+        const ctx = document.getElementById('costTrendChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ weekly_trend|map:"week"|date:"Y-m-d"|json_script:"trend_labels" }},
+                datasets: [{
+                    label: 'Стоимость ($)',
+                    data: {{ weekly_trend|map:"cost"|json_script:"trend_cost" }},
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: { display: true, text: 'Еженедельные расходы' }
+                }
+            }
+        });
+    </script>
+    
+    <!-- Рекомендации по оптимизации -->
+    <div class="row">
+        <div class="col-md-12">
+            <h3>Рекомендации по оптимизации</h3>
+            <div class="alert alert-info">
+                {% if cheapest_model %}
+                <p>
+                    <strong>Самая дешёвая модель:</strong> {{ cheapest_model.model_name }} 
+                    (${{ cheapest_model.cost_per_1k_tokens|floatformat:5 }}/1к токенов)
+                </p>
+                {% endif %}
+                
+                {% if expensive_modules %}
+                <p>
+                    <strong>Самые дорогие модули:</strong>
+                    {% for module in expensive_modules %}
+                        {{ module.request_type }} ({{ module.cost_share|floatformat:1 }}% бюджета){% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                </p>
+                {% endif %}
+                
+                <p>
+                    <strong>Потенциальная экономия:</strong> 
+                    Переключение на более дешёвые модели может снизить расходы на 
+                    {{ potential_savings|floatformat:1 }}%
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

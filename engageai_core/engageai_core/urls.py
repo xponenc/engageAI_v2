@@ -40,6 +40,7 @@ urlpatterns = [
     path('assistant/', include('ai_assistant.urls', namespace='assistant')),
     path('curriculum/', include('curriculum.urls', namespace='curriculum')),
     path('wh/', include('word_helper.urls', namespace='word_helper')),
+    path('llm-logger/', include('llm_logger.urls')),
 ]
 
 

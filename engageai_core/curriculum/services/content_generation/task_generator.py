@@ -8,6 +8,7 @@ from django.db import transaction
 from curriculum.models.content.task import Task, TaskType, ResponseFormat
 from curriculum.services.content_generation.base_generator import BaseContentGenerator
 from curriculum.validation.task_schemas import TASK_CONTENT_SCHEMAS
+from llm_logger.models import LLMRequestType
 
 logger = logging.getLogger(__name__)
 
@@ -204,6 +205,7 @@ class TaskGenerationService(BaseContentGenerator):
             "course_id": lesson.course.pk,
             "lesson_id": lesson.pk,
             "user_id": user_id,
+            "request_type": LLMRequestType.TASK_GENERATION.value,
         }
 
         tasks_data = await self._safe_llm_call(system_prompt=system_prompt, user_message=user_message,

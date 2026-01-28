@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import time
 from abc import ABC
-from typing import Any, AsyncIterable, Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, AsyncIterable, Dict, List, Literal, Optional, Tuple, Union, Callable, Awaitable, TypeVar
 
 import httpx
 from openai import RateLimitError, APIConnectionError, APIError
@@ -25,6 +25,8 @@ from tenacity import (
 from ...config import LLMConfig  # предполагаем, что config вынесен на уровень выше
 from ..dtos import GenerationMetrics, GenerationResult, LLMResponse
 from ..interfaces import LLMProvider, CostCalculator
+
+T = TypeVar("T")
 
 
 class BaseProvider(LLMProvider, ABC):
@@ -54,7 +56,8 @@ class BaseProvider(LLMProvider, ABC):
         """Уникальный строковый идентификатор провайдера для логов и конфигов"""
         return f"{self.__class__.__name__}({self.model_name})"
 
-    async def _with_retry(self, coro, max_attempts: int = 3, min_wait: float = 4.0):
+    async def _with_retry(self, func: Callable[[], Awaitable[T]],
+                          max_attempts: int = 3, min_wait: float = 4.0):
         """
         Обёртка для повторных попыток — используется почти всеми провайдерами.
         """
@@ -68,7 +71,7 @@ class BaseProvider(LLMProvider, ABC):
                 reraise=True,
         ):
             with attempt:
-                return await coro
+                return await func()
 
     def _create_metrics(
             self,
@@ -83,7 +86,9 @@ class BaseProvider(LLMProvider, ABC):
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             total_tokens=input_tokens + output_tokens,
-            cost_usd=0.0,  # будет перезаписано в CostCalculator
+            cost_total=0.0,  # будет перезаписано в CostCalculator
+            cost_in=0.0,  # будет перезаписано в CostCalculator
+            cost_out=0.0,  # будет перезаписано в CostCalculator
             generation_time_sec=generation_time,
             model_used=self.model_name,
             cached=cached,
@@ -152,8 +157,12 @@ class ZeroCostCalculator(CostCalculator):
             output_tokens: int = 0,
             extra_chars: int = 0,
             image_count: int = 0,
-    ) -> float:
-        return 0.0
+    ) -> dict:
+        return {
+            "cost_total": 0.0,
+            "cost_in": 0.0,
+            "cost_out": 0.0,
+        }
 
 
 class BaseLocalProvider(BaseProvider):

@@ -134,7 +134,7 @@ class ContentOrchestrator:
                     f"Урок {current_order}/{num_lessons} создан: {lesson.title} "
                     f"(уровень {level}, {num_tasks} заданий)"
                 )
-                if current_order > 1: # TODO временная заглушка
+                if current_order > 3: # TODO временная заглушка
                     return lessons
 
         return lessons
@@ -167,4 +167,4 @@ class ContentOrchestrator:
 
 if __name__ == "__main__":
     o = ContentOrchestrator()
-    asyncio.run(o.generate_full_course(theme="AI, LLM developer",))
+    asyncio.run(o.generate_full_course(theme="AI, LLM developer", user_id=2))

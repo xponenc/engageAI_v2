@@ -1,0 +1,136 @@
+<!-- templates/analytics/llm_user_detail.html -->
+<div class="container-fluid">
+    <h1>Аналитика пользователя #{{ user_id }}</h1>
+    
+    <!-- Общая статистика -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Всего запросов</h5>
+                    <h2>{{ total_requests }}</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Общая стоимость</h5>
+                    <h2>${{ total_cost|floatformat:5 }}</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Средняя стоимость</h5>
+                    <h2>${{ avg_cost_per_request|floatformat:6 }}</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-{% if anomaly_detected %}danger{% else %}success{% endif %}">
+                <div class="card-body">
+                    <h5 class="card-title">Аномалия</h5>
+                    <h2>{% if anomaly_detected %}ДА{% else %}НЕТ{% endif %}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Статистика по типам -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h3>По типам запросов</h3>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Тип</th>
+                        <th>Запросов</th>
+                        <th>Стоимость</th>
+                        <th>Средняя стоимость</th>
+                        <th>% от общего</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in type_breakdown %}
+                    <tr>
+                        <td>{{ stat.request_type }}</td>
+                        <td>{{ stat.count }}</td>
+                        <td>${{ stat.cost|floatformat:5 }}</td>
+                        <td>${{ stat.avg_cost|floatformat:6 }}</td>
+                        <td>{{ stat.percentage|floatformat:1 }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Часовая активность -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h3>Часовая активность (последние 24 часа)</h3>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Час</th>
+                        <th>Запросов</th>
+                        <th>Статус</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for hour in hourly_activity %}
+                    <tr class="{% if hour.requests > 50 %}table-danger{% endif %}">
+                        <td>{{ hour.hour|date:"Y-m-d H:00" }}</td>
+                        <td>{{ hour.requests }}</td>
+                        <td>
+                            {% if hour.requests > 50 %}
+                                <span class="badge bg-danger">АНОМАЛИЯ</span>
+                            {% else %}
+                                <span class="badge bg-success">Норма</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Последние логи -->
+    <div class="row">
+        <div class="col-md-12">
+            <h3>Последние запросы</h3>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Время</th>
+                        <th>Тип</th>
+                        <th>Модель</th>
+                        <th>Стоимость</th>
+                        <th>Статус</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in recent_logs %}
+                    <tr>
+                        <td>{{ log.request_time|date:"Y-m-d H:i:s" }}</td>
+                        <td>{{ log.request_type }}</td>
+                        <td>{{ log.model_name }}</td>
+                        <td>${{ log.cost_total|floatformat:6 }}</td>
+                        <td>
+                            <span class="badge bg-{% if log.status == 'SUCCESS' %}success{% elif log.status == 'ERROR' %}danger{% else %}warning{% endif %}">
+                                {{ log.status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

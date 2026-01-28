@@ -44,6 +44,7 @@ class LLMLloggingService:
 
     async def log_request(
         self,
+        provider: str,
         system_prompt: str,
         user_message: str,
         generation_result: "GenerationResult",
@@ -72,6 +73,7 @@ class LLMLloggingService:
 
             # Подготавливаем данные для модели
             log_data = self._prepare_log_data(
+                provider=provider,
                 generation_result=generation_result,
                 full_prompt=full_prompt,
                 status=status,
@@ -118,6 +120,7 @@ class LLMLloggingService:
 
     def _prepare_log_data(
         self,
+        provider: str,
         generation_result: "GenerationResult",
         full_prompt: str,
         status: str,
@@ -133,21 +136,15 @@ class LLMLloggingService:
         response_trunc = str(response.message)[:self.max_response_length]
         error_trunc = error_message[:self.max_error_length]
 
-        # Разделяем стоимость (примерно)
-        total_cost = metrics.cost_usd
-        total_tokens = metrics.input_tokens + metrics.output_tokens
-        cost_in = total_cost * (metrics.input_tokens / total_tokens) if total_tokens > 0 else 0
-        cost_out = total_cost - cost_in
-
         data = {
             "model_name": metrics.model_used,
             "prompt": prompt_trunc,
             "response": response_trunc,
             "tokens_in": metrics.input_tokens,
             "tokens_out": metrics.output_tokens,
-            "cost_in": round(cost_in, 6),
-            "cost_out": round(cost_out, 6),
-            "cost_total": round(total_cost, 6),
+            "cost_in": round(metrics.cost_in, 6),
+            "cost_out": round(metrics.cost_out, 6),
+            "cost_total": round( metrics.cost_total, 6),
             "duration_sec": round(metrics.generation_time_sec, 3),
             "status": status,
             "error_message": error_trunc,
@@ -155,13 +152,13 @@ class LLMLloggingService:
                 "cached": metrics.cached,
                 "temperature": self.config.llm_temperature,
                 "max_tokens": self.config.llm_max_tokens,
-                "provider": "local" if "local" in metrics.model_used.lower() else "openai",
+                "provider": provider,
                 "response_format": context.get("response_format", "json"),
             },
         }
 
         # Контекстные связи (если есть)
-        for field in ["user_id", "course_id", "lesson_id", "session_id"]:
+        for field in ["user_id", "course_id", "lesson_id", "session_id", "task_id", "request_type"]:
             if field in context and context[field]:
                 data[field] = context[field]
 

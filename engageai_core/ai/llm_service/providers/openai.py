@@ -77,8 +77,9 @@ class OpenAIProvider(BaseProvider):
         start_time = time.time()
 
         try:
-            completion = await self._with_retry(
-                self.client.chat.completions.create(
+
+            async def attempt():
+                return await self.client.chat.completions.create(
                     model=self.model_name,
                     messages=messages,
                     temperature=temperature or self.temperature,
@@ -86,9 +87,19 @@ class OpenAIProvider(BaseProvider):
                     response_format={"type": response_format} if response_format == "json_object" else None,
                     seed=seed,
                 )
-            )
 
-            print(f"OpenAIProvider {completion=}")
+            completion = await self._with_retry(attempt)
+
+            # completion = await self._with_retry(
+            #     self.client.chat.completions.create(
+            #         model=self.model_name,
+            #         messages=messages,
+            #         temperature=temperature or self.temperature,
+            #         max_tokens=max_tokens or self.max_tokens,
+            #         response_format={"type": response_format} if response_format == "json_object" else None,
+            #         seed=seed,
+            #     )
+            # )
 
             if not completion.choices or not completion.choices[0].message.content:
                 raise ValueError("Empty response from OpenAI")

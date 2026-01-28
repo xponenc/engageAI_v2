@@ -19,7 +19,10 @@ class CourseGenerationService(BaseContentGenerator):
     Ответственность: только создание курса и его метаданных.
     """
 
-    async def generate(self, theme: str) -> Course:
+    async def generate(self,
+                       theme: str,
+                       user_id: Optional[int] = None,
+                       ) -> Course:
         """
         Полный цикл создания курса с детальным логированием и гарантией атомарности.
         Соответствует требованиям ТЗ: Задача 2.1 (надёжность), Задача 5.1 (логирование для анализа аномалий).
@@ -27,7 +30,7 @@ class CourseGenerationService(BaseContentGenerator):
 
         # Шаг 1: Генерация данных курса
         try:
-            course_data = await self._generate_course_data(theme)
+            course_data = await self._generate_course_data(theme=theme, user_id=user_id)
         except Exception as e:
             self.logger.exception(
                 f"КРИТИЧЕСКАЯ ОШИБКА: не удалось сгенерировать данные курса для темы '{theme}'",
@@ -105,8 +108,8 @@ class CourseGenerationService(BaseContentGenerator):
 
         return course
 
-    async def _generate_course_data(self, theme: str) -> dict:
-        prompt = ("Ты опытный и талантливый проектировщик курсов повышения уровня английского языка. "
+    async def _generate_course_data(self, theme: str, user_id: Optional[int] = None,) -> dict:
+        system_prompt = ("Ты опытный и талантливый проектировщик курсов повышения уровня английского языка. "
                   "Выполни задание и ответь строго JSON")
         user_message = f"""
             Сгенерируй название и описание курса по теме "{theme}".
@@ -119,8 +122,12 @@ class CourseGenerationService(BaseContentGenerator):
                "description": "str (200–300 символов, мотивирующее описание)"
             }}
         """
+        context = {
+            "user_id": user_id
+        }
 
-        return await self._safe_llm_call(prompt, user_message, temperature=0.3)
+        return await self._safe_llm_call(system_prompt=system_prompt, user_message=user_message,
+                                         context=context, temperature=0.3, response_format=dict)
 
     @sync_to_async
     @transaction.atomic
@@ -132,33 +139,72 @@ class CourseGenerationService(BaseContentGenerator):
         )
 
     async def _generate_professional_tags_data(self, theme: str, course: Course) -> list[str]:
-        prompt = "You are an expert in professional English training. Generate relevant tags."
-        user_message = f"""
-        Generate 8-12 short professional tags for course theme: "{theme}".
-        Context: IT/business professionals (backend, qa, standup-meetings, etc.).
-        Rules: lowercase, no spaces, unique, max 20 chars per tag.
+        system_prompt = """
+        You are an expert curriculum designer for professional English courses.
 
-        Return ONLY JSON: {{"tags": ["tag1", "tag2", ...]}}
+        Your task is to generate structured data for Professional Tags
+        used to personalize English learning for working professionals.
+
+        A Professional Tag represents:
+        - a job role
+        - a work context
+        - or a recurring professional activity
+        that affects language usage.
+        """
+        user_message = f"""
+        Generate 10 professional tags for the following course theme:
+
+        "{theme}"
+
+        Rules for each tag:
+        - name:
+          - lowercase
+          - kebab-case (use hyphens)
+          - no spaces
+          - max 50 characters
+          - unique
+          - suitable as a database identifier
+        - description:
+          - short human-readable explanation
+          - describes the professional context or activity
+          - max 200 characters
+
+        Do NOT include:
+        - student levels
+        - language skills (grammar, vocabulary, etc.)
+        - abstract soft skills
+
+        Return ONLY valid JSON matching this structure:
+        {{
+        "tags": [
+            {{
+                "name": "backend",
+                "description": "Backend development tasks and communication"
+            }}
+          ]
+        }}
         """
 
         data = await self._safe_llm_call(
-            prompt, user_message, temperature=0.4,
-            context={"course_id": course.pk}
+            system_prompt, user_message, temperature=0.4,
+            context={"course_id": course.pk}, response_format=dict
         )
 
         if "tags" not in data or not isinstance(data["tags"], list):
             raise ValueError(f"Invalid tags format: {data}")
 
-        return [str(tag).lower().replace(" ", "-")[:20] for tag in data["tags"]]
+        return data["tags"]
 
     @sync_to_async
     @transaction.atomic
-    def _create_and_attach_tags(self, tags_data: list[str], course: Course):
+    def _create_and_attach_tags(self, tags_data: list[dict], course: Course):
         tags = []
-        for name in tags_data:
+        for tag in tags_data:
+            name = tag["name"].lower()
+            description = tag["description"]
             tag, _ = ProfessionalTag.objects.get_or_create(
                 name=name,
-                defaults={"description": f"Professional context: {name}"}
+                defaults={"description": description}
             )
             tags.append(tag)
 

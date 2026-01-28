@@ -26,7 +26,9 @@ class TaskGenerationService(BaseContentGenerator):
             self,
             lesson,
             num_tasks: Optional[int] = None,
-            include_media: bool = True
+            include_media: bool = True,
+            user_id: Optional[int] = None,
+
     ) -> list[Task]:
         """
         Генерация заданий для урока
@@ -54,7 +56,8 @@ class TaskGenerationService(BaseContentGenerator):
             tasks_data = await self._llm_generate_tasks_data(
                 lesson=lesson,
                 lesson_context=lesson_context,
-                num_tasks=num_tasks
+                num_tasks=num_tasks,
+                user_id=user_id,
             )
         except Exception as e:
             self.logger.exception(
@@ -144,7 +147,8 @@ class TaskGenerationService(BaseContentGenerator):
             "duration_minutes": lesson.duration_minutes
         }
 
-    async def _llm_generate_tasks_data(self, lesson, lesson_context: dict, num_tasks: int) -> list[dict]:
+    async def _llm_generate_tasks_data(self, lesson, lesson_context: dict,
+                                       num_tasks: int, user_id: Optional[int] = None) -> list[dict]:
         """Генерация данных заданий через LLM"""
         # Определение доступных типов заданий
         available_schemas = self._get_available_schemas(lesson_context["skill_focus"])
@@ -171,24 +175,43 @@ class TaskGenerationService(BaseContentGenerator):
         {lesson_context['theory_content']}
 
         Available Exercise Types:
-        {json.dumps(schemas_info, indent=2)}
+        {json.dumps(schemas_info, indent=2, ensure_ascii=False)}
 
         Generate exactly {num_tasks} diverse exercises covering all lesson objectives.
         For listening exercises: set "requires_media": true and provide "media_script".
 
-        Return ONLY JSON array of exercises with structure:
-        [
-          {{
-            "task_type": "grammar|vocabulary|reading|listening|writing|speaking",
-            "response_format": "single_choice|multiple_choice|short_text|free_text|audio",
-            "content": {{...}},  // Must match schema exactly
-            "requires_media": false,
-            "media_script": "optional audio script"
-          }}
-        ]
-        """
+        Return ONLY valid JSON (no comments, no text):
 
-        return await self._safe_llm_call(system_prompt, user_message, temperature=0.35, response_format=list)
+        {{
+          "exercises": [
+            {{
+              "task_type": "grammar",
+              "response_format": "single_choice",
+              "content": {{
+                "prompt": "string",
+                "options": ["string"]
+              }},
+              "requires_media": false,
+              "media_script": null
+            }}
+            ...
+          ]
+        }}
+        """
+        print(user_message)
+
+        context = {
+            "course_id": lesson.course.pk,
+            "lesson_id": lesson.pk,
+            "user_id": user_id,
+        }
+
+        tasks_data = await self._safe_llm_call(system_prompt=system_prompt, user_message=user_message,
+                                               context=context, temperature=0.35, response_format=dict)
+        if "exercises" not in tasks_data or not isinstance(tasks_data["exercises"], list):
+            raise ValueError(f"Invalid tags format: {tasks_data}"[:200])
+
+        return tasks_data["exercises"]
 
     def _get_available_schemas(self, skill_focus: list[str]) -> list[str]:
         """Определяет доступные схемы заданий по навыкам урока"""
@@ -290,7 +313,7 @@ class TaskGenerationService(BaseContentGenerator):
             response_format=response_format,
             content=content,
             content_schema_version=schema_version,
-            difficulty_cefr=task_data["difficulty_cefr"],
+            difficulty_cefr=lesson.required_cefr,
             is_diagnostic=False,
             is_active=True,
             order=order

@@ -1,5 +1,25 @@
+import asyncio
 import logging
+import os
+import sys
+from pathlib import Path
 from typing import Optional
+
+from asgiref.sync import sync_to_async
+
+# --- добавляем корень проекта в PYTHONPATH ---
+BASE_DIR = Path(__file__).resolve().parents[3]
+
+sys.path.insert(0, str(BASE_DIR))
+
+os.environ.setdefault(
+    "DJANGO_SETTINGS_MODULE",
+    "engageai_core.settings"
+)
+
+import django
+
+django.setup()
 
 from curriculum.models.content.course import Course
 from curriculum.models.content.balance import CourseBalance
@@ -26,7 +46,8 @@ class ContentOrchestrator:
             theme: str,
             num_lessons: int = 60,
             tasks_per_lesson: Optional[int] = None,
-            include_media: bool = True
+            include_media: bool = True,
+            user_id: Optional[int] = None,
     ) -> Course:
         """
         Полный цикл создания курса с уроками и заданиями.
@@ -36,16 +57,18 @@ class ContentOrchestrator:
             num_lessons: Общее количество уроков в курсе
             tasks_per_lesson: Количество заданий на урок (None = авто по уровню)
             include_media: Генерировать ли медиа для заданий (аудио для listening/speaking)
+            user_id: id пользователя в интересах которого генерируется запрос
         """
         logger.info(f"Начата генерация курса по теме: '{theme}'")
 
         # Шаг 1: Создание курса
-        course = await self.course_generator.generate(theme)
+        course = await self.course_generator.generate(theme=theme, user_id=user_id)
         logger.info(f"Курс '{course.title}' создан (ID: {course.pk})")
 
         # Шаг 2: Генерация уроков
         lessons = await self._generate_lessons_for_course(
-            course, num_lessons, tasks_per_lesson, include_media
+            course=course, num_lessons=num_lessons, tasks_per_lesson=tasks_per_lesson,
+            include_media=include_media, user_id=user_id
         )
 
         logger.info(
@@ -60,10 +83,17 @@ class ContentOrchestrator:
             course: Course,
             num_lessons: int,
             tasks_per_lesson: Optional[int],
-            include_media: bool
+            include_media: bool,
+            user_id: Optional[int] = None,
     ) -> list:
         """Генерация уроков для курса на основе баланса"""
         course_balance = await CourseBalance.objects.aget(course=course)
+
+        # Получаем профессиональные теги курса для контекста
+        professional_tags = await sync_to_async(
+            lambda: list(course.professional_tags.values_list('description', flat=True))
+        )()
+
         lessons = []
         current_order = 0
 
@@ -85,23 +115,27 @@ class ContentOrchestrator:
                     order=current_order,
                     level=level,
                     skill_focus=skill_focus,
-                    theme_tags=[]  # Теги уже в курсе
+                    theme_tags=professional_tags,
+                    user_id=user_id,
                 )
                 lessons.append(lesson)
                 current_order += 1
 
                 # Генерация заданий для урока
-                num_tasks = tasks_per_lesson or (5 if level in ["A1", "A2", "B1"] else 6)
+                num_tasks = tasks_per_lesson or (5 if level in ["A2", "B1"] else 6)
                 await self.task_generator.generate_tasks_for_lesson(
                     lesson=lesson,
                     num_tasks=num_tasks,
-                    include_media=include_media
+                    include_media=include_media,
+                    user_id=user_id,
                 )
 
                 logger.debug(
                     f"Урок {current_order}/{num_lessons} создан: {lesson.title} "
                     f"(уровень {level}, {num_tasks} заданий)"
                 )
+                if current_order > 1: # TODO временная заглушка
+                    return lessons
 
         return lessons
 
@@ -129,3 +163,8 @@ class ContentOrchestrator:
         )
 
         return lesson
+
+
+if __name__ == "__main__":
+    o = ContentOrchestrator()
+    asyncio.run(o.generate_full_course(theme="AI, LLM developer",))

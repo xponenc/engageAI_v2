@@ -27,30 +27,21 @@ class LessonGenerationService(BaseContentGenerator):
             level: str,
             skill_focus: list[str],
             theme_tags: list[str],
-            user: Optional[object] = None
+            user_id: Optional[int] = None
     ) -> Lesson:
         """
         Генерация одного урока:
         1. Получение данных через LLM
         2. Создание в БД с привязкой к целям обучения
         """
-        # Получаем профессиональные теги курса для контекста
-        course_tags = await sync_to_async(course.professional_tags.all)()
-        lesson_data = await self._llm_generate_lesson_data(
-            course=course,
-            level=level,
-            skill_focus=skill_focus,
-            theme_tags=theme_tags + course_tags,
-            user=user
-        )
 
         try:
             lesson_data = await self._llm_generate_lesson_data(
                 course=course,
                 level=level,
                 skill_focus=skill_focus,
-                theme_tags=theme_tags + course_tags,
-                user=user
+                theme_tags=theme_tags,
+                user_id=user_id
             )
         except Exception as e:
             self.logger.exception(
@@ -100,20 +91,13 @@ class LessonGenerationService(BaseContentGenerator):
                                         level: str,
                                         skill_focus: list[str],
                                         theme_tags: list[str],
-                                        user: Optional['User'] = None
+                                        user_id: Optional[int] = None
                                         ) -> dict:
         """Генерация данных урока через LLM"""
-        tags_str = ""
-        if course:
-            tags = await sync_to_async(list)(course.professional_tags.all())
-            # tags_str = ', '.join(t.name for t in course.professional_tags.all())
-            tags_str = ", ".join(t.name for t in tags)
+        professional_tags_str = ""
         if theme_tags:
-            tags_str += f", {', '.join(theme_tags)}" if tags_str else ', '.join(theme_tags)
+            professional_tags_str = "Professional tags for the topic: " + ', '.join(theme_tags)
 
-        theme_str = ""
-        if theme_tags:
-            theme_str = f"Theme: professional, tags: {tags_str}."
 
         if skill_focus:
             focus_str = (f"Pay special attention to the following skills: {', '.join(skill_focus)}. "
@@ -126,7 +110,7 @@ class LessonGenerationService(BaseContentGenerator):
                        Generate ONE lesson for course: 
                        "{course.title if course else 'Adaptive professional English'}".
                        Lesson CEFR level: {level}
-                       {theme_str}
+                       {professional_tags_str}
                        {focus_str}
 
                        Rules:
@@ -155,14 +139,17 @@ class LessonGenerationService(BaseContentGenerator):
                        """
         context = {
             "course_id": course.pk,
-            "user_id": user.pk if user else None,
+            "user_id": user_id,
         }
+
+        print(user_prompt)
 
         data = await self._safe_llm_call(
             system_prompt=system_prompt,
             user_message=user_prompt,
             temperature=0.2,
-            context=context
+            context=context,
+            response_format=dict
         )
 
         return data

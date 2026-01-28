@@ -1,64 +1,98 @@
-<!-- templates/analytics/llm_dashboard.html -->
-<div class="container-fluid">
-    <h1>Аналитика использования LLM</h1>
+{% extends 'base.html' %}
+{% load static %}
+
+{% block css %}
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/analytics.css' %}">
+{% endblock %}
+
+
+{% block title %}
+Аналитика LLM
+{% endblock title %}
+
+{% block content %}
+<div class="container container--fluid">
+    <header class="header">
+        <h1 class="header__title">📊 Аналитика использования LLM</h1>
+        <p class="header__subtitle">Детальная статистика и мониторинг производительности</p>
+    </header>
     
     <!-- Фильтр периода -->
-    <form method="get" class="mb-4">
-        <div class="row">
-            <div class="col-md-3">
-                <select name="period" class="form-select" onchange="this.form.submit()">
-                    {% for value, label in available_periods %}
-                    <option value="{{ value }}" {% if period == value %}selected{% endif %}>
-                        {{ label }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
+    <form method="get" class="filter-period" onchange="this.submit()">
+        <div class="filter-period__control">
+            <label class="filter-period__label" for="period-select">
+                <i class="fas fa-calendar-alt filter-period__icon"></i>
+                Выберите период
+            </label>
+            <select id="period-select" name="period" class="filter-period__select">
+                {% for value, label in available_periods %}
+                <option value="{{ value }}" {% if period == value %}selected{% endif %}>
+                    {{ label }}
+                </option>
+                {% endfor %}
+            </select>
         </div>
     </form>
     
     <!-- Основные метрики -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Запросов</h5>
-                    <h2>{{ total_requests }}</h2>
-                    <small class="text-{% if requests_trend == 'up' %}danger{% elif requests_trend == 'down' %}success{% else %}muted{% endif %}">
-                        {{ requests_change }}% {% if requests_trend == 'up' %}↑{% elif requests_trend == 'down' %}↓{% endif %}
-                    </small>
+    <div class="metrics">
+        <div class="metrics__grid">
+            <!-- Запросы -->
+            <div class="metric-card metric-card--primary">
+                <div class="metric-card__icon">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <div class="metric-card__content">
+                    <h3 class="metric-card__title">Запросов</h3>
+                    <div class="metric-card__value">{{ total_requests }}</div>
+                    <div class="metric-card__trend metric-card__trend--{{ requests_trend }}">
+                        <span class="metric-card__trend-value">{{ requests_change }}%</span>
+                        <i class="fas fa-{% if requests_trend == 'up' %}arrow-up{% else %}arrow-down{% endif %}"></i>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Стоимость</h5>
-                    <h2>${{ total_cost }}</h2>
-                    <small class="text-{% if cost_trend == 'up' %}danger{% elif cost_trend == 'down' %}success{% else %}muted{% endif %}">
-                        {{ cost_change }}% {% if cost_trend == 'up' %}↑{% elif cost_trend == 'down' %}↓{% endif %}
-                    </small>
+            
+            <!-- Стоимость -->
+            <div class="metric-card metric-card--secondary">
+                <div class="metric-card__icon">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="metric-card__content">
+                    <h3 class="metric-card__title">Стоимость</h3>
+                    <div class="metric-card__value">${{ total_cost }}</div>
+                    <div class="metric-card__trend metric-card__trend--{{ cost_trend }}">
+                        <span class="metric-card__trend-value">{{ cost_change }}%</span>
+                        <i class="fas fa-{% if cost_trend == 'up' %}arrow-up{% else %}arrow-down{% endif %}"></i>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Стоимость/запрос</h5>
-                    <h2>${{ avg_cost_per_request }}</h2>
+            
+            <!-- Стоимость/запрос -->
+            <div class="metric-card metric-card--accent">
+                <div class="metric-card__icon">
+                    <i class="fas fa-calculator"></i>
+                </div>
+                <div class="metric-card__content">
+                    <h3 class="metric-card__title">Стоимость/запрос</h3>
+                    <div class="metric-card__value">${{ avg_cost_per_request }}</div>
+                    <div class="metric-card__trend metric-card__trend--neutral">
+                        <span class="metric-card__trend-value">Стабильно</span>
+                        <i class="fas fa-equals"></i>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Success Rate</h5>
-                    <h2>{{ success_rate }}%</h2>
-                    <div class="progress">
-                        <div class="progress-bar bg-success" style="width: {{ success_rate }}%"></div>
+            
+            <!-- Success Rate -->
+            <div class="metric-card metric-card--success">
+                <div class="metric-card__icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="metric-card__content">
+                    <h3 class="metric-card__title">Success Rate</h3>
+                    <div class="metric-card__value">{{ success_rate }}%</div>
+                    <div class="metric-card__progress">
+                        <div class="metric-card__progress-bar" style="width: {{ success_rate }}%"></div>
                     </div>
                 </div>
             </div>
@@ -66,68 +100,226 @@
     </div>
     
     <!-- Аналитика по типам запросов -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <h3>По типам запросов</h3>
-            <table class="table table-striped">
-                <thead>
+    <section class="analytics-section">
+        <div class="analytics-section__header">
+            <h2 class="analytics-section__title">
+                <i class="fas fa-chart-pie"></i>
+                По типам запросов
+            </h2>
+            <button class="analytics-section__refresh-btn" title="Обновить данные">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+        
+        <div class="analytics-table">
+            <table class="analytics-table__table">
+                <thead class="analytics-table__header">
                     <tr>
-                        <th>Тип</th>
-                        <th>Запросов</th>
-                        <th>Стоимость</th>
-                        <th>Средняя стоимость</th>
-                        <th>Success Rate</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Тип запроса</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Запросов</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Стоимость</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Средняя стоимость</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Success Rate</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="analytics-table__body">
                     {% for stat in type_stats %}
-                    <tr>
-                        <td>{{ stat.request_type }}</td>
-                        <td>{{ stat.requests }}</td>
-                        <td>${{ stat.cost|floatformat:5 }}</td>
-                        <td>${{ stat.avg_cost|floatformat:6 }}</td>
-                        <td>{{ stat.success_rate|floatformat:1 }}%</td>
+                    <tr class="analytics-table__row">
+                        <td class="analytics-table__cell">
+                            <div class="analytics-table__type">
+                                <span class="analytics-table__type-icon">
+                                    <i class="fas fa-robot"></i>
+                                </span>
+                                {{ stat.request_type }}
+                            </div>
+                        </td>
+                        <td class="analytics-table__cell analytics-table__cell--number">{{ stat.requests }}</td>
+                        <td class="analytics-table__cell analytics-table__cell--currency">${{ stat.cost|floatformat:5 }}</td>
+                        <td class="analytics-table__cell analytics-table__cell--currency">${{ stat.avg_cost|floatformat:6 }}</td>
+                        <td class="analytics-table__cell analytics-table__cell--success">
+                            <div class="analytics-table__success-rate">
+                                <span class="analytics-table__success-value">{{ stat.success_rate|floatformat:1 }}%</span>
+                                <div class="analytics-table__success-bar">
+                                    <div class="analytics-table__success-fill" style="width: {{ stat.success_rate }}%"></div>
+                                </div>
+                            </div>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-    </div>
+    </section>
     
-    <!-- Динамика по дням (график) -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <h3>Динамика по дням</h3>
-            <canvas id="dailyChart"></canvas>
+    <!-- Динамика по дням -->
+    <section class="chart-section">
+        <div class="chart-section__header">
+            <h2 class="chart-section__title">
+                <i class="fas fa-chart-line"></i>
+                Динамика по дням
+            </h2>
+            <div class="chart-section__controls">
+                <button class="chart-section__btn chart-section__btn--active" data-type="requests">
+                    <i class="fas fa-bolt"></i> Запросы
+                </button>
+                <button class="chart-section__btn" data-type="cost">
+                    <i class="fas fa-dollar-sign"></i> Стоимость
+                </button>
+                <button class="chart-section__btn" data-type="both">
+                    <i class="fas fa-chart-line"></i> Оба
+                </button>
+            </div>
         </div>
-    </div>
-    
+        
+        <div class="chart-container">
+            <canvas id="dailyChart" class="chart-container__canvas"></canvas>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block script %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-    const ctx = document.getElementById('dailyChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: {{ daily_labels|safe }},
-            datasets: [{
-                label: 'Запросов',
-                data: {{ daily_requests|safe }},
-                borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1
-            }, {
-                label: 'Стоимость ($)',
-                data: {{ daily_cost|safe }},
-                borderColor: 'rgb(255, 99, 132)',
-                tension: 0.1,
-                yAxisID: 'y1'
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: { type: 'linear', display: true, position: 'left' },
-                y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false } }
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('dailyChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ daily_labels|safe }},
+                datasets: [{
+                    label: 'Запросов',
+                    data: {{ daily_requests|safe }},
+                    borderColor: '#4CAF50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    borderWidth: 3,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#4CAF50',
+                    pointHoverRadius: 7,
+                    tension: 0.3,
+                    fill: true
+                }, {
+                    label: 'Стоимость ($)',
+                    data: {{ daily_cost|safe }},
+                    borderColor: '#2196F3',
+                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                    borderWidth: 3,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#2196F3',
+                    pointHoverRadius: 7,
+                    tension: 0.3,
+                    fill: true,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: {
+                                family: 'Roboto',
+                                size: 14
+                            },
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleFont: {
+                            family: 'Roboto',
+                            size: 16
+                        },
+                        bodyFont: {
+                            family: 'Roboto',
+                            size: 14
+                        },
+                        padding: 12,
+                        displayColors: true
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            font: {
+                                family: 'Roboto',
+                                size: 12
+                            }
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            font: {
+                                family: 'Roboto',
+                                size: 12
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Количество запросов',
+                            font: {
+                                family: 'Roboto',
+                                size: 13,
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false,
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            font: {
+                                family: 'Roboto',
+                                size: 12
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Стоимость ($)',
+                            font: {
+                                family: 'Roboto',
+                                size: 13,
+                                weight: 'bold'
+                            }
+                        }
+                    }
+                }
             }
-        }
+        });
+
+        // Обработчик кнопок управления графиком
+        document.querySelectorAll('.chart-section__btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.chart-section__btn').forEach(b => b.classList.remove('chart-section__btn--active'));
+                this.classList.add('chart-section__btn--active');
+                
+                const type = this.dataset.type;
+                chart.data.datasets[0].hidden = type === 'cost';
+                chart.data.datasets[1].hidden = type === 'requests';
+                chart.update();
+            });
+        });
     });
     </script>
-</div>
+{% endblock script %} 

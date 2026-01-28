@@ -11,6 +11,9 @@ h3 { font-size: 1.05rem; }
 
 small, .muted { font-size: 0.85rem; color: var(--color-text-muted); }
 
+
+
+
 /* layout geometry */
 .header {
     width: 100%;
@@ -166,13 +169,17 @@ small, .muted { font-size: 0.85rem; color: var(--color-text-muted); }
 
 body {
   margin: 0;
-  font-family: "Montserrat", sans-serif;
   font-size: var(--major-fsz);
   font-style: normal;
   font-weight: 400;
-  line-height: 1.2;
   color: var(--text-color);
   background-color: var(--bg-color);
+
+  font-family: 'Roboto', sans-serif;
+  background: linear-gradient(135deg, var(--body-gradient-primary-start) 0%, var(--body-gradient-primary-end) 100%);
+  color: var(--color-text);
+  line-height: 1.25;
+  min-height: 100vh;
 }
 
 a {

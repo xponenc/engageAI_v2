@@ -1,81 +1,302 @@
-<nav class="nav">
-    <div class="nav__container container">
+<nav class="navbar">
+    <div class="navbar__container container">
 
         <!-- Логотип -->
-        <a class="nav__logo" href="/">
-            <span class="nav__logo-placeholder">EngageAI</span>
+        <a class="navbar__logo" href="/">
+            <div class="navbar__logo-icon">
+                <i class="fas fa-brain"></i>
+            </div>
+            <span class="navbar__logo-text">EngageAI</span>
         </a>
 
         <!-- Меню (десктоп) -->
-        <ul class="nav__menu">
-            <li class="nav__item"><a href="#" class="nav__link">Обучение</a></li>
-            <li class="nav__item"><a href="#" class="nav__link">Практика</a></li>
-            <li class="nav__item"><a href="#" class="nav__link">Прогресс</a></li>
-            <li class="nav__item"><a href="{% url 'curriculum:course_list' %}" class="nav__link">Курсы</a></li>
+        <ul class="navbar__menu">
+            {% comment %} <li class="navbar__item">
+                <a href="#" class="navbar__link navbar__link--active">
+                    <i class="fas fa-graduation-cap navbar__link-icon"></i>
+                    <span class="navbar__link-text">Обучение</span>
+                </a>
+            </li> {% endcomment %}
+            <li class="navbar__item">
+                <a href="#" class="navbar__link">
+                    <i class="fas fa-dumbbell navbar__link-icon"></i>
+                    <span class="navbar__link-text">Практика</span>
+                </a>
+            </li>
+            <li class="navbar__item">
+                <a href="{% url 'curriculum:course_list' %}" class="navbar__link  navbar__link--active">
+                    <i class="fas fa-book-open navbar__link-icon"></i>
+                    <span class="navbar__link-text">Курсы</span>
+                </a>
+            </li>
             {% if request.user.is_authenticated %}
-                <li class="nav__item"><a href="{% url 'chat:ai-chat' 'main_orchestrator' %}" class="nav__link">Чат</a></li>
-                <li class="nav__item"><a href="{% url 'chat:ai-chat-conversation' 'main_orchestrator' %}" class="nav__link">История чата</a></li>
+                <li class="navbar__item">
+                    <a href="{% url 'chat:ai-chat' 'main_orchestrator' %}" class="navbar__link">
+                        <i class="fas fa-comments navbar__link-icon"></i>
+                        <span class="navbar__link-text">Чат</span>
+                    </a>
+                </li>
+                <li class="navbar__item">
+                    <a href="{% url 'chat:ai-chat-conversation' 'main_orchestrator' %}" class="navbar__link">
+                        <i class="fas fa-history navbar__link-icon"></i>
+                        <span class="navbar__link-text">История</span>
+                    </a>
+                </li>
             {% endif %}
-            <li class="nav__item"><a href="{% url 'llm_logger:analytics' %}" class="nav__link">Аналитика</a></li>
-
+            <li class="navbar__item">
+                <a href="{% url 'llm_logger:analytics' %}" class="navbar__link">
+                    <i class="fas fa-chart-bar navbar__link-icon"></i>
+                    <span class="navbar__link-text">Аналитика</span>
+                </a>
+            </li>
         </ul>
 
         <!-- Правая часть: тема + пользователь -->
-        <div class="nav__right">
-            <!-- Компактный переключатель тем -->
-            <button class="theme-toggle btn_reset" 
-                    aria-label="Сменить тему" 
-                    title="Включить темную тему (Ctrl+/)">
-                <div class="theme-toggle__icon">
-                    <!-- Иконка будет меняться через CSS -->
+        <div class="navbar__right">
+            <!-- Поиск -->
+            <div class="navbar__search">
+                <button class="navbar__search-btn" aria-label="Поиск">
+                    <i class="fas fa-search"></i>
+                </button>
+                <div class="navbar__search-dropdown">
+                    <input type="text" class="navbar__search-input" placeholder="Поиск...">
+                    <div class="navbar__search-results">
+                        <div class="navbar__search-result">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Материалы по машинному обучению</span>
+                        </div>
+                        <div class="navbar__search-result">
+                            <i class="fas fa-video"></i>
+                            <span>Видеоуроки Python</span>
+                        </div>
+                        <div class="navbar__search-result">
+                            <i class="fas fa-book"></i>
+                            <span>Курс по нейросетям</span>
+                        </div>
+                    </div>
                 </div>
-            </button>
+            </div>
+
+            <!-- Компактный переключатель тем -->
+            <div class="theme-switcher" aria-label="Сменить тему">
+                <button class="theme-switcher__btn theme-switcher__btn--light" data-theme="light" title="Светлая тема">
+                    <i class="fas fa-sun"></i>
+                </button>
+                <button class="theme-switcher__btn theme-switcher__btn--auto" data-theme="solarized" title="Solarized тема">
+                    <i class="fas fa-adjust"></i>
+                </button>
+                <button class="theme-switcher__btn theme-switcher__btn--dark" data-theme="dark" title="Темная тема">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+
+            <!-- Уведомления -->
+            <div class="navbar__notifications">
+                <button class="navbar__notifications-btn" aria-label="Уведомления">
+                    <i class="fas fa-bell"></i>
+                    <span class="navbar__notifications-badge">3</span>
+                </button>
+                <div class="navbar__notifications-dropdown">
+                    <div class="navbar__notifications-header">
+                        <h3>Уведомления</h3>
+                        <button class="navbar__notifications-clear">Очистить</button>
+                    </div>
+                    <div class="navbar__notifications-list">
+                        <div class="navbar__notification">
+                            <div class="navbar__notification-icon navbar__notification-icon--success">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="navbar__notification-content">
+                                <p class="navbar__notification-title">Курс завершен</p>
+                                <p class="navbar__notification-text">Вы успешно завершили курс "Основы Python"</p>
+                                <time class="navbar__notification-time">2 часа назад</time>
+                            </div>
+                        </div>
+                        <div class="navbar__notification">
+                            <div class="navbar__notification-icon navbar__notification-icon--info">
+                                <i class="fas fa-info-circle"></i>
+                            </div>
+                            <div class="navbar__notification-content">
+                                <p class="navbar__notification-title">Новое задание</p>
+                                <p class="navbar__notification-text">Доступно новое практическое задание</p>
+                                <time class="navbar__notification-time">5 часов назад</time>
+                            </div>
+                        </div>
+                        <div class="navbar__notification">
+                            <div class="navbar__notification-icon navbar__notification-icon--warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="navbar__notification-content">
+                                <p class="navbar__notification-title">Срок истекает</p>
+                                <p class="navbar__notification-text">У вас осталось 2 дня на выполнение модуля</p>
+                                <time class="navbar__notification-time">Вчера</time>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="#" class="navbar__notifications-view-all">Посмотреть все</a>
+                </div>
+            </div>
 
             <!-- Личный кабинет / Авторизация -->
-            <div class="nav__user">
+            <div class="navbar__user">
                 {% if request.user.is_authenticated %}
-                    <a href="{% url 'users:profile' request.user.id %}" class="nav__user-link">
-                        {{ request.user.get_full_name|default:request.user.username }}
-                    </a>
-                    <form action="{% url 'users:logout'%}" method="POST" class="nav__logout-form">
-                        {% csrf_token %}
-                        <button class="nav__logout-btn" type="submit">Выйти</button>
-                    </form>
+                    <div class="navbar__user-avatar" aria-label="Профиль пользователя">
+                        <img src="{{ request.user.profile.avatar.url }}" alt="{{ request.user.username }}" class="navbar__user-img">
+                        <div class="navbar__user-info">
+                            <div class="navbar__user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+                            <div class="navbar__user-status">Онлайн</div>
+                        </div>
+                        <i class="fas fa-chevron-down navbar__user-arrow"></i>
+                    </div>
+                    <div class="navbar__user-dropdown">
+                        <a href="{% url 'users:profile' request.user.id %}" class="navbar__user-dropdown-item">
+                            <i class="fas fa-user"></i>
+                            <span>Профиль</span>
+                        </a>
+                        <a href="#" class="navbar__user-dropdown-item">
+                            <i class="fas fa-cog"></i>
+                            <span>Настройки</span>
+                        </a>
+                        <a href="#" class="navbar__user-dropdown-item">
+                            <i class="fas fa-bookmark"></i>
+                            <span>Избранное</span>
+                        </a>
+                        <div class="navbar__user-dropdown-divider"></div>
+                        <form action="{% url 'users:logout'%}" method="POST" class="navbar__user-dropdown-form">
+                            {% csrf_token %}
+                            <button type="submit" class="navbar__user-dropdown-item navbar__user-dropdown-item--danger">
+                                <i class="fas fa-sign-out-alt"></i>
+                                <span>Выйти</span>
+                            </button>
+                        </form>
+                    </div>
                 {% else %}
-                    <a class="nav__user-link" href="{% url 'users:login' %}?next={{request.path}}">Войти</a>
-                    <a class="nav__user-btn" href="{% url 'users:sign-up' %}">Регистрация</a>
+                    <a class="navbar__auth-link" href="{% url 'users:login' %}?next={{request.path}}">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Войти
+                    </a>
+                    <a class="navbar__auth-btn" href="{% url 'users:sign-up' %}">
+                        <i class="fas fa-user-plus"></i>
+                        Регистрация
+                    </a>
                 {% endif %}
             </div>
         </div>
 
         <!-- Кнопка бургера -->
-        <button class="nav__burger btn_reset" aria-label="Меню">
-            <span class="nav__burger-line"></span>
-            <span class="nav__burger-line"></span>
-            <span class="nav__burger-line"></span>
+        <button class="navbar__burger" aria-label="Меню">
+            <span class="navbar__burger-line"></span>
+            <span class="navbar__burger-line"></span>
+            <span class="navbar__burger-line"></span>
         </button>
 
         <!-- Мобильное меню -->
-        <div class="nav__mobile">
-            <ul class="nav__mobile-menu">
-                <li><a href="#" class="nav__mobile-link">Обучение</a></li>
-                <li><a href="#" class="nav__mobile-link">Практика</a></li>
-                <li><a href="#" class="nav__mobile-link">Прогресс</a></li>
-                <li><a href="#" class="nav__mobile-link">Материалы</a></li>
+        <div class="navbar__mobile">
+            <div class="navbar__mobile-header">
+                <a class="navbar__mobile-logo" href="/">
+                    <i class="fas fa-brain"></i>
+                    <span>EngageAI</span>
+                </a>
+                <button class="navbar__mobile-close" aria-label="Закрыть меню">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="navbar__mobile-content">
+                <ul class="navbar__mobile-menu">
+                    <li>
+                        <a href="#" class="navbar__mobile-link navbar__mobile-link--active">
+                            <i class="fas fa-graduation-cap"></i>
+                            <span>Обучение</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="navbar__mobile-link">
+                            <i class="fas fa-dumbbell"></i>
+                            <span>Практика</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="navbar__mobile-link">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Прогресс</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="navbar__mobile-link">
+                            <i class="fas fa-book-open"></i>
+                            <span>Курсы</span>
+                        </a>
+                    </li>
+                    {% if request.user.is_authenticated %}
+                        <li>
+                            <a href="#" class="navbar__mobile-link">
+                                <i class="fas fa-comments"></i>
+                                <span>Чат</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="navbar__mobile-link">
+                                <i class="fas fa-history"></i>
+                                <span>История</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                    <li>
+                        <a href="#" class="navbar__mobile-link">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Аналитика</span>
+                        </a>
+                    </li>
+                </ul>
 
-                <hr class="nav__mobile-separator">
+                <div class="navbar__mobile-divider"></div>
 
-                {% if request.user.is_authenticated %}
-                    <a href="{% url 'users:profile' request.user.id %}" class="nav__mobile-link">Личный кабинет</a>
-                    <form action="{% url 'users:logout'%}" method="POST">
-                        {% csrf_token %}
-                        <button class="nav__mobile-link" type="submit">Выйти</button>
-                    </form>
-                {% else %}
-                    <a class="nav__mobile-link" href="{% url 'users:login' %}">Войти</a>
-                    <a class="nav__mobile-link" href="{% url 'users:sign-up' %}">Регистрация</a>
-                {% endif %}
-            </ul>
+                <div class="navbar__mobile-theme">
+                    <div class="navbar__mobile-theme-title">Тема</div>
+                    <div class="theme-switcher theme-switcher--mobile">
+                        <button class="theme-switcher__btn" data-theme="light">
+                            <i class="fas fa-sun"></i>
+                        </button>
+                        <button class="theme-switcher__btn" data-theme="auto">
+                            <i class="fas fa-adjust"></i>
+                        </button>
+                        <button class="theme-switcher__btn" data-theme="dark">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="navbar__mobile-user">
+                    {% if request.user.is_authenticated %}
+                        <a href="{% url 'users:profile' request.user.id %}" class="navbar__mobile-user-link">
+                            <div class="navbar__mobile-user-avatar">
+                                <img src="{{ request.user.profile.avatar.url }}" alt="{{ request.user.username }}">
+                            </div>
+                            <div class="navbar__mobile-user-info">
+                                <div class="navbar__mobile-user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+                                <div class="navbar__mobile-user-status">Онлайн</div>
+                            </div>
+                        </a>
+                        <form action="{% url 'users:logout'%}" method="POST" class="navbar__mobile-logout">
+                            {% csrf_token %}
+                            <button type="submit" class="navbar__mobile-logout-btn">
+                                <i class="fas fa-sign-out-alt"></i>
+                                Выйти
+                            </button>
+                        </form>
+                    {% else %}
+                        <a class="navbar__mobile-auth-link" href="{% url 'users:login' %}">
+                            <i class="fas fa-sign-in-alt"></i>
+                            Войти
+                        </a>
+                        <a class="navbar__mobile-auth-btn" href="{% url 'users:sign-up' %}">
+                            <i class="fas fa-user-plus"></i>
+                            Регистрация
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
         </div>
 
     </div>

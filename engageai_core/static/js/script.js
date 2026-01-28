@@ -202,11 +202,124 @@ let helperEl = null;
 let lastWordCache = null;
 
 document.addEventListener('DOMContentLoaded', function () {
+    // JavaScript для навбара
+    // Бургер меню
+    const burger = document.querySelector('.navbar__burger');
+    const mobileMenu = document.querySelector('.navbar__mobile');
+    const mobileClose = document.querySelector('.navbar__mobile-close');
+
+    if (burger && mobileMenu) {
+        burger.addEventListener('click', () => {
+            mobileMenu.classList.add('navbar__mobile--open');
+            document.body.style.overflow = 'hidden';
+        });
+
+        mobileClose.addEventListener('click', () => {
+            mobileMenu.classList.remove('navbar__mobile--open');
+            document.body.style.overflow = '';
+        });
+
+        // Закрытие при клике вне меню
+        mobileMenu.addEventListener('click', (e) => {
+            if (e.target === mobileMenu) {
+                mobileMenu.classList.remove('navbar__mobile--open');
+                document.body.style.overflow = '';
+            }
+        });
+    }
+
+    // Переключатель тем
+    const themeButtons = document.querySelectorAll('.theme-switcher__btn');
+    const currentTheme = localStorage.getItem('theme') || 'light';
+
+    // Установка активной темы
+    themeButtons.forEach(btn => {
+        if (btn.dataset.theme === currentTheme) {
+            btn.style.color = getComputedStyle(document.documentElement)
+                .getPropertyValue('--color-accent');
+            btn.style.background = getComputedStyle(document.documentElement)
+                .getPropertyValue('--color-accent-soft');
+        }
+    });
+
+    themeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const theme = btn.dataset.theme;
+            
+            // Убираем активный стиль у всех кнопок
+            themeButtons.forEach(b => {
+                b.style.color = '';
+                b.style.background = '';
+            });
+            
+            // Устанавливаем активный стиль
+            btn.style.color = getComputedStyle(document.documentElement)
+                .getPropertyValue('--color-accent');
+            btn.style.background = getComputedStyle(document.documentElement)
+                .getPropertyValue('--color-accent-soft');
+            
+            // Применяем тему
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+        });
+    });
+
+    // Уведомления - закрытие при клике вне
+    const notifications = document.querySelector('.navbar__notifications');
+    if (notifications) {
+        document.addEventListener('click', (e) => {
+            if (!notifications.contains(e.target)) {
+                const dropdown = notifications.querySelector('.navbar__notifications-dropdown');
+                if (dropdown && dropdown.style.display === 'block') {
+                    dropdown.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    // Пользователь - закрытие при клике вне
+    const userMenu = document.querySelector('.navbar__user');
+    if (userMenu) {
+        document.addEventListener('click', (e) => {
+            if (!userMenu.contains(e.target)) {
+                const dropdown = userMenu.querySelector('.navbar__user-dropdown');
+                if (dropdown && dropdown.style.display === 'block') {
+                    dropdown.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    // Поиск - закрытие при клике вне
+    const search = document.querySelector('.navbar__search');
+    if (search) {
+        document.addEventListener('click', (e) => {
+            if (!search.contains(e.target)) {
+                const dropdown = search.querySelector('.navbar__search-dropdown');
+                if (dropdown && dropdown.style.display === 'block') {
+                    dropdown.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    // Очистка уведомлений
+    const clearBtn = document.querySelector('.navbar__notifications-clear');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const notificationsList = document.querySelector('.navbar__notifications-list');
+            if (notificationsList) {
+                notificationsList.innerHTML = '<div class="navbar__notification-empty">Нет новых уведомлений</div>';
+            }
+            const badge = document.querySelector('.navbar__notifications-badge');
+            if (badge) {
+                badge.style.display = 'none';
+            }
+        });
+    }
 
     click_handler();
-
-    
-    
 
     // Создаём один раз — переиспользуем
     helperEl = document.createElement('div');

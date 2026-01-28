@@ -1,52 +1,144 @@
-/* Переменные дизайн-системы */
 :root {
-    /* --- Colors --- */
+    /* ===================================
+       НОВЫЕ ПЕРЕМЕННЫЕ - MATERIAL DESIGN
+       =================================== */
+
+    /* Основные цвета темы */
+    --md-primary: #6200EE;
+    --md-primary-dark: #3700B3;
+    --md-primary-light: #BB86FC;
+    --md-primary-variant: #7928CA;
+    --md-on-primary: #FFFFFF;
+
+    --md-secondary: #03DAC6;
+    --md-secondary-dark: #018786;
+    --md-secondary-light: #66FFF9;
+    --md-secondary-variant: #03DAC6;
+    --md-on-secondary: #000000;
+
+    --md-surface: #FFFFFF;
+    --md-surface-variant: #F5F5F5;
+    --md-surface-dim: #E0E0E0;
+    --md-on-surface: #212121;
+    --md-on-surface-variant: #757575;
+    --md-on-surface-disabled: #9E9E9E;
+
+    --md-background: #FAFAFA;
+    --md-on-background: #212121;
+
+    --md-error: #CF6679;
+    --md-error-dark: #B00020;
+    --md-error-light: #FFDAD6;
+    --md-on-error: #000000;
+
+    --md-success: #00C853;
+    --md-success-light: #69F0AE;
+    --md-success-dark: #009624;
+    --md-warning: #FFAB00;
+    --md-warning-light: #FFD54F;
+    --md-warning-dark: #FF6D00;
+    --md-info: #2962FF;
+    --md-info-light: #64B5F6;
+    --md-info-dark: #0039CB;
+
+    /* Тени */
+    --md-shadow-1: 0 2px 4px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.12);
+    --md-shadow-2: 0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.16);
+    --md-shadow-3: 0 8px 16px rgba(0, 0, 0, 0.16), 0 4px 8px rgba(0, 0, 0, 0.24);
+    --md-shadow-4: 0 16px 32px rgba(0, 0, 0, 0.24), 0 8px 16px rgba(0, 0, 0, 0.32);
+    --md-shadow-5: 0 24px 48px rgba(0, 0, 0, 0.32), 0 12px 24px rgba(0, 0, 0, 0.40);
+
+    /* Радиусы */
+    --md-radius-sm: 4px;
+    --md-radius-md: 8px;
+    --md-radius-lg: 12px;
+    --md-radius-xl: 16px;
+    --md-radius-full: 9999px;
+
+    /* Переходы */
+    --md-transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --md-transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --md-transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Элевации */
+    --md-elevation-0: none;
+    --md-elevation-1: var(--md-shadow-1);
+    --md-elevation-2: var(--md-shadow-2);
+    --md-elevation-3: var(--md-shadow-3);
+    --md-elevation-4: var(--md-shadow-4);
+    --md-elevation-5: var(--md-shadow-5);
+
+    /* Типография */
+    --md-font-family: 'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --md-font-size-display: 3.5rem;
+    --md-font-size-headline: 2.5rem;
+    --md-font-size-title: 1.5rem;
+    --md-font-size-subtitle: 1.25rem;
+    --md-font-size-body: 1rem;
+    --md-font-size-caption: 0.875rem;
+    --md-font-size-button: 0.875rem;
+
+    --md-font-weight-light: 300;
+    --md-font-weight-regular: 400;
+    --md-font-weight-medium: 500;
+    --md-font-weight-bold: 700;
+
+    /* Состояния */
+    --md-state-hover-opacity: 0.08;
+    --md-state-focus-opacity: 0.12;
+    --md-state-pressed-opacity: 0.16;
+    --md-state-dragged-opacity: 0.16;
+    --md-state-disabled-opacity: 0.38;
+
+    /* Спейсинг */
+    --md-spacing-xs: 4px;
+    --md-spacing-sm: 8px;
+    --md-spacing-md: 16px;
+    --md-spacing-lg: 24px;
+    --md-spacing-xl: 32px;
+    --md-spacing-2xl: 48px;
+    --md-spacing-3xl: 64px;
+
+    /* Z-index */
+    --md-z-index-drawer: 1000;
+    --md-z-index-modal: 1100;
+    --md-z-index-tooltip: 1200;
+    --md-z-index-notification: 1300;
+    --md-z-index-overlay: 1400;
+
+    /* ===================================
+       СТАРЫЕ ПЕРЕМЕННЫЕ - НЕ ИСПОЛЬЗОВАТЬ
+       =================================== */
+
     --color-bg: #f8fafc;
-    /* page background — slightly warmer than pure #fff for reduced eye strain */
     --color-surface: #ffffff;
-    /* cards, panels — clean white with sufficient contrast on bg */
     --color-surface-alt: #f1f5f9;
-    /* subtle surface — distinct but soft */
     --color-border: #e2e8f0;
-    /* neutral, low-contrast border for visual separation without harshness */
 
     --color-text: #213a76;
-    /* primary text — improved contrast ratio (AAA on white) */
     --color-text-muted: #64748b;
-    /* secondary text — readable but subdued */
     --color-informer-text: #334155;
-    /* messages text — clear mid-tone for alerts/notifications */
 
     --color-accent: #3b82f6;
-    /* primary / AI accent — vibrant but not overwhelming */
     --color-accent-dark: #1d4ed8;
-    /* hover/focus/state variant — maintains contrast on surfaces */
     --color-accent-soft: rgba(59, 130, 246, 0.1);
 
     --color-success: #10b981;
     --color-success-bg: #f0fdf4;
-
     --color-error: #ef4444;
     --color-error-bg: #fef2f2;
-
     --color-warning: #f59e0b;
     --color-warning-bg: #fffbeb;
-
     --color-muted-bg: #f8fafc;
-    /* consistent with --color-bg for seamless blending */
 
-    /* --- Typography & sizing --- */
     --font-family-system: "Inter", "Montserrat", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --base-font-size: 14px;
     --index: max(18px, calc(0.9vh + 0.9vw));
-    /* scalable spacing base */
-
     --double-gap: calc(2 * var(--index));
     --standard-gap: var(--index);
     --half-gap: calc(0.5 * var(--index));
     --third-gap: calc(0.33 * var(--index));
 
-    /* Border radius & shadows */
     --radius-sm: 6px;
     --radius-md: 10px;
     --radius-lg: 16px;
@@ -54,14 +146,12 @@
     --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.04);
     --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.06);
 
-    /* forms */
     --field-padding: 12px;
     --form-input-border-color: #cbd5e1;
     --form-input-border-hover-color: #94a3b8;
     --input-text-color: var(--color-text);
     --placeholder-color: #94a3b8;
 
-    /* buttons */
     --btn-radius: var(--radius-md);
     --btn-padding: 12px 22px;
 
@@ -74,109 +164,103 @@
     --light-color: #F8F9FA;
     --dark-color: #343A40;
 
-    /* Тема по умолчанию */
+    --body-gradient-primary-start: #667eea;
+    --body-gradient-primary-end: #764ba2;
+
     --theme-name: 'light';
 }
 
 /* Темная тема */
 [data-theme="dark"] {
-    --color-bg: #0b0f19;
-    /* deeper than before for better visual "ground" */
-    --color-surface: #111827;
-    --color-surface-alt: #1e293b;
-    --color-border: #334155;
+    --color-bg: #121212;
+    --color-surface: #1E1E1E;
+    --color-surface-alt: #2D2D2D;
+    --color-border: rgba(255, 255, 255, 0.12);
 
-    --color-text: #f1f5f9;
-    /* AAA contrast on dark surfaces */
-    --color-text-muted: #94a3b8;
-    --color-informer-text: #cbd5e1;
+    --color-text: #FFFFFF;
+    --color-text-muted: rgba(255, 255, 255, 0.70);
+    --color-informer-text: rgba(255, 255, 255, 0.87);
 
-    --color-accent: #21539f;
-    /* slightly brighter for visibility on dark */
-    --color-accent-dark: #05172e;
-    --color-accent-soft: rgba(96, 165, 250, 0.12);
+    --color-accent: #BB86FC;
+    --color-accent-dark: #7C4DFF;
+    --color-accent-light: #E0B8FF;
+    --color-accent-soft: rgba(187, 134, 252, 0.12);
 
-    --color-success: #34d399;
-    --color-success-bg: rgba(52, 211, 153, 0.12);
+    --color-success: #69F0AE;
+    --color-success-bg: rgba(105, 240, 174, 0.12);
 
-    --color-error: #f87171;
-    --color-error-bg: rgba(248, 113, 113, 0.12);
+    --color-error: #FF8A80;
+    --color-error-bg: rgba(255, 138, 128, 0.12);
 
-    --color-warning: #fbbf24;
-    --color-warning-bg: rgba(251, 191, 36, 0.12);
+    --color-warning: #FFD54F;
+    --color-warning-bg: rgba(255, 213, 79, 0.12);
 
-    --color-muted-bg: #1e293b;
+    --color-muted-bg: #2D2D2D;
 
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
-    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.32), 0 1px 2px rgba(0, 0, 0, 0.40);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.40), 0 2px 4px rgba(0, 0, 0, 0.48);
 
-    --form-input-border-color: #475569;
-    --form-input-border-hover-color: #60a5fa;
-    --placeholder-color: #64748b;
+    --form-input-border-color: rgba(255, 255, 255, 0.24);
+    --form-input-border-hover-color: rgba(255, 255, 255, 0.38);
+    --placeholder-color: rgba(255, 255, 255, 0.50);
 
-    --primary-color:   #66BB6A; /* green 400 */
-    --secondary-color: #42A5F5; /* blue 400 */
-
-    --success-color:   #66BB6A;
-    --warning-color:   #FFCA28; /* amber 400 */
-    --danger-color:    #EF5350; /* red 400 */
-    --info-color:      #AB47BC; /* purple 400 */
-
-    --light-color:     #2A2E33; /* cards / surfaces */
-    --dark-color:      #ECEFF1; /* primary text */
+    --body-gradient-primary-start: #191919;
+    --body-gradient-primary-end: #232429;
 
     --theme-name: 'dark';
 }
 
 /* Solarized тема */
 [data-theme="solarized"] {
-    --color-bg: #002b36;
-    --color-surface: #073642;
-    --color-surface-alt: #0a404d;
-    --color-border: #586e75;
+    /* Основные поверхности */
+    --color-bg: #002b36;           /* base03 */
+    --color-surface: #073642;      /* base02 */
+    --color-surface-alt: #0a404d;  /* base01-ish для контраста */
+    --color-border: rgba(88, 110, 117, 0.25); /* base01 с прозрачностью */
 
-    --color-text: #839496;
-    /* Solarized standard base0 */
-    --color-text-muted: #657b83;
-    /* base01 */
-    --color-informer-text: #93a1a1;
-    /* base1 */
+    /* Тексты */
+    --color-text: #839496;          /* base0 */
+    --color-text-muted: #657b83;    /* base00 */
+    --color-informer-text: #93a1a1; /* base1 */
 
-    --color-accent: #114b58;
-    --color-accent-dark: #2d7081;
-    --color-accent-soft: rgba(42, 161, 152, 0.15);
+    /* Акценты */
+    --color-accent: #268bd2;        /* blue */
+    --color-accent-dark: #00629d;   /* более тёмный для hover/focus */
+    --color-accent-light: #53b0e6;  /* светлый вариант */
+    --color-accent-soft: rgba(38, 139, 210, 0.08);
 
-    --color-success: #859900;
+    /* Статусы */
+    --color-success: #859900;       /* green */
     --color-success-bg: rgba(133, 153, 0, 0.12);
+    --color-success-light: #bfcf6c;
 
-    --color-error: #dc322f;
+    --color-error: #dc322f;         /* red */
     --color-error-bg: rgba(220, 50, 47, 0.12);
+    --color-error-light: #f4c6c3;
 
-    --color-warning: #b58900;
+    --color-warning: #b58900;       /* yellow */
     --color-warning-bg: rgba(181, 137, 0, 0.12);
+    --color-warning-light: #f0e68c;
 
-    --color-muted-bg: #073642;
+    --color-muted-bg: #073642;      /* base02 */
 
-    --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.35);
-    --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
+    /* Тени (используем Material-тени) */
+    --shadow-sm: var(--md-shadow-1);
+    --shadow-md: var(--md-shadow-2);
+    --shadow-lg: var(--md-shadow-3);
 
-    --form-input-border-color: #586e75;
-    --form-input-border-hover-color: #2aa198;
-    --placeholder-color: #657b83;
+    /* Формы */
+    --form-input-border-color: #586e75; /* base01 */
+    --form-input-border-hover-color: #2aa198; /* cyan */
+    --placeholder-color: #657b83; /* base00 */
 
-    --primary-color:   #859900; /* green */
-    --secondary-color: #268BD2; /* blue */
+    --body-gradient-primary-start: #002b36;
+    --body-gradient-primary-end: #073642;
 
-    --success-color:   #859900;
-    --warning-color:   #B58900; /* yellow */
-    --danger-color:    #DC322F; /* red */
-    --info-color:      #6C71C4; /* violet */
-
-    --light-color:     #073642; /* base02 */
-    --dark-color:      #EEE8D5; /* base2 */
-
-    --theme-name: 'solarized-dark';
+    --theme-name: 'solarized';
 }
+
+
 
 /* Отключение переходов для улучшения производительности при загрузке */
 .initial-load * {
@@ -208,16 +292,6 @@
 html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-}
-
-body {
-    margin: 0;
-    font-family: var(--font-family-system);
-    font-size: var(--base-font-size);
-    line-height: 1.45;
-    color: var(--color-text);
-    background-color: var(--color-bg);
-    -webkit-tap-highlight-color: transparent;
 }
 
 /* links */

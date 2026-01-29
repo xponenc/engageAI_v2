@@ -175,7 +175,7 @@ body {
   color: var(--text-color);
   background-color: var(--bg-color);
 
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   background: linear-gradient(135deg, var(--body-gradient-primary-start) 0%, var(--body-gradient-primary-end) 100%);
   color: var(--color-text);
   line-height: 1.25;

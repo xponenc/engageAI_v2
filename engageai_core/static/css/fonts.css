@@ -1,0 +1,151 @@
+
+@font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 300;
+    src: local(''), url('/static/fonts/montserrat-v15-latin_cyrillic-300.woff2') format('woff2'),
+    url('/static/fonts/montserrat-v15-latin_cyrillic-300.woff') format('woff');
+    
+  }
+  
+  
+  @font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 400;
+    src: local(''), url('/static/fonts/montserrat-v15-latin_cyrillic-regular.woff2') format('woff2'),
+    url('/static/fonts/montserrat-v15-latin_cyrillic-regular.woff') format('woff');
+    
+  }
+  
+  
+  @font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 600;
+    src: local(''), url('/static/fonts/montserrat-v15-latin_cyrillic-600.woff2') format('woff2'),
+    url('/static/fonts/montserrat-v15-latin_cyrillic-600.woff') format('woff');
+  }
+  
+  
+  @font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 700;
+    src: local(''), url('/static/fonts/montserrat-v15-latin_cyrillic-700.woff2') format('woff2'),
+    url('/static/fonts/montserrat-v15-latin_cyrillic-700.woff') format('woff');
+  }
+  
+  
+  @font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 900;
+    src: local(''), url('/static/fonts/montserrat-v15-latin_cyrillic-900.woff2') format('woff2'),
+    url('/static/fonts/montserrat-v15-latin_cyrillic-900.woff') format('woff');
+  }
+  
+
+/* ubuntu-regular - latin_cyrillic */
+@font-face {
+    font-family: 'Ubuntu';
+    font-style: normal;
+    font-weight: 400;
+    src: local(''),
+         url('../fonts/ubuntu-v20-latin_cyrillic-regular.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+         url('../fonts/ubuntu-v20-latin_cyrillic-regular.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+  }
+  /* ubuntu-500 - latin_cyrillic */
+  @font-face {
+    font-family: 'Ubuntu';
+    font-style: normal;
+    font-weight: 500;
+    src: local(''),
+         url('../fonts/ubuntu-v20-latin_cyrillic-500.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+         url('../fonts/ubuntu-v20-latin_cyrillic-500.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+  }
+  /* ubuntu-700 - latin_cyrillic */
+  @font-face {
+    font-family: 'Ubuntu';
+    font-style: normal;
+    font-weight: 700;
+    src: local(''),
+         url('../fonts/ubuntu-v20-latin_cyrillic-700.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+         url('../fonts/ubuntu-v20-latin_cyrillic-700.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+  }
+  /* ubuntu-700italic - latin_cyrillic */
+  @font-face {
+    font-family: 'Ubuntu';
+    font-style: italic;
+    font-weight: 700;
+    src: local(''),
+         url('../fonts/ubuntu-v20-latin_cyrillic-700italic.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+         url('../fonts/ubuntu-v20-latin_cyrillic-700italic.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+  }
+
+  @font-face {
+    font-family: 'RobotoMono';
+    font-style: normal;
+    font-weight: 400;
+    src: local(''), url('/static/fonts/robotomono/RobotoMono-Regular.woff2') format('woff2'),
+    url('/static/fonts/robotomono/RobotoMono-Regular.woff') format('woff');
+  }
+
+  @font-face {
+    font-family: 'JetBrainsMono';
+    font-style: normal;
+    font-weight: 100;
+    src: local(''), url('/static/fonts/jet_brains_mono/JetBrainsMono-Thin.woff2') format('woff2'),
+}
+
+@font-face {
+    font-family: 'JetBrainsMono';
+    font-style: normal;
+    font-weight: 200;
+    src: local(''), url('/static/fonts/jet_brains_mono/JetBrainsMono-ExtraLight.woff2') format('woff2'),
+}
+
+@font-face {
+    font-family: 'JetBrainsMono';
+    font-style: normal;
+    font-weight: 300;
+    src: local(''), url('/static/fonts/jet_brains_mono/JetBrainsMono-Light.woff2') format('woff2'),
+}
+
+
+@font-face {
+    font-family: 'JetBrainsMono';
+    font-style: normal;
+    font-weight: 400;
+    src: local(''), url('/static/fonts/jet_brains_mono/JetBrainsMono-Regular.woff2') format('woff2'),
+}
+
+
+@font-face {
+    font-family: 'JetBrainsMono';
+    font-style: normal;
+    font-weight: 500;
+    src: local(''), url('/static/fonts/jet_brains_mono/JetBrainsMono-Medium.woff2') format('woff2'),
+}
+
+@font-face {
+    font-family: 'JetBrainsMono';
+    font-style: normal;
+    font-weight: 600;
+    src: local(''), url('/static/fonts/jet_brains_mono/JetBrainsMono-SemiBold.woff2') format('woff2'),
+}
+
+
+@font-face {
+    font-family: 'JetBrainsMono';
+    font-style: normal;
+    font-weight: 700;
+    src: local(''), url('/static/fonts/jet_brains_mono/JetBrainsMono-Bold.woff2') format('woff2'),
+}
+
+@font-face {
+    font-family: 'JetBrainsMono';
+    font-style: normal;
+    font-weight: 800;
+    src: local(''), url('/static/fonts/jet_brains_mono/JetBrainsMono-ExtraBold.woff2') format('woff2'),
+}

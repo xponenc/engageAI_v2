@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+{% load static %}
+
+
+{% block css %}
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/analytics.css' %}">
+<link rel="stylesheet" href="{% static 'css/llm-log.css' %}">
+{% endblock %}
+
+
+{% block title %}
+LLM лог #{{ log.id }}
+{% endblock title %}
+
+{% block content %}
+<div class="container container--fluid llm-log">
+
+    <header class="header _mb-half">
+        <h2 class="header__title">Детали запроса <span class="llm-log__id">#{{ log.id }}</span></h2>
+        <div class="header__subtitle">
+            <div class="llm-log__meta">
+                {{ log.request_time|date:"d.m.Y H:i:s" }} ·
+                модель <code>{{ log.model_name }}</code>
+            </div>
+        </div>
+        <a href="{% url 'llm_logger:log_list' %}" class="llm-log__back">
+            ← к списку
+        </a>
+    </header>
+    <header class="llm-log__header">
+        <div>
+            <h1 class="llm-log__title">
+                
+            </h1>
+            
+        </div>
+
+    </header>
+
+    <div class="llm-log__grid">
+
+        <!-- MAIN -->
+        <section class="llm-log__main">
+
+            <!-- SUMMARY -->
+            <div class="llm-card">
+                <h2 class="llm-card__title">Основные параметры</h2>
+
+                <dl class="llm-dl">
+                    <div>
+                        <dt>Тип запроса</dt>
+                        <dd>{{ log.get_request_type_display }}</dd>
+                    </div>
+
+                    <div>
+                        <dt>Статус</dt>
+                        <dd>
+                            <span class="llm-status llm-status--{{ log.status|lower }}">
+                                {{ log.status }}
+                            </span>
+                        </dd>
+                    </div>
+
+                    <div>
+                        <dt>Длительность</dt>
+                        <dd>{{ log.duration_sec|floatformat:2 }} сек</dd>
+                    </div>
+
+                    <div>
+                        <dt>Провайдер</dt>
+                        <dd>{{ log.metadata.provider|default:"-" }}</dd>
+                    </div>
+                    <div>
+                        <dt>Модель</dt>
+                        <dd>{{ log.model_name }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- COST -->
+            <div class="llm-card">
+                <h2 class="llm-card__title">Стоимость и токены</h2>
+
+                <dl class="llm-dl llm-dl--wide">
+                    <div>
+                        <dt>Стоимость</dt>
+                        <dd>
+                            in ${{ log.cost_in|floatformat:6 }} ·
+                            out ${{ log.cost_out|floatformat:6 }} ·
+                            <strong>${{ log.cost_total|floatformat:6 }}</strong>
+                        </dd>
+                    </div>
+
+                    <div>
+                        <dt>Токены</dt>
+                        <dd>
+                            in {{ log.tokens_in }} ·
+                            out {{ log.tokens_out }} ·
+                            <strong>{{ log.tokens_in|add:log.tokens_out }}</strong>
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- PROMPT -->
+            <div class="llm-card">
+                <h2 class="llm-card__title">Prompt</h2>
+                <pre class="llm-pre">{{ log.prompt }}</pre>
+            </div>
+
+            <!-- RESPONSE -->
+            <div class="llm-card">
+                <h2 class="llm-card__title">Ответ LLM</h2>
+                {% comment %} <pre class="llm-pre">{{ log.response|default:"-" }}</pre> {% endcomment %}
+                {% include 'widgets/_json_recursive.html' with data=response level=0 %}
+
+            </div>
+
+            <!-- ERROR -->
+            {% if log.error_message %}
+            <div class="llm-card llm-card--error">
+                <h2 class="llm-card__title">Ошибка</h2>
+                <pre class="llm-pre llm-pre--error">{{ log.error_message }}</pre>
+            </div>
+            {% endif %}
+        </section>
+
+        <!-- ASIDE -->
+        <aside class="llm-log__aside">
+
+            <!-- CONTEXT -->
+            <div class="llm-card">
+                <h2 class="llm-card__title">Контекст</h2>
+
+                <dl class="llm-dl">
+                    <div>
+                        <dt>Пользователь</dt>
+                        <dd>
+                            {% if log.user %}
+                                <a href="{% url 'admin:auth_user_change' log.user.id %}" target="_blank">
+                                    {{ log.user.username }}
+                                </a>
+                            {% else %}-{% endif %}
+                        </dd>
+                    </div>
+
+                    <div>
+                        <dt>Курс</dt>
+                        <dd>{{ log.course.title|default:"-" }}</dd>
+                    </div>
+
+                    <div>
+                        <dt>Урок</dt>
+                        <dd>{{ log.lesson.title|default:"-" }}</dd>
+                    </div>
+
+                    <div>
+                        <dt>Задание</dt>
+                        <dd>{% if log.task %}#{{ log.task.id }}{% else %}-{% endif %}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- METADATA -->
+            <div class="llm-card">
+                <h2 class="llm-card__title">Метаданные</h2>
+                {% include 'widgets/_json_recursive.html' with data=log.metadata level=0 %}
+            </div>
+
+        </aside>
+    </div>
+</div>
+{% endblock %}

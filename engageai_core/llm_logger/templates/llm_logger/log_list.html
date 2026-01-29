@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+{% load static %}
+
+
+{% block css %}
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/analytics.css' %}">
+<link rel="stylesheet" href="{% static 'css/llm-log.css' %}">
+{% endblock %}
+
+
+{% block title %}
+LLM Logs
+{% endblock %}
+
+{% block content %}
+<div class="container container--fluid llm-list">
+
+    <!-- HEADER -->
+    <header class="llm-list__header">
+        <div>
+            <h1 class="llm-list__title">Логи запросов к LLM</h1>
+            <div class="llm-list__subtitle">
+                Полная история использования языковых моделей
+            </div>
+        </div>
+    </header>
+
+    <!-- FILTERS -->
+    <form method="get" class="llm-filters">
+        <div class="llm-filters__grid">
+
+            <div class="llm-field">
+                <label>Тип запроса</label>
+                <select name="request_type">
+                    <option value="ALL">Все</option>
+                    {% for value, label in request_types %}
+                        <option value="{{ value }}"
+                            {% if current_filters.request_type == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="llm-field">
+                <label>Статус</label>
+                <select name="status">
+                    <option value="ALL">Все</option>
+                    <option value="SUCCESS" {% if current_filters.status == 'SUCCESS' %}selected{% endif %}>Success</option>
+                    <option value="ERROR" {% if current_filters.status == 'ERROR' %}selected{% endif %}>Error</option>
+                    <option value="TIMEOUT" {% if current_filters.status == 'TIMEOUT' %}selected{% endif %}>Timeout</option>
+                </select>
+            </div>
+
+            <div class="llm-field">
+                <label>Модель</label>
+                <input type="text" name="model_name"
+                       placeholder="gpt-4o-mini"
+                       value="{{ current_filters.model_name }}">
+            </div>
+
+            <div class="llm-field">
+                <label>Период</label>
+                <select name="period">
+                    <option value="all" {% if current_filters.period == 'all' %}selected{% endif %}>Все</option>
+                    <option value="day" {% if current_filters.period == 'day' %}selected{% endif %}>День</option>
+                    <option value="week" {% if current_filters.period == 'week' %}selected{% endif %}>Неделя</option>
+                    <option value="month" {% if current_filters.period == 'month' %}selected{% endif %}>Месяц</option>
+                </select>
+            </div>
+
+            <div class="llm-field llm-field--wide">
+                <label>Поиск</label>
+                <input type="text" name="search"
+                       placeholder="Поиск в prompt или response"
+                       value="{{ current_filters.search }}">
+            </div>
+
+            <div class="llm-field llm-field--action">
+                <button type="submit">Применить</button>
+            </div>
+
+        </div>
+    </form>
+
+    <!-- STATS -->
+    <section class="llm-stats">
+        <div>
+            <span>Запросов</span>
+            <strong>{{ total_requests }}</strong>
+        </div>
+        <div>
+            <span>Общая стоимость</span>
+            <strong>${{ total_cost|floatformat:4 }}</strong>
+        </div>
+        <div>
+            <span>Средняя стоимость</span>
+            <strong>${{ avg_cost|floatformat:6 }}</strong>
+        </div>
+        <div>
+            <span>Success rate</span>
+            <strong>{{ success_rate }}%</strong>
+        </div>
+    </section>
+
+    <!-- TABLE -->
+    <section class="llm-table-wrap">
+        <table class="llm-table">
+            <thead>
+                <tr>
+                    <th>Время</th>
+                    <th>Модель</th>
+                    <th>Тип</th>
+                    <th>Статус</th>
+                    <th>Стоимость</th>
+                    <th>Время</th>
+                    <th>Пользователь</th>
+                    <th>Курс</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="logs-table-body">
+                {% include 'llm_logger/include/_log_table_rows.html' %}
+            </tbody>
+        </table>
+    </section>
+
+    <!-- PAGINATION -->
+    <footer class="llm-pagination">
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">
+                ←
+            </a>
+        {% endif %}
+
+        <span>Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">
+                →
+            </a>
+        {% endif %}
+    </footer>
+    <footer class="llm-pagination">
+        {% if page_obj.has_previous %}
+            <a class="llm-pagination__btn"
+            href="?page=1{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">
+                «
+            </a>
+
+            <a class="llm-pagination__btn"
+            href="?page={{ page_obj.previous_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">
+                ‹
+            </a>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if num >= page_obj.number|add:-2 and num <= page_obj.number|add:2 %}
+                {% if num == page_obj.number %}
+                    <span class="llm-pagination__page llm-pagination__page--active">
+                        {{ num }}
+                    </span>
+                {% else %}
+                    <a class="llm-pagination__page"
+                    href="?page={{ num }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">
+                        {{ num }}
+                    </a>
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+            <a class="llm-pagination__btn"
+            href="?page={{ page_obj.next_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">
+                ›
+            </a>
+
+            <a class="llm-pagination__btn"
+            href="?page={{ page_obj.paginator.num_pages }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">
+                »
+            </a>
+        {% endif %}
+
+    </footer>
+</div>
+
+<style>
+
+</style>
+{% endblock %}
+
+{% block script %}
+<script>
+// AJAX подгрузка при нажатии кнопки
+document.getElementById('load-more-btn')?.addEventListener('click', function() {
+    const btn = this;
+    const nextPage = btn.dataset.nextPage;
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', nextPage);
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
+    
+    fetch(url.toString(), {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Добавляем новые строки в таблицу
+        const tbody = document.getElementById('logs-table-body');
+        data.logs.forEach(log => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${log.request_time}</td>
+                <td><code>${log.model_name}</code></td>
+                <td><span class="badge bg-primary">${log.request_type}</span></td>
+                <td>
+                    <span class="badge ${log.status === 'SUCCESS' ? 'bg-success' : log.status === 'ERROR' ? 'bg-danger' : 'bg-warning'}">
+                        ${log.status}
+                    </span>
+                </td>
+                <td><strong>$${log.cost_total.toFixed(6)}</strong></td>
+                <td>${log.duration_sec} сек</td>
+                <td>${log.user}</td>
+                <td>${log.course}</td>
+                <td>
+                    <a href="${log.url}" class="btn btn-sm btn-outline-info">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+        // Обновляем кнопку
+        if (data.has_next) {
+            btn.dataset.nextPage = data.next_page_number;
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Загрузить ещё';
+        } else {
+            btn.remove();
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка загрузки:', error);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Загрузить ещё';
+        alert('Ошибка при загрузке данных');
+    });
+});
+
+// Бесконечная прокрутка (опционально)
+let loading = false;
+window.addEventListener('scroll', function() {
+    if (loading) return;
+    
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    if (!loadMoreBtn) return;
+    
+    const btnRect = loadMoreBtn.getBoundingClientRect();
+    if (btnRect.top < window.innerHeight + 100) {
+        loadMoreBtn.click();
+    }
+});
+</script>
+{% endblock script %}

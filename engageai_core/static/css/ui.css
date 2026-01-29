@@ -2108,7 +2108,6 @@ input:valid:not(:focus):not(:placeholder-shown) {
 .json__block {
     margin: 0;
     padding: 0 0 0 1em;
-    font-family: monospace;
     position: relative;
 }
 
@@ -2121,19 +2120,19 @@ input:valid:not(:focus):not(:placeholder-shown) {
 }
 
 .json__key {
-    color: #a71d5d;
-    font-weight: bold;
+    opacity: 0.75;
+    font-weight: 500;
 }
 
 .json__string {
-    color: #183691;
     white-space: pre-line;
     word-break: break-word;
 }
 
 .json__url {
-    color: #0066cc;
     text-decoration: underline;
+    font-style: italic;
+    font-weight: 500;
 }
 
 .json__bracket {

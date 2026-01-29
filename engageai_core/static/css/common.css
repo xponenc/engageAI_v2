@@ -388,3 +388,55 @@ select:-webkit-autofill {
         animation-duration: 0 !important;
     }
 }
+
+._gap {
+    gap: var(--standard-gap) !important
+}
+
+._gap-half {
+    gap: var(--half-gap) !important
+}
+
+._gap-third {
+    gap: var(--third-gap) !important
+}
+
+._mb-none {
+    margin-bottom: 0 !important
+}
+
+._m-a {
+    margin: auto !important;
+}
+
+._mb {
+    margin-bottom: var(--standard-gap) !important
+}
+
+._mb-half {
+    margin-bottom: var(--half-gap) !important
+}
+
+.pad-0 {
+    padding: 0 !important;
+}
+
+._pad-s {
+    padding: var(--standard-gap) !important;
+}
+
+._pad-hs {
+    padding: var(--half-gap) var(--standard-gap) !important;
+}
+
+._ta-s {
+    text-align: start !important;
+}
+
+._ta-e {
+    text-align: end !important;
+}
+
+._ta-c {
+    text-align: center !important;
+}

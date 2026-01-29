@@ -57,14 +57,13 @@
 }
 
 .container--fluid {
-    padding: 0 20px;
+    padding: 20px 20px;
 }
 
 /* Header */
 .header {
     text-align: center;
-    margin-bottom: 40px;
-    padding: 30px;
+    padding: var(--standard-gap);
     background: var(--color-surface);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
@@ -105,7 +104,6 @@
     padding: 20px;
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
-    margin-bottom: 30px;
     animation: slideInUp 0.5s ease;
 }
 
@@ -162,13 +160,13 @@
 
 /* Metrics */
 .metrics {
-    margin-bottom: 40px;
 }
 
 .metrics__grid {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 25px;
+    gap: var(--standard-gap);
     animation: fadeIn 0.8s ease;
 }
 
@@ -181,11 +179,11 @@
 .metric-card {
     background: var(--color-surface);
     border-radius: var(--radius-lg);
-    padding: 25px;
+    padding: var(--standard-gap);
     box-shadow: var(--shadow-sm);
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: var(--half-gap);
     transition: all var(--animation-normal) var(--animation-easing);
     position: relative;
     overflow: hidden;
@@ -211,6 +209,17 @@
 .metric-card--secondary::before { background: var(--secondary-color); }
 .metric-card--accent::before { background: var(--color-accent); }
 .metric-card--success::before { background: var(--success-color); }
+.metric-card--info::before {
+    background: var(--secondary-color);
+}
+
+.metric-card--warning::before {
+    background: var(--accent-orange);
+}
+
+.metric-card--danger::before {
+    background: var(--danger-color);
+}
 
 .metric-card__icon {
     width: var(--dashboard-card-icon-size);
@@ -220,14 +229,14 @@
     align-items: center;
     justify-content: center;
     font-size: var(--dashboard-card-icon-font-size);
-    color: white;
+    color: var(--color-text-muted);
     flex-shrink: 0;
 }
 
-.metric-card--primary .metric-card__icon { background: linear-gradient(135deg, var(--primary-color), var(--color-accent-dark)); }
-.metric-card--secondary .metric-card__icon { background: linear-gradient(135deg, var(--secondary-color), var(--color-accent-dark)); }
-.metric-card--accent .metric-card__icon { background: linear-gradient(135deg, var(--color-accent), var(--accent-orange)); }
-.metric-card--success .metric-card__icon { background: linear-gradient(135deg, var(--success-color), var(--accent-green-dark)); }
+.metric-card--primary .metric-card__icon { background: linear-gradient(135deg, var(--primary-color), var(--color-accent-dark)); color: var(--color-text); }
+.metric-card--secondary .metric-card__icon { background: linear-gradient(135deg, var(--secondary-color), var(--color-accent-dark)); color: var(--color-text); }
+.metric-card--accent .metric-card__icon { background: linear-gradient(135deg, var(--color-accent), var(--accent-orange)); color: var(--color-text); }
+.metric-card--success .metric-card__icon { background: linear-gradient(135deg, var(--success-color), var(--accent-green-dark)); color: var(--color-text); }
 
 .metric-card__content {
     flex: 1;
@@ -288,13 +297,74 @@
 }
 
 /* Analytics Section */
+.analytics-layout {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-areas:
+        "metrics metrics metrics recommendations recommendations"
+        "stats   stats   stats   recommendations recommendations";
+
+    gap: var(--standard-gap);
+    align-items: stretch;
+}
+
+
+@media (max-width: 1200px) {
+    .analytics-layout {
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-areas:
+            "metrics metrics metrics"
+            "stats   stats   stats"
+            "recommendations recommendations recommendations";
+    }
+}
+
+@media (max-width: 768px) {
+    .analytics-layout {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "metrics"
+            "stats"
+            "recommendations";
+        gap: 16px;
+    }
+}
+
+.analytics-layout__recommendations .recommendations {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* зоны */
+.analytics-layout__metrics {
+    grid-area: metrics;
+}
+
+.analytics-layout__stats {
+    grid-area: stats;
+}
+
+.analytics-layout__recommendations {
+    grid-area: recommendations;
+}
+
+
 .analytics-section {
     background: var(--color-surface);
     border-radius: var(--radius-lg);
-    padding: 30px;
+    padding: var(--standard-gap);
     box-shadow: var(--shadow-sm);
-    margin-bottom: 40px;
     animation: fadeIn 0.9s ease;
+}
+
+.analytics-section__badge {
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
 }
 
 .analytics-section__header {
@@ -398,35 +468,11 @@
     color: var(--color-accent);
 }
 
-.analytics-table__success-rate {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.analytics-table__success-value {
-    font-weight: 600;
-    color: var(--success-color);
-}
-
-.analytics-table__success-bar {
-    height: var(--dashboard-success-bar-height);
-    background: var(--color-surface-alt);
-    border-radius: 3px;
-    overflow: hidden;
-}
-
-.analytics-table__success-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--success-color), var(--primary-color));
-    transition: width var(--animation-slow) ease;
-}
-
 /* Chart Section */
 .chart-section {
     background: var(--color-surface);
     border-radius: var(--radius-lg);
-    padding: 30px;
+    padding: var(--standard-gap);
     box-shadow: var(--shadow-sm);
     animation: fadeIn 1s ease;
 }
@@ -545,3 +591,91 @@
 .analytics-table__row:nth-child(3) { animation-delay: 0.2s; }
 .analytics-table__row:nth-child(4) { animation-delay: 0.25s; }
 .analytics-table__row:nth-child(5) { animation-delay: 0.3s; }
+
+
+.module-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 14px;
+    background: var(--primary-color);
+    color: white;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+.progress-bar {
+    position: relative;
+    height: 8px;
+    background: var(--color-surface-alt);
+    border-radius: 6px;
+    overflow: visible; /* КЛЮЧЕВО */
+}
+
+/* заливка */
+.progress-bar__fill {
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        var(--primary-color),
+        var(--color-accent)
+    );
+    border-radius: 6px;
+    transition: width var(--animation-slow) ease;
+}
+
+/* плашка */
+.progress-bar__label {
+    position: absolute;
+    top: -18px; /* над шкалой */
+    transform: translateX(-50%);
+
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    line-height: 1;
+
+    background: var(--color-surface);
+    color: var(--color-accent);
+
+    border-radius: 10px;
+    box-shadow: var(--shadow-sm);
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+
+/* ===============================
+   RECOMMENDATIONS
+   =============================== */
+
+.recommendations {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.recommendation-card {
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    display: flex;
+    gap: 15px;
+    align-items: flex-start;
+    box-shadow: var(--shadow-sm);
+    animation: fadeIn 0.5s ease;
+}
+
+.recommendation-card i {
+    font-size: 1.4rem;
+    color: var(--accent-orange);
+}
+
+.recommendation-card p {
+    margin: 0;
+    color: var(--color-text);
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.recommendation-card--warning {
+    border-left: 4px solid var(--accent-orange);
+}

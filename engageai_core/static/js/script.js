@@ -1,146 +1,10 @@
-// theme-switcher.js
-class ThemeSwitcher {
-    constructor() {
-        this.themes = ['light', 'dark', 'solarized',];
-        this.themeNames = {
-            'light': 'Светлая',
-            'dark': 'Темная',
-            'solarized': 'Solarized',
-        };
-        this.nextThemeNames = {
-            'light': 'Включить темную тему',
-            'dark': 'Включить Solarized тему',
-            'solarized': 'Включить светлую тему'
-        };
-        this.currentTheme = this.getSavedTheme() || 'light';
-        this.init();
-    }
-
-    init() {
-        this.applyTheme(this.currentTheme);
-        this.bindEvents();
-        this.setupKeyboardShortcut();
-    }
-
-    // Получить сохраненную тему из localStorage
-    getSavedTheme() {
-        return localStorage.getItem('theme');
-    }
-
-    // Сохранить тему в localStorage
-    saveTheme(theme) {
-        localStorage.setItem('theme', theme);
-    }
-
-    // Применить тему
-    applyTheme(theme) {
-        document.documentElement.setAttribute('data-theme', theme);
-        this.currentTheme = theme;
-        this.saveTheme(theme);
-        this.updateButtonTitle();
-    }
-
-    // Переключить на следующую тему
-    nextTheme() {
-        const currentIndex = this.themes.indexOf(this.currentTheme);
-        const nextIndex = (currentIndex + 1) % this.themes.length;
-        const nextTheme = this.themes[nextIndex];
-        this.applyTheme(nextTheme);
-
-        // Показать уведомление о смене темы
-        this.showThemeNotification();
-    }
-
-    // Обновить title кнопки
-    updateButtonTitle() {
-        const button = document.querySelector('.theme-toggle');
-        if (button) {
-            button.title = this.nextThemeNames[this.currentTheme] + ' (Ctrl+/)';
-        }
-    }
-
-    // Привязать события
-    bindEvents() {
-        // Переключатель тем
-        const themeToggle = document.querySelector('.theme-toggle');
-        if (themeToggle) {
-            themeToggle.addEventListener('click', () => this.nextTheme());
-        }
-
-        // Слушатель изменения системной темы
-        this.watchSystemTheme();
-    }
-
-    // Отслеживание системной темы
-    watchSystemTheme() {
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-        const handleSystemThemeChange = (e) => {
-            // Автоматически переключаемся только если тема не была явно выбрана пользователем
-            const savedTheme = this.getSavedTheme();
-            if (!savedTheme) {
-                const systemTheme = e.matches ? 'dark' : 'light';
-                this.applyTheme(systemTheme);
-            }
-        };
-
-        mediaQuery.addEventListener('change', handleSystemThemeChange);
-
-        // Инициализация при загрузке, если тема не сохранена
-        if (!this.getSavedTheme()) {
-            const systemTheme = mediaQuery.matches ? 'dark' : 'light';
-            this.applyTheme(systemTheme);
-        }
-    }
-
-    // Горячая клавиша для переключения тем
-    setupKeyboardShortcut() {
-        document.addEventListener('keydown', (e) => {
-            // Ctrl + / для переключения темы
-            if (e.ctrlKey && e.key === '/') {
-                e.preventDefault();
-                this.nextTheme();
-            }
-        });
-    }
-
-    // Показать уведомление о смене темы
-    showThemeNotification() {
-        // Создаем временное уведомление
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 70px;
-            right: 20px;
-            background: var(--color-surface);
-            color: var(--color-text);
-            padding: 8px 12px;
-            border-radius: var(--radius-md);
-            border: 1px solid var(--color-border);
-            box-shadow: var(--shadow-md);
-            z-index: 10000;
-            font-size: 0.8rem;
-            transition: all 0.3s ease;
-            pointer-events: none;
-        `;
-        notification.textContent = `Тема: ${this.themeNames[this.currentTheme]}`;
-
-        document.body.appendChild(notification);
-
-        // Автоматически скрываем через 1.5 секунды
-        setTimeout(() => {
-            notification.style.opacity = '0';
-            notification.style.transform = 'translateY(-10px)';
-            setTimeout(() => notification.remove(), 300);
-        }, 1500);
-    }
-}
-
-
 const modal = document.getElementById("app-modal");
 const titleEl = document.getElementById("app-modal-title");
 const bodyEl = document.getElementById("app-modal-body");
 const actionBtn = document.getElementById("app-modal-action");
+
+const currentTheme = localStorage.getItem('theme') || 'light';
+document.documentElement.setAttribute('data-theme', currentTheme);
 
 let modalAction = null;
 
@@ -230,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Переключатель тем
     const themeButtons = document.querySelectorAll('.theme-switcher__btn');
-    const currentTheme = localStorage.getItem('theme') || 'light';
+    
 
     // Установка активной темы
     themeButtons.forEach(btn => {
@@ -339,7 +203,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.body.appendChild(helperEl);
     world_helper();
 
-    new ThemeSwitcher();
 
     // Убираем класс initial-load после загрузки
     setTimeout(() => {

@@ -13,13 +13,45 @@
 
 {% block content %}
 <div class="container container--fluid">
-    <header class="header">
+    <header class="header _mb-half">
         <h1 class="header__title">📊 Аналитика использования LLM</h1>
         <p class="header__subtitle">Детальная статистика и мониторинг производительности</p>
     </header>
+
+    <nav class="navbar navbar--local">
+        <ul class="navbar__list">
+            <li class="navbar__item">
+                <a href="{% url 'llm_logger:analytics'  %}" class="navbar__link  is-active">
+                    <i class="fas fa-user navbar__link-icon"></i>
+                    <span class="navbar__link-text">Общая</span>
+                </a>
+            </li>
+            <li class="navbar__item">
+                <a href="{% url 'llm_logger:analytics-user' %}?user_id=2"
+                class="navbar__link">
+                    <i class="fas fa-user navbar__link-icon"></i>
+                    <span class="navbar__link-text">Пользователь</span>
+                </a>
+            </li>
+            <li class="navbar__item">
+                <a href="{% url 'llm_logger:analytics-cost' %}"
+                class="navbar__link">
+                    <i class="fas fa-coins navbar__link-icon"></i>
+                    <span class="navbar__link-text">Стоимость</span>
+                </a>
+            </li>
+            <li class="navbar__item">
+                <a href="{% url 'llm_logger:log_list' %}?user_id=2"
+                class="navbar__link">
+                    <i class="fas fa-user navbar__link-icon"></i>
+                    <span class="navbar__link-text">Список логов</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
     
     <!-- Фильтр периода -->
-    <form method="get" class="filter-period" onchange="this.submit()">
+    <form method="get" class="filter-period _mb" onchange="this.submit()">
         <div class="filter-period__control">
             <label class="filter-period__label" for="period-select">
                 <i class="fas fa-calendar-alt filter-period__icon"></i>
@@ -36,7 +68,7 @@
     </form>
     
     <!-- Основные метрики -->
-    <div class="metrics">
+    <div class="metrics _mb">
         <div class="metrics__grid">
             <!-- Запросы -->
             <div class="metric-card metric-card--primary">
@@ -100,7 +132,7 @@
     </div>
     
     <!-- Аналитика по типам запросов -->
-    <section class="analytics-section">
+    <section class="analytics-section _mb">
         <div class="analytics-section__header">
             <h2 class="analytics-section__title">
                 <i class="fas fa-chart-pie"></i>
@@ -126,22 +158,17 @@
                     {% for stat in type_stats %}
                     <tr class="analytics-table__row">
                         <td class="analytics-table__cell">
-                            <div class="analytics-table__type">
-                                <span class="analytics-table__type-icon">
-                                    <i class="fas fa-robot"></i>
-                                </span>
-                                {{ stat.request_type }}
-                            </div>
+                            <span class="module-badge">{{ stat.request_type }}</span>
                         </td>
                         <td class="analytics-table__cell analytics-table__cell--number">{{ stat.requests }}</td>
                         <td class="analytics-table__cell analytics-table__cell--currency">${{ stat.cost|floatformat:5 }}</td>
                         <td class="analytics-table__cell analytics-table__cell--currency">${{ stat.avg_cost|floatformat:6 }}</td>
                         <td class="analytics-table__cell analytics-table__cell--success">
-                            <div class="analytics-table__success-rate">
-                                <span class="analytics-table__success-value">{{ stat.success_rate|floatformat:1 }}%</span>
-                                <div class="analytics-table__success-bar">
-                                    <div class="analytics-table__success-fill" style="width: {{ stat.success_rate }}%"></div>
-                                </div>
+                            <div class="progress-bar">
+                                <div class="progress-bar__fill" style="width: {{ stat.success_rate|floatformat:0 }}%"></div>
+                                <span class="progress-bar__label" style="left: {{ stat.success_rate|floatformat:0 }}%;">
+                                    {{ stat.success_rate|floatformat:0 }}%
+                                </span>
                             </div>
                         </td>
                     </tr>
@@ -152,7 +179,7 @@
     </section>
     
     <!-- Динамика по дням -->
-    <section class="chart-section">
+    <section class="chart-section _mb">
         <div class="chart-section__header">
             <h2 class="chart-section__title">
                 <i class="fas fa-chart-line"></i>

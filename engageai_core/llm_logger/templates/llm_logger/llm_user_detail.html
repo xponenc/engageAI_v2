@@ -1,128 +1,283 @@
-<!-- templates/analytics/llm_user_detail.html -->
-<div class="container-fluid">
-    <h1>Аналитика пользователя #{{ user_id }}</h1>
-    
-    <!-- Общая статистика -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Всего запросов</h5>
-                    <h2>{{ total_requests }}</h2>
+{% extends 'base.html' %}
+{% load static %}
+
+{% block css %}
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/analytics.css' %}">
+{% endblock %}
+
+{% block title %}
+Аналитика пользователя #{{ user_id }}
+{% endblock title %}
+
+{% block content %}
+<div class="container container--fluid">
+    <header class="header _mb-half">
+        <h1 class="header__title">📊 Аналитика пользователя #{{ user_id }}</h1>
+        <p class="header__subtitle">Детальная статистика по запросам и расходам</p>
+    </header>
+
+    <!-- Локальная навигация -->
+    <nav class="navbar navbar--local _mb">
+        <ul class="navbar__list">
+            <li class="navbar__item">
+                <a href="{% url 'llm_logger:analytics'  %}" class="navbar__link">
+                    <i class="fas fa-user navbar__link-icon"></i>
+                    <span class="navbar__link-text">Общая</span>
+                </a>
+            </li>
+            <li class="navbar__item">
+                <a href="{% url 'llm_logger:analytics-user' %}?user_id=2"
+                class="navbar__link is-active">
+                    <i class="fas fa-user navbar__link-icon"></i>
+                    <span class="navbar__link-text">Пользователь</span>
+                </a>
+            </li>
+            <li class="navbar__item">
+                <a href="{% url 'llm_logger:analytics-cost' %}" class="navbar__link">
+                    <i class="fas fa-coins navbar__link-icon"></i>
+                    <span class="navbar__link-text">Стоимость</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Основные метрики -->
+    <div class="metrics _mb">
+        <div class="metrics__grid">
+            <div class="metric-card metric-card--primary">
+                <div class="metric-card__icon"><i class="fas fa-bolt"></i></div>
+                <div class="metric-card__content">
+                    <h3 class="metric-card__title">Всего запросов</h3>
+                    <div class="metric-card__value">{{ total_requests }}</div>
                 </div>
             </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Общая стоимость</h5>
-                    <h2>${{ total_cost|floatformat:5 }}</h2>
+
+            <div class="metric-card metric-card--secondary">
+                <div class="metric-card__icon"><i class="fas fa-dollar-sign"></i></div>
+                <div class="metric-card__content">
+                    <h3 class="metric-card__title">Общая стоимость</h3>
+                    <div class="metric-card__value">${{ total_cost|floatformat:5 }}</div>
                 </div>
             </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Средняя стоимость</h5>
-                    <h2>${{ avg_cost_per_request|floatformat:6 }}</h2>
+
+            <div class="metric-card metric-card--accent">
+                <div class="metric-card__icon"><i class="fas fa-calculator"></i></div>
+                <div class="metric-card__content">
+                    <h3 class="metric-card__title">Средняя стоимость</h3>
+                    <div class="metric-card__value">${{ avg_cost_per_request|floatformat:6 }}</div>
                 </div>
             </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="card bg-{% if anomaly_detected %}danger{% else %}success{% endif %}">
-                <div class="card-body">
-                    <h5 class="card-title">Аномалия</h5>
-                    <h2>{% if anomaly_detected %}ДА{% else %}НЕТ{% endif %}</h2>
+
+            <div class="metric-card {% if success_rate >= 95 %}metric-card--success{% elif success_rate >= 80 %}metric-card--warning{% else %}metric-card--danger{% endif %}">
+                <div class="metric-card__icon"><i class="fas fa-check-circle"></i></div>
+                <div class="metric-card__content">
+                    <h3 class="metric-card__title">Success Rate</h3>
+                    <div class="metric-card__value">{{ success_rate }}%</div>
+                    <div class="metric-card__subtitle">
+                        {% if success_rate >= 95 %}Отлично{% elif success_rate >= 80 %}Нормально{% else %}Требует внимания{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="metric-card metric-card--info">
+                <div class="metric-card__icon"><i class="fas fa-clock"></i></div>
+                <div class="metric-card__content">
+                    <h3 class="metric-card__title">Средняя длительность</h3>
+                    <div class="metric-card__value">{{ avg_duration|floatformat:2 }} сек</div>
+                    <div class="metric-card__subtitle">на запрос</div>
+                </div>
+            </div>
+
+            <div class="metric-card {% if anomaly_detected %}metric-card--danger{% else %}metric-card--success{% endif %}">
+                <div class="metric-card__icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="metric-card__content">
+                    <h3 class="metric-card__title">Аномалия</h3>
+                    <div class="metric-card__value">{% if anomaly_detected %}ДА{% else %}НЕТ{% endif %}</div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Статистика по типам -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <h3>По типам запросов</h3>
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Тип</th>
-                        <th>Запросов</th>
-                        <th>Стоимость</th>
-                        <th>Средняя стоимость</th>
-                        <th>% от общего</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for stat in type_breakdown %}
-                    <tr>
-                        <td>{{ stat.request_type }}</td>
-                        <td>{{ stat.count }}</td>
-                        <td>${{ stat.cost|floatformat:5 }}</td>
-                        <td>${{ stat.avg_cost|floatformat:6 }}</td>
-                        <td>{{ stat.percentage|floatformat:1 }}%</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    
-    <!-- Часовая активность -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <h3>Часовая активность (последние 24 часа)</h3>
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Час</th>
-                        <th>Запросов</th>
-                        <th>Статус</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for hour in hourly_activity %}
-                    <tr class="{% if hour.requests > 50 %}table-danger{% endif %}">
-                        <td>{{ hour.hour|date:"Y-m-d H:00" }}</td>
-                        <td>{{ hour.requests }}</td>
-                        <td>
-                            {% if hour.requests > 50 %}
-                                <span class="badge bg-danger">АНОМАЛИЯ</span>
+
+    {% if anomalies.detected %}
+        <section class="analytics-section analytics-layout__recommendations">
+            <div class="analytics-section__header">
+                <h2 class="analytics-section__title">
+                    <i class="fas fa-lightbulb"></i>
+                    Аномалии
+                </h2>
+            </div>
+                    
+            <div class="recommendations">
+                {% for detail in anomalies.details %}
+                    <div class="recommendation-card recommendation-card--warning">
+                        <div class="recommendation-card__icon">
+                            {% if detail.severity == 'HIGH' %}
+                                <i class="fas fa-fire"></i> КРИТИЧЕСКАЯ
+                            {% elif detail.severity == 'MEDIUM' %}
+                                <i class="fas fa-exclamation-circle"></i> СРЕДНЯЯ
                             {% else %}
-                                <span class="badge bg-success">Норма</span>
+                                <i class="fas fa-info-circle"></i> НИЗКАЯ
                             {% endif %}
+                        </div>
+                        <div class="recommendation-card__content">
+                            <p>{{ detail.message }}</p>
+                            <p><i class="fas fa-lightbulb"></i> <strong>Рекомендация:</strong> {{ detail.recommendation }}</p>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+            
+
+    <!-- Статистика по типам -->
+    <section class="analytics-section _mb">
+        <div class="analytics-section__header">
+            <h2 class="analytics-section__title">
+                <i class="fas fa-chart-pie"></i> По типам запросов
+            </h2>
+        </div>
+
+        <div class="analytics-table">
+            <table class="analytics-table__table">
+                <thead class="analytics-table__header">
+                    <tr>
+                        <th class="analytics-table__cell analytics-table__cell--header">Тип</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Запросов</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Стоимость</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Средняя</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Доля</th>
+                    </tr>
+                </thead>
+                <tbody class="analytics-table__body">
+                    {% for stat in type_breakdown %}
+                    <tr class="analytics-table__row">
+                        <td class="analytics-table__cell">{{ stat.request_type }}</td>
+                        <td class="analytics-table__cell analytics-table__cell--number">{{ stat.count }}</td>
+                        <td class="analytics-table__cell analytics-table__cell--currency">${{ stat.cost|floatformat:5 }}</td>
+                        <td class="analytics-table__cell analytics-table__cell--currency">${{ stat.avg_cost|floatformat:6 }}</td>
+                        <td class="analytics-table__cell">
+                            <div class="progress-bar">
+                                <div class="progress-bar__fill" style="width: {{ stat.cost_percentage|floatformat:0 }}%"></div>
+                                <span class="progress-bar__label" style="left: {{ stat.cost_percentage|floatformat:0 }}%;">
+                                    {{ stat.cost_percentage|floatformat:0 }}%
+                                </span>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-    </div>
-    
-    <!-- Последние логи -->
-    <div class="row">
-        <div class="col-md-12">
-            <h3>Последние запросы</h3>
-            <table class="table table-striped">
-                <thead>
+    </section>
+
+
+    <!-- Часовая активность (24 часа) -->
+
+    <section class="analytics-section _mb">
+        <div class="analytics-section__header">
+            <h2 class="analytics-section__title"><i class="fas fa-list"></i> Часовая активность (последние 24 часа)</h2>
+        </div>
+        <div class="analytics-table">
+            <table class="analytics-table__table">
+                <thead class="analytics-table__header">
                     <tr>
-                        <th>Время</th>
-                        <th>Тип</th>
-                        <th>Модель</th>
-                        <th>Стоимость</th>
-                        <th>Статус</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Час</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Запросов</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Статус</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {% for log in recent_logs %}
+                <tbody class="analytics-table__body">
+                    {% for hour in hourly_activity %}
+                        <tr class="analytics-table__row {% if hour.requests > 50 %}table-danger{% elif hour.requests > 20 %}table-warning{% endif %}">
+                            <td class="analytics-table__cell">{{ hour.hour|date:"Y-m-d H:00" }}</td>
+                            <td class="analytics-table__cell">
+                                <span class="badge {% if hour.requests > 50 %}bg-danger{% elif hour.requests > 20 %}bg-warning{% else %}bg-success{% endif %}">
+                                    {{ hour.requests }}
+                                </span>
+                            </td>
+                            <td class="analytics-table__cell">
+                                {% if hour.requests > 50 %}
+                                    <span class="badge bg-danger">АНОМАЛИЯ</span>
+                                {% elif hour.requests > 20 %}
+                                    <span class="badge bg-warning">Высокая</span>
+                                {% else %}
+                                    <span class="badge bg-success">Норма</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Топ-5 самых дорогих запросов -->
+
+    <section class="analytics-section _mb">
+        <div class="analytics-section__header">
+            <h2 class="analytics-section__title"><i class="fas fa-list"></i> Топ-5 самых дорогих запросов</h2>
+        </div>
+        <div class="analytics-table">
+            <table class="analytics-table__table">
+                <thead class="analytics-table__header">
                     <tr>
-                        <td>{{ log.request_time|date:"Y-m-d H:i:s" }}</td>
-                        <td>{{ log.request_type }}</td>
-                        <td>{{ log.model_name }}</td>
-                        <td>${{ log.cost_total|floatformat:6 }}</td>
-                        <td>
+                        <th class="analytics-table__cell analytics-table__cell--header">Время</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Тип</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Модель</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Курс/Урок</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Стоимость</th>
+                    </tr>
+                </thead>
+                <tbody class="analytics-table__body">
+                    {% for req in expensive_requests %}
+                    <tr class="analytics-table__row">
+                        <td class="analytics-table__cell">{{ req.request_time|date:"Y-m-d H:i:s" }}</td>
+                        <td class="analytics-table__cell"><span class="badge bg-info">{{ req.request_type }}</td>
+                        <td class="analytics-table__cell">{{ req.model_name }}</td>
+                        <td class="analytics-table__cell">
+                            {% if req.course %}
+                                <span class="badge bg-secondary">{{ req.course.title|truncatechars:30 }}</span>
+                            {% elif req.lesson %}
+                                <span class="badge bg-secondary">{{ req.lesson.title|truncatechars:30 }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="analytics-table__cell analytics-table__cell--currency">${{ req.cost_total|floatformat:6 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    
+    
+    <!-- Последние логи -->
+    <section class="analytics-section _mb">
+        <div class="analytics-section__header">
+            <h2 class="analytics-section__title"><i class="fas fa-list"></i> Последние запросы</h2>
+        </div>
+        <div class="analytics-table">
+            <table class="analytics-table__table">
+                <thead class="analytics-table__header">
+                    <tr>
+                        <th class="analytics-table__cell analytics-table__cell--header">Время</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Тип</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Модель</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Стоимость</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Статус</th>
+                    </tr>
+                </thead>
+                <tbody class="analytics-table__body">
+                    {% for log in user_logs %}
+                    <tr class="analytics-table__row">
+                        <td class="analytics-table__cell">{{ log.request_time|date:"Y-m-d H:i:s" }}</td>
+                        <td class="analytics-table__cell">{{ log.get_request_type_display }}</td>
+                        <td class="analytics-table__cell">{{ log.model_name }}</td>
+                        <td class="analytics-table__cell analytics-table__cell--currency">${{ log.cost_total|floatformat:6 }}</td>
+                        <td class="analytics-table__cell">
                             <span class="badge bg-{% if log.status == 'SUCCESS' %}success{% elif log.status == 'ERROR' %}danger{% else %}warning{% endif %}">
                                 {{ log.status }}
                             </span>
@@ -132,5 +287,6 @@
                 </tbody>
             </table>
         </div>
-    </div>
+    </section>
 </div>
+{% endblock content %}

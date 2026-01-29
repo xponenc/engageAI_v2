@@ -1,163 +1,456 @@
-<!-- templates/analytics/llm_cost_analysis.html -->
-<div class="container-fluid">
-    <h1>Глубокий анализ стоимости</h1>
-    
-    <!-- Прогноз расходов -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Неделя</h5>
-                    <h2>${{ weekly_cost|floatformat:2 }}</h2>
+{% extends 'base.html' %}
+{% load static %}
+
+{% block css %}
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/analytics.css' %}">
+{% endblock %}
+
+{% block title %}Глубокий анализ стоимости{% endblock %}
+
+{% block content %}
+<div class="container container--fluid">
+
+    <!-- Header -->
+    <header class="header _mb-half">
+        <h1 class="header__title">📊 Глубокий анализ стоимости</h1>
+        <p class="header__subtitle">
+            Детальная аналитика расходов на LLM с рекомендациями по оптимизации
+        </p>
+    </header>
+
+        <!-- Локальная навигация -->
+    <nav class="navbar navbar--local _mb">
+        <ul class="navbar__list">
+            <li class="navbar__item">
+                <a href="{% url 'llm_logger:analytics'  %}" class="navbar__link">
+                    <i class="fas fa-user navbar__link-icon"></i>
+                    <span class="navbar__link-text">Общая</span>
+                </a>
+            </li>
+            <li class="navbar__item">
+                <a href="{% url 'llm_logger:analytics-user' %}?user_id=2"
+                class="navbar__link">
+                    <i class="fas fa-user navbar__link-icon"></i>
+                    <span class="navbar__link-text">Пользователь</span>
+                </a>
+            </li>
+            <li class="navbar__item">
+                <a href="{% url 'llm_logger:analytics-cost' %}"
+                class="navbar__link is-active">
+                    <i class="fas fa-coins navbar__link-icon"></i>
+                    <span class="navbar__link-text">Стоимость</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="analytics-layout _mb">
+
+        <section class="metrics analytics-layout__metrics">
+            <div class="metrics__grid">
+
+                <div class="metric-card metric-card--info">
+                    <div class="metric-card__icon">
+                        <i class="fas fa-calendar-week"></i>
+                    </div>
+                    <div class="metric-card__content">
+                        <h3 class="metric-card__title">Неделя</h3>
+                        <div class="metric-card__value">${{ weekly_cost|floatformat:2 }}</div>
+                        <div class="metric-card__trend metric-card__trend--neutral">
+                            Текущая неделя
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Месяц (прогноз)</h5>
-                    <h2 class="text-danger">${{ monthly_projection|floatformat:2 }}</h2>
+
+                <div class="metric-card metric-card--warning">
+                    <div class="metric-card__icon">
+                        <i class="fas fa-calendar-month"></i>
+                    </div>
+                    <div class="metric-card__content">
+                        <h3 class="metric-card__title">Месяц (прогноз)</h3>
+                        <div class="metric-card__value">${{ monthly_projection|floatformat:2 }}</div>
+                        <div class="metric-card__trend">
+                            {{ monthly_projection|floatformat:0 }} $ / месяц
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Год (прогноз)</h5>
-                    <h2 class="text-danger">${{ yearly_projection|floatformat:2 }}</h2>
+
+                <div class="metric-card metric-card--danger">
+                    <div class="metric-card__icon">
+                        <i class="fas fa-calendar-days"></i>
+                    </div>
+                    <div class="metric-card__content">
+                        <h3 class="metric-card__title">Год (прогноз)</h3>
+                        <div class="metric-card__value">${{ yearly_projection|floatformat:2 }}</div>
+                        <div class="metric-card__trend">
+                            {{ yearly_projection|floatformat:0 }} $ / год
+                        </div>
+                    </div>
                 </div>
+
             </div>
-        </div>
+        </section>
+
+        <section class="chart-section analytics-layout__stats">
+            <div class="chart-section__header">
+                <h2 class="chart-section__title">
+                    <i class="fas fa-chart-line"></i>
+                    Тренд стоимости по неделям
+                </h2>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="costTrendChart" class="chart-container__canvas"></canvas>
+            </div>
+        </section>
+
+        <!-- Рекомендации по оптимизации -->
+        <section class="analytics-section analytics-layout__recommendations">
+            <div class="analytics-section__header">
+                <h2 class="analytics-section__title">
+                    <i class="fas fa-lightbulb"></i>
+                    Рекомендации по оптимизации
+                </h2>
+            </div>
+                    
+            <div class="recommendations">
+                {% if recommendations.messages %}
+                    {% for message in recommendations.messages %}
+                    <div class="recommendation-card recommendation-card--warning">
+                        <div class="recommendation-card__icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="recommendation-card__content">
+                            <p>{{ message }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                
+                {% if recommendations.cheapest_model %}
+                <div class="recommendation-card recommendation-card--info">
+                    <div class="recommendation-card__icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="recommendation-card__content">
+                        <h4>💰 Самая экономичная модель</h4>
+                        <p>
+                            <strong>{{ recommendations.cheapest_model.model_name }}</strong> - 
+                            ${{ recommendations.cheapest_model.cost_per_1k_tokens|floatformat:5 }}/1к токенов
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if recommendations.expensive_modules %}
+                <div class="recommendation-card recommendation-card--attention">
+                    <div class="recommendation-card__icon">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <div class="recommendation-card__content">
+                        <h4>📊 Самые затратные модули</h4>
+                        <ul>
+                            {% for module in recommendations.expensive_modules %}
+                            <li>
+                                {{ module.request_type }} - 
+                                {{ module.cost_share|floatformat:1 }}% бюджета 
+                                (${{ module.total_cost|floatformat:2 }})
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if recommendations.potential_savings > 0 %}
+                <div class="recommendation-card recommendation-card--success">
+                    <div class="recommendation-card__icon">
+                        <i class="fas fa-percentage"></i>
+                    </div>
+                    <div class="recommendation-card__content">
+                        <h4>🎯 Потенциальная экономия</h4>
+                        <p>
+                            Переключение на более дешёвые модели может снизить расходы на 
+                            <strong>{{ recommendations.potential_savings }}%</strong>
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if not recommendations.messages and not recommendations.cheapest_model %}
+                <div class="recommendation-card recommendation-card--neutral">
+                    <div class="recommendation-card__icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="recommendation-card__content">
+                        <h4>✅ Оптимизация не требуется</h4>
+                        <p>Текущие расходы находятся в пределах нормы. Продолжайте в том же духе!</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </section>
     </div>
-    
-    <!-- Стоимость по модулям -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <h3>Стоимость по модулям</h3>
-            <table class="table table-striped">
-                <thead>
+
+    <section class="analytics-section _mb">
+        <div class="analytics-section__header">
+            <h2 class="analytics-section__title">
+                <i class="fas fa-puzzle-piece"></i>
+                Стоимость по модулям
+            </h2>
+            <span class="analytics-section__badge">
+                {{ module_costs|length }} модулей
+            </span>
+        </div>
+
+        <div class="analytics-table">
+            <table class="analytics-table__table">
+                <thead class="analytics-table__header">
+                <tr>
+                    <th class="analytics-table__cell analytics-table__cell--header">Модуль</th>
+                    <th class="analytics-table__cell analytics-table__cell--header">Запросов</th>
+                    <th class="analytics-table__cell analytics-table__cell--header">Стоимость</th>
+                    <th class="analytics-table__cell analytics-table__cell--header">Средняя</th>
+                    <th class="analytics-table__cell analytics-table__cell--header">Доля в бюджете</th>
+                </tr>
+                </thead>
+                <tbody class="analytics-table__body">
+                {% for stat in module_costs %}
+                <tr class="analytics-table__row">
+                    <td class="analytics-table__cell">
+                        <span class="module-badge">
+                            {{ stat.request_type }}
+                        </span>
+                    </td>
+                    <td class="analytics-table__cell analytics-table__cell--number">{{ stat.requests }}</td>
+                    <td class="analytics-table__cell analytics-table__cell--currency">
+                        ${{ stat.total_cost|floatformat:4 }}
+                    </td>
+                    <td class="analytics-table__cell analytics-table__cell--currency">
+                        ${{ stat.avg_cost|floatformat:4 }}
+                    </td>
+                    <td class="analytics-table__cell">
+                        <div class="progress-bar">
+                            <div class="progress-bar__fill" style="width: {{ stat.cost_share|floatformat:0 }}%"></div>
+                            <span class="progress-bar__label" style="left: {{ stat.cost_share|floatformat:0 }}%;">
+                                {{ stat.cost_share|floatformat:0 }}%
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="analytics-section _mb">
+        <div class="analytics-section__header">
+            <h2 class="analytics-section__title">
+                <i class="fas fa-robot"></i>
+                Стоимость по моделям LLM
+            </h2>
+            <span class="analytics-section__badge">
+                {{ model_costs|length }} моделей
+            </span>
+        </div>
+
+        <div class="analytics-table">
+            <table class="analytics-table__table">
+                <thead class="analytics-table__header">
                     <tr>
-                        <th>Модуль</th>
-                        <th>Запросов</th>
-                        <th>Стоимость</th>
-                        <th>Средняя стоимость</th>
-                        <th>Доля в бюджете</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Модель</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Запросов</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Стоимость</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Средняя</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">$/1к токенов</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Доля</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {% for stat in module_costs %}
-                    <tr>
-                        <td>{{ stat.request_type }}</td>
-                        <td>{{ stat.requests }}</td>
-                        <td>${{ stat.total_cost|floatformat:5 }}</td>
-                        <td>${{ stat.avg_cost|floatformat:6 }}</td>
-                        <td>
-                            <div class="progress">
-                                <div class="progress-bar" style="width: {{ stat.cost_share }}%">
-                                    {{ stat.cost_share|floatformat:1 }}%
+                <tbody class="analytics-table__body">
+                    {% for stat in model_costs %}
+                        <tr class="analytics-table__row">
+                            <td class="analytics-table__cell">
+                                <code class="model-name">{{ stat.model_name }}</code>
+                            </td>
+                            <td class="analytics-table__cell analytics-table__cell--number">{{ stat.requests }}</td>
+                            <td class="analytics-table__cell analytics-table__cell--currency">${{ stat.total_cost|floatformat:3 }}</td>
+                            <td class="analytics-table__cell analytics-table__cell--currency">${{ stat.avg_cost|floatformat:4 }}</td>
+                            <td class="analytics-table__cell analytics-table__cell--currency">${{ stat.cost_per_1k_tokens|floatformat:5 }}</td>
+                            <td class="analytics-table__cell">
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar-fill" style="width: {{ stat.cost_share }}%">
+                                        {{ stat.cost_share }}%
+                                    </div>
                                 </div>
-                            </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+
+    
+    <!-- Топ дорогих запросов -->
+
+    <section class="analytics-section _mb">
+        <div class="analytics-section__header">
+            <h2 class="analytics-section__title">
+                <i class="fas fa-list-ol"></i>
+                Топ-10 самых дорогих запросов
+            </h2>
+        </div>
+                
+        <div class="analytics-table">
+            <table class="analytics-table__table">
+                <thead class="analytics-table__header">
+                    <tr>
+                        <th class="analytics-table__cell analytics-table__cell--header">Дата</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Модель</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Тип</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Стоимость</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Статус</th>
+                        <th class="analytics-table__cell analytics-table__cell--header">Пользователь</th>
+                    </tr>
+                </thead>
+                <tbody class="analytics-table__body">
+                    {% for request in top_expensive_requests %}
+                    <tr class="analytics-table__row">
+                        <td class="analytics-table__cell">{{ request.request_time|date:"d.m.Y H:i" }}</td>
+                        <td class="analytics-table__cell"><code>{{ request.model_name }}</code></td>
+                        <td class="analytics-table__cell">{{ request.get_request_type_display }}</td>
+                        <td class="analytics-table__cell analytics-table__cell--currency">${{ request.cost_total|floatformat:5 }}</td>
+                        <td class="analytics-table__cell">
+                            <span class="status-badge status-badge--{{ request.status|lower }}">
+                                {{ request.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="analytics-table__cell">
+                            {% if request.user %}
+                                {{ request.user.get_full_name|default:request.user.username }}
+                            {% else %}
+                                <em>Аноним</em>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-    </div>
+    </section>
     
-    <!-- Стоимость по моделям -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <h3>Стоимость по моделям LLM</h3>
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Модель</th>
-                        <th>Запросов</th>
-                        <th>Стоимость</th>
-                        <th>Средняя стоимость</th>
-                        <th>Стоимость/1к токенов</th>
-                        <th>Доля в бюджете</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for stat in model_costs %}
-                    <tr>
-                        <td><code>{{ stat.model_name }}</code></td>
-                        <td>{{ stat.requests }}</td>
-                        <td>${{ stat.total_cost|floatformat:5 }}</td>
-                        <td>${{ stat.avg_cost|floatformat:6 }}</td>
-                        <td>${{ stat.cost_per_1k_tokens|floatformat:5 }}</td>
-                        <td>{{ stat.cost_share|floatformat:1 }}%</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
     
-    <!-- Тренд по неделям -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <h3>Тренд стоимости по неделям</h3>
-            <canvas id="costTrendChart"></canvas>
-        </div>
-    </div>
-    
-    <script>
+</div>
+
+
+
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
         // Chart.js для тренда
         const ctx = document.getElementById('costTrendChart').getContext('2d');
+        
+        // Данные передаются из контекста
+        const labels = {{ weekly_trend.labels|safe }};
+        const costs = {{ weekly_trend.costs|safe }};
+        
         new Chart(ctx, {
             type: 'line',
             data: {
-                labels: {{ weekly_trend|map:"week"|date:"Y-m-d"|json_script:"trend_labels" }},
+                labels: labels,
                 datasets: [{
                     label: 'Стоимость ($)',
-                    data: {{ weekly_trend|map:"cost"|json_script:"trend_cost" }},
-                    borderColor: 'rgb(255, 99, 132)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    data: costs,
+                    borderColor: '#2196F3',
+                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                    borderWidth: 3,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#2196F3',
+                    pointHoverRadius: 7,
+                    tension: 0.3,
                     fill: true,
-                    tension: 0.3
+                    cubicInterpolationMode: 'monotone'
                 }]
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
                 plugins: {
-                    title: { display: true, text: 'Еженедельные расходы' }
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: {
+                                family: 'Roboto',
+                                size: 14
+                            },
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleFont: {
+                            family: 'Roboto',
+                            size: 16
+                        },
+                        bodyFont: {
+                            family: 'Roboto',
+                            size: 14
+                        },
+                        padding: 12,
+                        displayColors: true
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            font: {
+                                family: 'Roboto',
+                                size: 12
+                            }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            font: {
+                                family: 'Roboto',
+                                size: 12
+                            },
+                            callback: function(value) {
+                                return '$' + value.toFixed(2);
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Стоимость ($)',
+                            font: {
+                                family: 'Roboto',
+                                size: 13,
+                                weight: 'bold'
+                            }
+                        }
+                    }
                 }
             }
         });
-    </script>
-    
-    <!-- Рекомендации по оптимизации -->
-    <div class="row">
-        <div class="col-md-12">
-            <h3>Рекомендации по оптимизации</h3>
-            <div class="alert alert-info">
-                {% if cheapest_model %}
-                <p>
-                    <strong>Самая дешёвая модель:</strong> {{ cheapest_model.model_name }} 
-                    (${{ cheapest_model.cost_per_1k_tokens|floatformat:5 }}/1к токенов)
-                </p>
-                {% endif %}
-                
-                {% if expensive_modules %}
-                <p>
-                    <strong>Самые дорогие модули:</strong>
-                    {% for module in expensive_modules %}
-                        {{ module.request_type }} ({{ module.cost_share|floatformat:1 }}% бюджета){% if not forloop.last %},{% endif %}
-                    {% endfor %}
-                </p>
-                {% endif %}
-                
-                <p>
-                    <strong>Потенциальная экономия:</strong> 
-                    Переключение на более дешёвые модели может снизить расходы на 
-                    {{ potential_savings|floatformat:1 }}%
-                </p>
-            </div>
-        </div>
-    </div>
-</div>
+    });
+</script>
+
+{% endblock script %}

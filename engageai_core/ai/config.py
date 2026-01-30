@@ -52,7 +52,7 @@ class LLMConfig(BaseSettings):
     llm_model_name: str = Field(default="gpt-4.1-mini", env="LLM_MODEL_NAME")
     llm_fallback_model: str = Field(default="gpt-4.1-mini", env="LLM_FALLBACK_MODEL")
     llm_temperature: float = Field(default=0.0, ge=0.0, le=1.0, env="LLM_TEMPERATURE")
-    llm_max_tokens: int = Field(default=1000, ge=1, le=4096, env="LLM_MAX_TOKENS")
+    llm_max_tokens: int = Field(default=20000, env="LLM_MAX_TOKENS")
 
     # Локальные модели (опционально)
     use_local_models: bool = Field(default=False, env="USE_LOCAL_MODELS")

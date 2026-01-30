@@ -1,41 +1,73 @@
 /* start.css — resets, layout basics, typography scale and responsive breakpoints */
 
 /* Typography scale */
-h1, h2, h3, h4, h5 { color: var(--color-text); margin: 0 0 8px 0; font-weight: 700; line-height: 1.2; }
-p, label { color: var(--color-text); margin: 0 0 12px 0; }
+h1,
+h2,
+h3,
+h4,
+h5 {
+  color: var(--color-text);
+  margin: 0 0 8px 0;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+p,
+label {
+  color: var(--color-text);
+  margin: 0 0 12px 0;
+}
 
 /* Headings sizes */
-h1 { font-size: 1.6rem; }
-h2 { font-size: 1.25rem; }
-h3 { font-size: 1.05rem; }
+h1 {
+  font-size: 1.6rem;
+}
 
-small, .muted { font-size: 0.85rem; color: var(--color-text-muted); }
+h2 {
+  font-size: 1.25rem;
+}
+
+h3 {
+  font-size: 1.05rem;
+}
+
+small,
+.muted {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
 
 
 
 
 /* layout geometry */
 .header {
-    width: 100%;
-    background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
-    box-shadow: var(--shadow-sm);
-    padding: 12px 0;
+  width: 100%;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  padding: 12px 0;
 }
-.header__inner { display:flex; align-items:center; justify-content:space-between; gap: 12px; }
+
+.header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 
 /* main content area */
 .main {
-    padding: var(--double-gap) 0;
-    display: block;
+  padding: var(--double-gap) 0;
+  display: block;
 }
 
 /* typography utility for subheadings (keeps your .subheadings class) */
 .subheadings {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--color-text-muted);
-    margin-bottom: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
 }
 
 /* messages (Django) — modernized */
@@ -44,73 +76,74 @@ small, .muted { font-size: 0.85rem; color: var(--color-text-muted); }
    ================================ */
 
 .messages {
-    position: fixed;
-    z-index: 20000;
-    top: 24px;
-    right: 24px;
+  position: fixed;
+  z-index: 20000;
+  top: 24px;
+  right: 24px;
 
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 
-    width: min(380px, calc(100% - 48px));
-    pointer-events: none;
+  width: min(380px, calc(100% - 48px));
+  pointer-events: none;
 }
 
 .message {
-    pointer-events: auto;
+  pointer-events: auto;
 
-    position: relative;
-    padding: 14px 16px 14px 18px;
+  position: relative;
+  padding: 14px 16px 14px 18px;
 
-    border-radius: 10px;
-    background: var(--color-surface);
-    color: var(--color-informer-text);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-informer-text);
 
-    font-size: 0.95rem;
-    line-height: 1.45;
+  font-size: 0.95rem;
+  line-height: 1.45;
 
-    box-shadow: 0 6px 18px rgba(0,0,0,.08);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .08);
 
-    animation: message-enter 0.28s ease-out;
-    will-change: transform, opacity;
+  animation: message-enter 0.28s ease-out;
+  will-change: transform, opacity;
 }
 
 /* subtle hover */
 .message:hover {
-    transform: translateX(-2px);
+  transform: translateX(-2px);
 }
 
 .message::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 8px;
-    bottom: 8px;
-    width: 3px;
-    border-radius: 2px;
-    background: transparent;
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 2px;
+  background: transparent;
 }
 
 .message_success::before {
-    background: #2ecc71;
+  background: #2ecc71;
 }
 
 .message_warning::before {
-    background: #f1c40f;
+  background: #f1c40f;
 }
 
 .message_error,
 .message_danger {
-    background: color-mix(in oklch, var(--color-surface), #e74c3c 6%);
+  background: color-mix(in oklch, var(--color-surface), #e74c3c 6%);
 }
+
 .message_error::before,
 .message_danger::before {
-    background: #e74c3c;
+  background: #e74c3c;
 }
 
 .message__text {
-    margin: 0;
+  margin: 0;
 }
 
 /* ================================
@@ -118,47 +151,75 @@ small, .muted { font-size: 0.85rem; color: var(--color-text-muted); }
    ================================ */
 
 @keyframes message-enter {
-    from {
-        opacity: 0;
-        transform: translateX(12px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes message-leave {
-    to {
-        opacity: 0;
-        transform: translateX(12px);
-    }
+  to {
+    opacity: 0;
+    transform: translateX(12px);
+  }
 }
 
 .message.is-leaving {
-    animation: message-leave 0.2s ease forwards;
+  animation: message-leave 0.2s ease forwards;
 }
 
 
 
 /* container centers and spacing */
-.container--narrow { max-width: 980px; }
+.container--narrow {
+  max-width: 980px;
+}
 
 /* small print */
-.muted-text { color: var(--color-text-muted); font-size: 0.9rem; }
+.muted-text {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
 
 /* responsive breakpoints (mobile-first): */
 @media (max-width: 480px) {
-    .container { padding: 10px; }
-    h1 { font-size: 1.25rem; }
-    .messages { right: 12px; left: 12px; top: 12px; width: auto; }
-    .message { grid-template-columns: 40px 1fr; padding: 10px; border-radius: 10px; }
+  .container {
+    padding: 10px;
+  }
+
+  h1 {
+    font-size: 1.25rem;
+  }
+
+  .messages {
+    right: 12px;
+    left: 12px;
+    top: 12px;
+    width: auto;
+  }
+
+  .message {
+    grid-template-columns: 40px 1fr;
+    padding: 10px;
+    border-radius: 10px;
+  }
 }
+
 @media (min-width: 481px) and (max-width: 768px) {
-    .container { padding: 12px 16px; }
+  .container {
+    padding: 12px 16px;
+  }
 }
+
 @media (min-width: 769px) and (max-width: 1024px) {
-    .container { padding: 14px 18px; }
+  .container {
+    padding: 14px 18px;
+  }
 }
 
 
@@ -169,14 +230,14 @@ small, .muted { font-size: 0.85rem; color: var(--color-text-muted); }
 
 body {
   margin: 0;
-  font-size: var(--major-fsz);
+  font-size: 14px;
   font-style: normal;
   font-weight: 400;
-  color: var(--text-color);
-  background-color: var(--bg-color);
 
   font-family: 'Montserrat', sans-serif;
-  background: linear-gradient(135deg, var(--body-gradient-primary-start) 0%, var(--body-gradient-primary-end) 100%);
+  background: linear-gradient(to bottom right,
+      var(--body-gradient-primary-start) 55%,
+      var(--body-gradient-primary-end) 95%);
   color: var(--color-text);
   line-height: 1.25;
   min-height: 100vh;

@@ -102,15 +102,16 @@ class GenerationService:
         """
         start_time = time.time()
 
-        try:
-            # 1. Формируем сообщения
-            messages = self.prompt_builder.build_messages(
-                system_prompt=system_prompt,
-                user_message=user_message,
-                conversation_history=conversation_history,
-                media_context=media_context,
-            )
+        # 1. Формируем сообщения
+        messages = self.prompt_builder.build_messages(
+            system_prompt=system_prompt,
+            user_message=user_message,
+            conversation_history=conversation_history,
+            media_context=media_context,
+        )
+        print(f"{messages=}")
 
+        try:
             # 2. Генерация
             text, base_metrics = await self._generate_with_fallback(
                 messages=messages,
@@ -121,8 +122,6 @@ class GenerationService:
 
             # 3. Парсинг и валидация
             parsed = self._parse_json_response(text)
-
-            print(f"{parsed=}")
 
             # 4. Расчёт стоимости (если не локально)
             cost = self.cost_calculator.calculate(
@@ -147,8 +146,7 @@ class GenerationService:
 
             await llm_logging_service.log_request(
                 provider=self.provider.__class__.__name__,
-                system_prompt=system_prompt,
-                user_message=user_message,
+                full_prompt=messages,
                 generation_result=result,
                 context=context_for_logging,
                 status="SUCCESS",
@@ -177,8 +175,7 @@ class GenerationService:
             )
             await llm_logging_service.log_request(
                 provider=self.provider.__class__.__name__,
-                system_prompt=system_prompt,
-                user_message=user_message,
+                full_prompt=messages,
                 generation_result=result,  # даже при ошибке
                 context=context_for_logging,
                 status="ERROR",

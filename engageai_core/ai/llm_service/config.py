@@ -33,7 +33,7 @@ class LLMConfig(BaseSettings):
     )
     use_fallback: bool = Field(default=False)
     llm_temperature: float = Field(default=0.0, ge=0.0, le=2.0)
-    llm_max_tokens: int = Field(default=2048, ge=128, le=32768)
+    llm_max_tokens: int = Field(default=10000, ge=128, le=32768)
 
     # ─── Локальные модели ───────────────────────────────────────────
     use_local_models: bool = Field(default=False)

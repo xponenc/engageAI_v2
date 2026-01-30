@@ -50,15 +50,6 @@
    ОСНОВНОЙ CSS ДАШБОРДА
    =================================== */
 
-/* Container */
-.container {
-    max-width: 1400px;
-    margin: 0 auto;
-}
-
-.container--fluid {
-    padding: 20px 20px;
-}
 
 /* Header */
 .header {

@@ -20,7 +20,11 @@ from curriculum.models.content.response_format import ResponseFormat
 TASK_CONTENT_SCHEMAS = {
     "scq_v1": {
         "name": "Single Choice Question v1",
-        "supported_formats": [ResponseFormat.SINGLE_CHOICE],
+        "is_generation_enabled": True,
+        "response_format": [ResponseFormat.SINGLE_CHOICE],
+        "supported_skills": {
+                "grammar", "vocabulary", "reading"
+            },
         "required": {"prompt", "options", "correct_idx"},
         "optional": {"explanation", "hint", "difficulty"},
         "validation_rules": {
@@ -40,11 +44,25 @@ TASK_CONTENT_SCHEMAS = {
                 "min_length": 5     # Текст вопроса должен быть минимум 5 символов
             }
         },
-        "description": "Задание с выбором одного правильного варианта из списка"
+        "description": "Задание с выбором одного правильного варианта из списка",
+        "example": {
+            "prompt": "Choose the correct form of the verb.",
+            "options": [
+                "She work in an international company.",
+                "She works in an international company.",
+                "She working in an international company."
+            ],
+            "correct_idx": 1,
+            "explanation": "In the Present Simple, third person singular verbs take -s."
+        }
     },
     "mcq_v1": {
         "name": "Multiple Choice Question v1",
-        "supported_formats": [ResponseFormat.MULTIPLE_CHOICE],
+        "is_generation_enabled": True,
+        "response_format": [ResponseFormat.MULTIPLE_CHOICE],
+        "supported_skills": {
+                        "grammar", "vocabulary", "reading"
+                    },
         "required": {"prompt", "options", "correct_indices"},  # ИСПРАВЛЕНО: correct_indices вместо correct_idx
         "optional": {"explanation", "hint", "min_selections", "max_selections", "difficulty"},
         "validation_rules": {
@@ -75,11 +93,28 @@ TASK_CONTENT_SCHEMAS = {
                 "min_length": 5
             }
         },
-        "description": "Задание с выбором нескольких правильных вариантов из списка"
+        "description": "Задание с выбором нескольких правильных вариантов из списка",
+        "example": {
+            "prompt": "Which of the following sentences are grammatically correct?",
+            "options": [
+                "He has finished the report already.",
+                "He have finished the report already.",
+                "The report was finished yesterday.",
+                "He finishing the report yesterday."
+            ],
+            "correct_indices": [0, 2],
+            "min_selections": 1,
+            "max_selections": 2,
+            "explanation": "Sentences 1 and 3 are grammatically correct."
+        }
     },
     "short_text_v1": {
         "name": "Short Text Response v1",
-        "supported_formats": [ResponseFormat.SHORT_TEXT],
+        "is_generation_enabled": True,
+        "response_format": [ResponseFormat.SHORT_TEXT],
+        "supported_skills": {
+            "grammar", "vocabulary", "reading", "listening"
+        },
         "required": {"prompt", "correct_answers"},
         "optional": {"correct_answers", "case_sensitive", "min_length", "max_length", "allowed_characters"},
         "validation_rules": {
@@ -90,28 +125,39 @@ TASK_CONTENT_SCHEMAS = {
             "correct_answers": {
                 "type": "list",
                 "item_type": "str",
-                "min_items": 1     # Должен быть хотя бы один правильный ответ
+                "min_items": 1
             },
             "case_sensitive": {
                 "type": "bool",
-                "default": False   # По умолчанию нечувствительно к регистру
+                "default": False
             },
             "min_length": {
                 "type": "int",
-                "min": 1,          # Минимальная длина ответа - 1 символ
+                "min": 1,
                 "default": 1
             },
             "max_length": {
                 "type": "int",
-                "min": 1,          # Максимальная длина ответа - 100 символов
+                "min": 1,
                 "default": 100
             }
         },
-        "description": "Задание с кратким текстовым ответом (1-3 слова)"
+        "description": "Задание с кратким текстовым ответом (1-3 слова)",
+        "example": {
+            "prompt": "Complete the sentence with one word: She is responsible ___ managing the team.",
+            "correct_answers": ["for"],
+            "case_sensitive": False,
+            "min_length": 1,
+            "max_length": 10
+        },
     },
     "free_text_v1": {
         "name": "Free Text Response v1",
-        "supported_formats": [ResponseFormat.FREE_TEXT],
+        "is_generation_enabled": True,
+        "response_format": [ResponseFormat.FREE_TEXT],
+        "supported_skills": {
+            "writing"
+        },
         "required": {"prompt", "min_words", "max_words"},
         "optional": {"context_prompt", "sample_response"},
         "validation_rules": {
@@ -154,7 +200,11 @@ TASK_CONTENT_SCHEMAS = {
     },
     "audio_v1": {
         "name": "Audio Response Task v1",
-        "supported_formats": [ResponseFormat.AUDIO],
+        "is_generation_enabled": True,
+        "response_format": [ResponseFormat.AUDIO],
+        "supported_skills": {
+            "speaking"
+        },
         "required": {"prompt", "min_duration_sec", "max_duration_sec"},
         "optional": {"context_prompt", "sample_transcript", "max_attempts", "transcription_required"},
         "validation_rules": {
@@ -208,3 +258,4 @@ TASK_CONTENT_SCHEMAS = {
         }
     },
 }
+

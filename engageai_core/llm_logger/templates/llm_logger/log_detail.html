@@ -106,14 +106,23 @@ LLM лог #{{ log.id }}
             <!-- PROMPT -->
             <div class="llm-card">
                 <h2 class="llm-card__title">Prompt</h2>
-                <pre class="llm-pre">{{ log.prompt }}</pre>
+                {% if log.prompt %}
+                    {% include 'widgets/_json_recursive.html' with data=log.prompt level=0 %}
+                {% endif %}
+
             </div>
 
             <!-- RESPONSE -->
             <div class="llm-card">
                 <h2 class="llm-card__title">Ответ LLM</h2>
                 {% comment %} <pre class="llm-pre">{{ log.response|default:"-" }}</pre> {% endcomment %}
-                {% include 'widgets/_json_recursive.html' with data=response level=0 %}
+                {% if log.response %}
+                    {{ log.response }}
+                {% endif %}
+
+                {% if log.response_json %}
+                    {% include 'widgets/_json_recursive.html' with data=log.response_json level=0 %}
+                {% endif %}
 
             </div>
 

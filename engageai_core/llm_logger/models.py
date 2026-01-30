@@ -21,9 +21,9 @@ class LogLLMRequest(models.Model):
     """
     request_time = models.DateTimeField(auto_now_add=True, verbose_name=_("Время запроса"))
     model_name = models.CharField(max_length=50, verbose_name=_("Имя модели"), help_text=_("e.g., 'gpt-4o-mini'"))
-    prompt = models.TextField(verbose_name=_("Промпт запроса"), help_text=_("Полный текст запроса к LLM"))
-    response = models.TextField(verbose_name=_("Ответ LLM (текстовый)"), blank=True, help_text=_("Полный ответ, включая JSON"))
-    response_json = models.JSONField(verbose_name="Ответ LLM (структура)", blank=True, null=True)
+    prompt = models.JSONField(verbose_name=_("Промпт запроса"), help_text=_("Полный текст запроса к LLM"))
+    response = models.TextField(verbose_name=_("Ответ LLM (текстовый)"), blank=True, null=True, help_text=_("Текстовый ответ от LLM"))
+    response_json = models.JSONField(verbose_name="Ответ LLM (структура)", blank=True, null=True, help_text=_("Структурированный JSON ответ от LLM"),)
     tokens_in = models.PositiveIntegerField(default=0, verbose_name=_("Токены на вход"))
     tokens_out = models.PositiveIntegerField(default=0, verbose_name=_("Токены на выход"))
     cost_in = models.DecimalField(max_digits=10, decimal_places=5, default=0, verbose_name=_("Стоимость входа"))

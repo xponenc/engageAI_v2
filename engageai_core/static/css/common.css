@@ -106,10 +106,6 @@
     --md-z-index-notification: 1300;
     --md-z-index-overlay: 1400;
 
-    /* ===================================
-       СТАРЫЕ ПЕРЕМЕННЫЕ - НЕ ИСПОЛЬЗОВАТЬ
-       =================================== */
-
     --color-bg: #f8fafc;
     --color-surface: #ffffff;
     --color-surface-alt: #f1f5f9;
@@ -164,8 +160,8 @@
     --light-color: #F8F9FA;
     --dark-color: #343A40;
 
-    --body-gradient-primary-start: #667eea;
-    --body-gradient-primary-end: #764ba2;
+    --body-gradient-primary-start: #ffffff;
+    --body-gradient-primary-end: #e3edfd;
 
     --theme-name: 'light';
 }
@@ -355,9 +351,23 @@ select:-webkit-autofill {
 /* grid container */
 .container {
     margin: 0 auto;
-    padding: 12px 20px;
-    max-width: 1280px;
+    padding: 20px 20px;
+    max-width: 1400px;
     width: 100%;
+}
+
+.container_wide {
+    max-width: unset;
+}
+
+
+/* Container */
+.container {
+    margin: 0 auto;
+}
+
+.container--fluid {
+    
 }
 
 /* cards/common surfaces */

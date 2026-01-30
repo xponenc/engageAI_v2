@@ -223,26 +223,8 @@ class LLMLogDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
             'id', 'request_time', 'status', 'cost_total', 'duration_sec', 'user', 'course', 'lesson'
         ).order_by('-request_time')[:10]
 
-
-        # Форматируем метаданные для отображения
-        metadata_pretty = json.dumps(log.metadata, indent=2, ensure_ascii=False) if log.metadata else '{}'
-
-        # Форматируем промпт и ответ для читаемости
-        prompt_lines = log.prompt.split('\n') if log.prompt else []
-        response_lines = log.response.split('\n') if log.response else []
-        print(log.response)
-
-        try:
-            response_data = json.loads(log.response)
-        except json.JSONDecodeError:
-            response_data = ast.literal_eval(log.response)
-
         context.update({
             'similar_logs': similar_logs,
-            'metadata_pretty': metadata_pretty,
-            'prompt_lines': prompt_lines,
-            'response_lines': response_lines,
-            'response': response_data,
             'request_types': LLMRequestType.choices,
         })
 

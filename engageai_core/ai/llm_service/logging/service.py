@@ -45,8 +45,7 @@ class LLMLloggingService:
     async def log_request(
         self,
         provider: str,
-        system_prompt: str,
-        user_message: str,
+        full_prompt: str,
         generation_result: "GenerationResult",
         context: Optional[Dict[str, Any]] = None,
         status: str = "SUCCESS",
@@ -63,13 +62,11 @@ class LLMLloggingService:
         context = context or {}
 
         try:
-            # Формируем полный промпт (как раньше)
-            full_prompt = self._build_full_prompt(
-                system_prompt,
-                user_message,
-                context.get("conversation_history"),
-                context.get("media_context")
-            )
+            if isinstance(full_prompt, str):
+                full_prompt = {
+                    "full_prompt": full_prompt,
+                }
+
 
             # Подготавливаем данные для модели
             log_data = self._prepare_log_data(
@@ -87,42 +84,42 @@ class LLMLloggingService:
 
         except Exception as e:
             logger.warning(f"Не удалось записать лог LLM-запроса: {e}", exc_info=True)
-
-    def _build_full_prompt(
-        self,
-        system_prompt: str,
-        user_message: str,
-        history: Optional[list] = None,
-        media: Optional[list] = None,
-    ) -> str:
-        """Воссоздаёт полный промпт (примерно как раньше)"""
-        parts = [system_prompt]
-
-        if media:
-            media_info = "\nКонтекст медиафайлов:"
-            for m in media:
-                media_info += f"\n- Тип: {m.get('type')}, URL: {m.get('url')}"
-            parts.append(media_info)
-
-        if history:
-            parts.append("\nИстория диалога:")
-            for entry in history[-5:]:
-                parts.append(f"Студент: {entry.get('user_message', '')}")
-                resp = entry.get('agent_response', {})
-                if isinstance(resp, dict):
-                    parts.append(f"Репетитор: {resp.get('message', '...')}")
-                else:
-                    parts.append(f"Репетитор: {str(resp)}")
-
-        parts.append(f"\nСообщение студента:\n{user_message}")
-
-        return "\n".join(parts)
+    #
+    # def _build_full_prompt(
+    #     self,
+    #     system_prompt: str,
+    #     user_message: str,
+    #     history: Optional[list] = None,
+    #     media: Optional[list] = None,
+    # ) -> str:
+    #     """Воссоздаёт полный промпт (примерно как раньше)"""
+    #     parts = [system_prompt]
+    #
+    #     if media:
+    #         media_info = "\nКонтекст медиафайлов:"
+    #         for m in media:
+    #             media_info += f"\n- Тип: {m.get('type')}, URL: {m.get('url')}"
+    #         parts.append(media_info)
+    #
+    #     if history:
+    #         parts.append("\nИстория диалога:")
+    #         for entry in history[-5:]:
+    #             parts.append(f"Студент: {entry.get('user_message', '')}")
+    #             resp = entry.get('agent_response', {})
+    #             if isinstance(resp, dict):
+    #                 parts.append(f"Репетитор: {resp.get('message', '...')}")
+    #             else:
+    #                 parts.append(f"Репетитор: {str(resp)}")
+    #
+    #     parts.append(f"\nСообщение студента:\n{user_message}")
+    #
+    #     return "\n".join(parts)
 
     def _prepare_log_data(
         self,
         provider: str,
         generation_result: "GenerationResult",
-        full_prompt: str,
+        full_prompt: dict,
         status: str,
         error_message: str,
         context: Dict[str, Any],
@@ -136,10 +133,25 @@ class LLMLloggingService:
         response_trunc = str(response.message)[:self.max_response_length]
         error_trunc = error_message[:self.max_error_length]
 
+        if isinstance(response.message, str):
+            response_txt = response.message
+            response_json = None
+        else:
+            try:
+                import json
+                json.dumps(response.message)
+                response_json = response.message
+                response_txt = None
+            except (TypeError, ValueError) as e:
+                # Если не JSON-сериализуемо, сохраняем как строку
+                response_txt = str(response.message)
+                response_json = None
+
         data = {
             "model_name": metrics.model_used,
             "prompt": prompt_trunc,
-            "response": response_trunc,
+            "response": response_txt,
+            "response_json": response_json,
             "tokens_in": metrics.input_tokens,
             "tokens_out": metrics.output_tokens,
             "cost_in": round(metrics.cost_in, 6),

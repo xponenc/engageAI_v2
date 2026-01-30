@@ -182,10 +182,21 @@
     transform: scale(1.3);
 }
 
-.btn_blob:hover .blob:nth-child(2) { background: #F5A962; }
-.btn_blob:hover .blob:nth-child(3) { background: #A2D7D3; }
-.btn_blob:hover .blob:nth-child(4) { background: #1768AC; }
-.btn_blob:hover .blob:nth-child(5) { background: #541388; }
+.btn_blob:hover .blob:nth-child(2) {
+    background: #F5A962;
+}
+
+.btn_blob:hover .blob:nth-child(3) {
+    background: #A2D7D3;
+}
+
+.btn_blob:hover .blob:nth-child(4) {
+    background: #1768AC;
+}
+
+.btn_blob:hover .blob:nth-child(5) {
+    background: #541388;
+}
 
 .btn_blob:active {
     border: 2px solid white;
@@ -195,25 +206,35 @@
    Link-pill — keep .link class
    ------------------------------------- */
 .link {
-    padding: 6px 14px;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-
-    font-weight: 600;
+    justify-content: space-between;
+    width: 100%;
     font-size: 0.9rem;
-
-    background: var(--color-accent-soft);
     color: var(--color-accent-dark);
-
-    border-radius: 999px;
-    transition: 0.2s ease;
+    transition: transform 0.2s ease;
 }
 
-.link:hover {
-    background: var(--color-accent);
-    color: #fff;
+.link:hover,
+.link:focus {
     transform: translateY(-1px);
+}
+
+.link__wrapper {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.link__wrapper>span,
+.link__wrapper>time {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.link__icon {
+    padding: 0 5px;
 }
 
 /* -------------------------------------
@@ -2154,4 +2175,44 @@ input:valid:not(:focus):not(:placeholder-shown) {
     border-radius: 4px;
     cursor: help;
     transition: background 0.15s ease;
+}
+
+.badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35em 0.65em;
+    width: fit-content;
+    font-size: 0.875rem;
+    line-height: 1;
+    color: var(--color-text);
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 50px;
+    background-color: #dadada;
+}
+
+.badge.bg-success {
+    background-color: var(--color-success);
+}
+
+.badge.bg-danger {
+    background-color: var(--color-error);
+}
+
+.badge.bg-warning {
+    background-color: var(--color-warning);
+    color: #212529;
+    /* тёмный текст для контраста на жёлтом */
+}
+
+
+.text {}
+
+.text_fat {
+    font-weight: 600 !important;
+}
+.text_mutted {
+    opacity: 0.7;
 }

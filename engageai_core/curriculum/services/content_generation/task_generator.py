@@ -1,14 +1,35 @@
+import asyncio
 import json
 import logging
+import os
+import re
+import sys
+from pathlib import Path
 from typing import Optional
 
 from asgiref.sync import sync_to_async
+
+# --- добавляем корень проекта в PYTHONPATH ---
+BASE_DIR = Path(__file__).resolve().parents[3]
+
+sys.path.insert(0, str(BASE_DIR))
+
+os.environ.setdefault(
+    "DJANGO_SETTINGS_MODULE",
+    "engageai_core.settings"
+)
+
+import django
+
+django.setup()
+
 from django.db import transaction
 
 from curriculum.models.content.task import Task, TaskType, ResponseFormat
 from curriculum.services.content_generation.base_generator import BaseContentGenerator
 from curriculum.validation.task_schemas import TASK_CONTENT_SCHEMAS
 from llm_logger.models import LLMRequestType
+from curriculum.models import Lesson
 
 logger = logging.getLogger(__name__)
 
@@ -155,51 +176,83 @@ class TaskGenerationService(BaseContentGenerator):
         available_schemas = self._get_available_schemas(lesson_context["skill_focus"])
         schemas_info = {
             name: {
+                "version": name,
+                "response_format": schema["response_format"],
                 "description": schema["description"],
-                "required_fields": list(schema["required"]),
-                "example": self._get_schema_example(name)
+                "example": schema["example"],
             }
             for name, schema in TASK_CONTENT_SCHEMAS.items()
             if name in available_schemas
         }
 
-        system_prompt = """You are an expert English assessment designer. Create exercises that test lesson objectives."""
+        system_prompt = """
+You are an expert English assessment designer.
+
+Your task is to generate high-quality lesson exercises that:
+- strictly match the provided exercise schemas
+- assess the specified language skills
+- are appropriate for the given CEFR level
+- can be validated automatically without manual fixes
+
+You follow instructions precisely and return only valid JSON.
+"""
         user_message = f"""
-        Lesson: "{lesson_context['title']}" ({lesson_context['level']})
-        Skills: {', '.join(lesson_context['skill_focus'])}
-        Professional Context: {', '.join(lesson_context['professional_tags']) or 'general'}
+Lesson: "{lesson_context['title']}" (CEFR Level: {lesson_context['level']})
 
-        Learning Objectives:
-        {self._format_objectives(lesson_context['learning_objectives'])}
+Skills assessed in this lesson:
+{', '.join(lesson_context['skill_focus'])}
 
-        Theory Snippet:
-        {lesson_context['theory_content']}
+Professional Context:
+{', '.join(lesson_context['professional_tags']) or 'general'}
 
-        Available Exercise Types:
-        {json.dumps(schemas_info, indent=2, ensure_ascii=False)}
+Learning Objectives:
+{self._format_objectives(lesson_context['learning_objectives'])}
 
-        Generate exactly {num_tasks} diverse exercises covering all lesson objectives.
-        For listening exercises: set "requires_media": true and provide "media_script".
+Theory Snippet:
+{self.remove_html_tags(lesson_context['theory_content'])}
 
-        Return ONLY valid JSON (no comments, no text):
+Available exercise types:
+Each exercise type below defines:
+- a validation version ("version")
+- a response format
+- an example that represents the exact required content structure
+{json.dumps(schemas_info, indent=2, ensure_ascii=False)}
 
-        {{
-          "exercises": [
-            {{
-              "task_type": "grammar",
-              "response_format": "single_choice",
-              "content": {{
-                "prompt": "string",
-                "options": ["string"]
-              }},
-              "requires_media": false,
-              "media_script": null
-            }}
-            ...
-          ]
-        }}
+Generate exactly {num_tasks} diverse exercises covering all lesson objectives.
+RULES (STRICT):
+1. Each exercise MUST include:
+   - task_type: one of [{', '.join(lesson_context['skill_focus'])}]
+   - version: one of the available exercise type keys
+   - response_format: must match the response_format of the chosen version
+   - content: MUST strictly match the example structure of that version
+2. All fields shown in the example are REQUIRED.
+3. Do NOT add extra fields inside "content".
+4. Field names must match the example exactly.
+5. Use only the provided versions. Do NOT invent new versions.
+6. Exercises must collectively cover ALL listed learning objectives.
+7. Listening exercises are NOT required for this lesson.
+
+MEDIA RULES:
+- requires_media:  boolean (true if the exercise is a listening task, false otherwise)
+- media_script: string (the transcript for listening exercises; empty string "" if not applicable)
+
+Return ONLY valid JSON in the following format:
+
+{{
+  "exercises": [
+    {{
+      "task_type": "grammar",
+      "version": "scq_v1",
+      "response_format": "single_choice",
+      "content": {{
+        "...": "exactly as in the example of the chosen version"
+      }},
+      "requires_media": false,
+      "media_script": null
+    }}
+  ]
+}}
         """
-        print(user_message)
 
         context = {
             "course_id": lesson.course.pk,
@@ -216,77 +269,34 @@ class TaskGenerationService(BaseContentGenerator):
         return tasks_data["exercises"]
 
     def _get_available_schemas(self, skill_focus: list[str]) -> list[str]:
-        """Определяет доступные схемы заданий по навыкам урока"""
-        mapping = {
-            "grammar": ["scq_v1", "mcq_v1", "short_text_v1"],
-            "vocabulary": ["scq_v1", "mcq_v1", "short_text_v1"],
-            "reading": ["scq_v1", "mcq_v1", "short_text_v1"],
-            "listening": ["short_text_v1"],
-            "writing": ["free_text_v1"],
-            "speaking": ["audio_v1"]
-        }
+        """
+        Определяет доступные схемы заданий по навыкам урока
+        на основе TASK_CONTENT_SCHEMAS.supported_skills
+        схема берется на генерацию только если is_generation_enabled
+        """
+        lesson_skills = set(skill_focus)
 
-        schemas = []
-        for skill in skill_focus:
-            schemas.extend(mapping.get(skill, []))
+        return [
+            schema_name
+            for schema_name, schema in TASK_CONTENT_SCHEMAS.items()
+            if schema.get("is_generation_enabled", False)
+            if lesson_skills & schema.get("supported_skills", set())
+        ]
 
-        return list(set(schemas))
-
-    def _get_schema_example(self, schema_name: str) -> dict:
-        examples = {
-            "scq_v1": {
-                "prompt": "Which sentence is correct?",
-                "options": ["I have went...", "I went...", "I have go..."],
-                "correct_idx": 1,
-                "explanation": "Past Simple for completed actions"
-            },
-            "mcq_v1": {
-                "prompt": "Select all professional email phrases:",
-                "options": ["Hey dude", "Dear Mr. Smith", "See ya", "Please find attached"],
-                "correct_indices": [1, 3],
-                "min_selections": 1,
-                "max_selections": 2
-            },
-            "short_text_v1": {
-                "prompt": "Past tense of 'write'?",
-                "correct_answers": ["wrote"],
-                "case_sensitive": False
-            },
-            "free_text_v1": {
-                "prompt": "Write email requesting day off",
-                "context_prompt": "Be polite and professional",
-                "min_words": 80,
-                "max_words": 150
-            },
-            "audio_v1": {
-                "prompt": "Describe your project in 45 seconds",
-                "context_prompt": "Explain to a new colleague",
-                "min_duration_sec": 30,
-                "max_duration_sec": 60
-            }
-        }
-        return examples.get(schema_name, {})
+    @staticmethod
+    def remove_html_tags(text):
+        clean = re.compile('<.*?>')
+        return re.sub(clean, '', text)
 
     def _format_objectives(self, objectives: list) -> str:
         if not objectives:
             return "No specific objectives"
         return "\n".join([
-            f"- {obj['name']} ({obj['skill_domain']}, {obj['cefr_level']}): {obj['description'][:80]}..."
+            f"- {obj['name']} ({obj['skill_domain']}, {obj['cefr_level']}): {obj['description']}"
             for obj in objectives
         ])
 
-    def _determine_response_format(self, task_data: dict, content: dict) -> str:
-        """Определяет формат ответа по структуре контента"""
-        schema_map = {
-            "scq_v1": ResponseFormat.SINGLE_CHOICE,
-            "mcq_v1": ResponseFormat.MULTIPLE_CHOICE,
-            "short_text_v1": ResponseFormat.SHORT_TEXT,
-            "free_text_v1": ResponseFormat.FREE_TEXT,
-            "audio_v1": ResponseFormat.AUDIO
-        }
 
-        schema = self._detect_schema(content)
-        return schema_map.get(schema, ResponseFormat.SHORT_TEXT)
 
     def _detect_schema(self, content: dict) -> str:
         """Определяет схему по структуре контента"""
@@ -305,9 +315,9 @@ class TaskGenerationService(BaseContentGenerator):
     def _create_task_in_db(self, lesson, task_data: dict, order: int) -> Task:
         """Атомарное создание задания в БД"""
         content = task_data["content"]
-        schema_version = self._detect_schema(content)
-        response_format = self._determine_response_format(task_data, content)
-        task_type = self._map_to_task_type(task_data["task_type"])
+        response_format = task_data["response_format"]
+        schema_version = task_data["version"]
+        task_type = task_data["task_type"]
 
         task = Task.objects.create(
             lesson=lesson,
@@ -321,6 +331,10 @@ class TaskGenerationService(BaseContentGenerator):
             order=order
         )
 
+        # TODO обработка и создание фалов для listening заданий
+        media_script = task_data["media_script"]
+        requires_media = task_data["requires_media"]
+
         # Привязка профессиональных тегов курса
         if lesson.course:
             tags = list(lesson.course.professional_tags.all())
@@ -328,18 +342,6 @@ class TaskGenerationService(BaseContentGenerator):
                 task.professional_tags.add(*tags)
 
         return task
-
-    def _map_to_task_type(self, raw_type: str) -> str:
-        """Маппинг строкового типа в константы модели"""
-        mapping = {
-            "grammar": TaskType.GRAMMAR,
-            "vocabulary": TaskType.VOCABULARY,
-            "reading": TaskType.READING,
-            "listening": TaskType.LISTENING,
-            "writing": TaskType.WRITING,
-            "speaking": TaskType.SPEAKING
-        }
-        return mapping.get(raw_type, TaskType.VOCABULARY)
 
     async def _handle_media_requirement(self, task: Task, task_data: dict):
         """Обработка требований к медиа (заглушка для интеграции с TTS)"""
@@ -355,3 +357,8 @@ class TaskGenerationService(BaseContentGenerator):
             # TODO: Интеграция с TTS сервисом
             # После генерации:
             # await self._create_task_media(task, audio_path, MediaType.AUDIO)
+
+
+if __name__ == "__main__":
+    tgs = TaskGenerationService()
+    asyncio.run(tgs.generate(lesson=Lesson.objects.get(id=27), user_id=2))

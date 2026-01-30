@@ -12,10 +12,7 @@ OpenAI-специфичная реализация LLMProvider.
 
 from __future__ import annotations
 
-import asyncio
-import base64
 import time
-from pathlib import Path
 from typing import Any, AsyncIterable, Dict, List, Literal, Optional, Tuple
 
 import httpx

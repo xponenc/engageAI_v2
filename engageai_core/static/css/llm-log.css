@@ -3,7 +3,10 @@
    =============================== */
 
 .llm-list__header {
-    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: var(--standard-gap);
 }
 
 .llm-list__title {
@@ -19,6 +22,9 @@
 /* FILTERS */
 
 .llm-filters {
+    display: flex;
+    flex-direction: column;
+    gap: var(--half-gap);
     background: var(--color-surface);
     border: 1px solid var(--color-surface-alt);
     border-radius: var(--radius-md);
@@ -32,22 +38,32 @@
     gap: 14px;
 }
 
-.llm-field label {
+.llm-field__label {
     display: block;
     font-size: 0.75rem;
-    text-transform: uppercase;
+    font-weight: 600;
+    opacity: 0.8;
     color: var(--color-text-muted);
-    margin-bottom: 4px;
 }
 
-.llm-field input,
-.llm-field select {
+.llm-field__label span{
+    display: block;
+    margin-bottom: 4px;
+    padding-left: 4px;
+}
+
+.llm-field__input {
     width: 100%;
     padding: 6px 8px;
     background: var(--color-surface-alt);
     border: 1px solid var(--color-surface-alt);
     border-radius: var(--radius-sm);
     font-size: 0.85rem;
+}
+
+.llm-field__input::placeholder {
+    opacity: 0.6;
+    font-style: italic;
 }
 
 .llm-field--wide {
@@ -97,13 +113,27 @@
 }
 
 .llm-table {
-    width: 100%;
+    display: grid;
+    grid-template-columns: auto auto auto auto;
+    min-width: 100%;
     border-collapse: collapse;
     font-size: 0.85rem;
 }
 
+.llm-table thead, .llm-table tbody, .llm-table tfoot, .llm-table tr {
+    display: contents;
+    overflow: hidden;
+}
+
+.llm-table__th {
+    
+}
+
+
 .llm-table th,
 .llm-table td {
+    display: flex;
+    flex-direction: column;
     padding: 10px 12px;
     border-bottom: 1px solid var(--color-surface-alt);
     white-space: nowrap;

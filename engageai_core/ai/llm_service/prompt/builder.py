@@ -85,11 +85,11 @@ class DefaultPromptBuilder(PromptBuilder):
                 full_system += "\n\n" + media_desc
 
         # Добавляем инструкцию про JSON, если требуется
-        if self.add_json_instruction:
-            full_system += (
-                "\n\nВАЖНО: Ответь строго в формате JSON. "
-                "Не добавляй никакой дополнительный текст вне JSON-структуры. "
-            )
+        # if self.add_json_instruction:
+        #     full_system += (
+        #         "\n\nВАЖНО: Ответь строго в формате JSON. "
+        #         "Не добавляй никакой дополнительный текст вне JSON-структуры. "
+        #     )
 
         messages.append({"role": "system", "content": full_system})
 

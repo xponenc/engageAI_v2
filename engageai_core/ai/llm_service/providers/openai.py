@@ -98,6 +98,8 @@ class OpenAIProvider(BaseProvider):
             #     )
             # )
 
+            print(f"{completion=}")
+
             if not completion.choices or not completion.choices[0].message.content:
                 raise ValueError("Empty response from OpenAI")
 
@@ -110,6 +112,7 @@ class OpenAIProvider(BaseProvider):
                 generation_time=time.time() - start_time,
                 extra={"finish_reason": completion.choices[0].finish_reason},
             )
+            print(f"{content=}")
 
             return content, metrics
 

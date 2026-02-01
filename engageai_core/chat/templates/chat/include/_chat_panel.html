@@ -120,12 +120,12 @@
             {% csrf_token %}
             <div class="chat-input">
                 <div class="chat-input__field">
-                    <input type="text" 
+                    <textarea type="text" 
                             name="message" 
                             id="message-input" 
                             class="chat-input__text" 
                             placeholder="Введите ваш вопрос..."
-                            autocomplete="off">
+                            autocomplete="off"></textarea>
                     <div class="chat-input__actions">
                         <button type="button" class="chat-input__action" id="voice-record-btn" title="Отправить голосовое сообщение">
                             🎤
@@ -138,16 +138,18 @@
                         </label>
                     </div>
                 </div>
-                <div class="file-preview-container" id="file-preview-container" style="display: none;">
-                    <div class="file-preview">
-                        <span class="file-preview__name" id="file-name"></span>
-                        <span class="file-preview__remove" id="remove-file">✖</span>
+                <div class="chat-input__wrapper">
+                    <div class="file-preview-container" id="file-preview-container" style="display: none;">
+                        <div class="file-preview">
+                            <span class="file-preview__name" id="file-name"></span>
+                            <span class="file-preview__remove" id="remove-file">✖</span>
+                        </div>
                     </div>
+                    <button type="submit" class="btn btn_primary chat-input__submit" id="submit-btn">
+                        <span class="btn__icon">✈️</span>
+                        Отправить
+                    </button>
                 </div>
-                <button type="submit" class="btn btn_primary chat-input__submit" id="submit-btn">
-                    <span class="btn__icon">✈️</span>
-                    Отправить
-                </button>
             </div>
             <div class="chat-input__hint">
                 Нажмите Enter для отправки, Shift+Enter для новой строки

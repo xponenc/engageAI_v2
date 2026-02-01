@@ -12,6 +12,14 @@
 
 
 {% block assistant_content %}
+<div id="page-environment-context-for-message"
+    data-page-type="Активный урок"
+    data-enrollment-id="{{ enrollment.id }}"
+    data-context-objects='[
+        {"type":"Lesson","id":{{ lesson.id }}},
+        {"type":"Course","id":{{ enrollment.course.id }}}
+    ]'>
+</div>
 <section class="learning-session">
     <div class="learning-session__container">
 
@@ -86,6 +94,15 @@
                 <input type="hidden" id="enrollment-id" value="{{ enrollment.id }}">
                 <input type="hidden" id="assessment-job-id" value="{{ enrollment.assessment_job_id }}">
             {% else %}
+                <button
+                    class="btn btn_secondary chat-action-trigger"
+                    data-context-type="Lesson"
+                    data-context-id="{{ lesson.id }}"
+                    data-context-prefix="Поясни мне этот урок"
+                >
+                    ❓ Вопрос по уроку
+                </button>
+                
                 {% if lesson.content %}
                     <section class="lesson-theory">
                         <h3 class="lesson-theory__title">Lesson Theory</h3>
@@ -151,6 +168,14 @@
                                         {% if task.id in completed_tasks %}
                                             <span class="lesson-task__status">✓ выполнено</span>
                                         {% endif %}
+                                        <button
+                                            class="btn btn_reset btn_outline chat-action-trigger"
+                                            data-context-type="Task"
+                                            data-context-id="{{ task.id }}"
+                                            data-context-prefix="Объясни, что я сделал не так в этом задании"
+                                        type="button">
+                                            ❓ Вопрос по заданию
+                                        </button>
                                     </header>
 
                                     <div class="lesson-task__prompt">

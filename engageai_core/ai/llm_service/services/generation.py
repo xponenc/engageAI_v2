@@ -90,7 +90,7 @@ class GenerationService:
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         response_schema: Optional[Type[BaseModel]] = None,  # для structured output
-        context_for_logging: Optional[Dict[str, Any]] = None,
+        context: Optional[Dict[str, Any]] = None,
     ) -> GenerationResult:
         """
         Основной метод для генерации структурированного JSON-ответа.
@@ -148,7 +148,7 @@ class GenerationService:
                 provider=self.provider.__class__.__name__,
                 full_prompt=messages,
                 generation_result=result,
-                context=context_for_logging,
+                context=context,
                 status="SUCCESS",
             )
 
@@ -177,7 +177,7 @@ class GenerationService:
                 provider=self.provider.__class__.__name__,
                 full_prompt=messages,
                 generation_result=result,  # даже при ошибке
-                context=context_for_logging,
+                context=context,
                 status="ERROR",
                 error_message=str(exc),
             )
@@ -242,9 +242,104 @@ class GenerationService:
             raise ValueError(f"Невалидный JSON от модели: {e}\nRaw: {raw_text[:200]}...") from e
 
     # Дополнительные методы (можно расширять)
-    async def generate_text_response(self, *args, **kwargs):
-        # Аналогично, но без парсинга JSON
-        pass
+    async def generate_text_response(
+        self,
+        system_prompt: str,
+        user_message: str,
+        conversation_history: Optional[List[Dict[str, Any]]] = None,
+        media_context: Optional[List[Dict[str, Any]]] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        response_schema: Optional[Type[BaseModel]] = None,  # для structured output
+        context: Optional[Dict[str, Any]] = None,
+    ) -> GenerationResult:
+        """
+        Основной метод для генерации текстового ответа.
+
+        Возвращает GenerationResult с:
+        - response (LLMResponse)
+        - metrics (токены, стоимость, время)
+        - raw_provider_response (для отладки)
+        """
+        start_time = time.time()
+
+        # 1. Формируем сообщения
+        messages = self.prompt_builder.build_messages(
+            system_prompt=system_prompt,
+            user_message=user_message,
+            conversation_history=conversation_history,
+            media_context=media_context,
+        )
+        print(f"{messages=}")
+
+        try:
+            # 2. Генерация
+            text, base_metrics = await self._generate_with_fallback(
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                response_format="text",
+            )
+            print(f"{text=}")
+
+            # 4. Расчёт стоимости (если не локально)
+            cost = self.cost_calculator.calculate(
+                model=self.provider.model_name,
+                input_tokens=base_metrics.input_tokens,
+                output_tokens=base_metrics.output_tokens,
+            )
+            # 5. Обогащаем метрики стоимостью
+            metrics = base_metrics.with_cost(cost)
+
+            # 6. Формируем ответ
+            response = LLMResponse(
+                message=text if text else "Ошибка ответа",
+            )
+
+            result = GenerationResult(
+                response=response,
+                metrics=metrics,
+                raw_provider_response=text,
+            )
+
+            await llm_logging_service.log_request(
+                provider=self.provider.__class__.__name__,
+                full_prompt=messages,
+                generation_result=result,
+                context=context,
+                status="SUCCESS",
+            )
+
+            return result
+
+        except Exception as exc:
+            # Graceful fallback / ошибка
+            error_msg = f"Ошибка генерации: {str(exc)}"
+            metrics = GenerationMetrics(
+                generation_time_sec=time.time() - start_time,
+                model_used=self.provider.model_name,
+            )
+            response = LLMResponse(
+                message="Извините, произошла техническая ошибка. Попробуйте позже.",
+                agent_state={"error": error_msg},
+                metadata={"error": str(exc)},
+            )
+
+            result = GenerationResult(
+                response=response,
+                metrics=metrics,
+                raw_provider_response=None,
+                error=exc,
+            )
+            await llm_logging_service.log_request(
+                provider=self.provider.__class__.__name__,
+                full_prompt=messages,
+                generation_result=result,  # даже при ошибке
+                context=context_for_logging,
+                status="ERROR",
+                error_message=str(exc),
+            )
+            return result
 
     async def generate_media(
         self,

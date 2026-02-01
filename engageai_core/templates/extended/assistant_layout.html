@@ -159,6 +159,60 @@ function updateContent(html) {
     }
 }
 document.addEventListener("DOMContentLoaded", function () {
+    // Точный контекст для сообщения в оркестратор
+    let messageActionContext = null;
+    let messageActionPrefix = null;
+    let lastMessageActionInjectedPrefix = null;
+
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.chat-action-trigger');
+        if (!btn) return;
+
+        const type = btn.dataset.contextType;
+        const id = btn.dataset.contextId;
+        const prefix = btn.dataset.contextPrefix;
+
+        if (!type || !id || !prefix) return;
+
+        // explicit context
+        messageActionContext = {
+            type,
+            id,
+            source: "ui"
+        };
+        messageActionPrefix = prefix;
+
+        openChatAndFocus();
+
+        const shouldReplace =
+            !messageInput.value ||
+            messageInput.value === `${lastMessageActionInjectedPrefix}: `;
+
+        if (shouldReplace) {
+            messageInput.value = `${prefix}: `;
+            lastMessageActionInjectedPrefix = prefix;
+        }
+
+        requestAnimationFrame(() => {
+            messageInput.setSelectionRange(
+                messageInput.value.length,
+                messageInput.value.length
+            );
+        });
+    });
+
+    function openChatAndFocus() {
+        if (chatCollapsed) {
+            chatCollapsed = false;
+            initLayout();
+        }
+        setTimeout(() => {
+            messageInput.focus();
+            scrollChatToBottom(true);
+        }, 200);
+    }
+
+
     // === Настройки layout ===
     const STORAGE_KEY = 'chat_layout_ratio';
     const MIN_CHAT_WIDTH_PX = 320;
@@ -563,10 +617,34 @@ document.addEventListener("DOMContentLoaded", function () {
         chatHistory.insertAdjacentHTML('beforeend', userMessageHTML + botMessageHTML);
         scrollAfterMessage(); 
         messageInput.value = '';
+
         const formData = new FormData();
         formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
         if (message) formData.append('message', message);
         if (currentFile) formData.append('file', currentFile);
+
+        // === Page context auto-attach ===
+        const environmentContextElement = document.querySelector('#page-environment-context-for-message');
+
+        if (environmentContextElement) {
+            const environmentContext = {};
+
+            Object.keys(environmentContextElement.dataset).forEach((key) => {
+                environmentContext[key] = environmentContextElement.dataset[key];
+            });
+
+            console.log()
+
+            formData.append('environment_context', JSON.stringify(environmentContext));
+        }
+
+        if (messageActionContext) {
+            formData.append(
+                'action_context',
+                JSON.stringify(messageActionContext)
+            );
+        }
+
         fetch(formAction, {
             method: "POST",
             body: formData,
@@ -676,6 +754,9 @@ document.addEventListener("DOMContentLoaded", function () {
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<span class="btn__icon">✈️</span>Отправить';
             messageInput.focus();
+            messageActionContext = null;
+            messageActionPrefix = null;
+            lastMessageActionInjectedPrefix = null;
         });
     });
     
@@ -712,6 +793,17 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.error("Ошибка:", error);
                 showNotification(error.message || "Ошибка при очистке чата", "error");
             });
+        }
+    });
+    // Управление точным контекстом отпраленного соообщения
+    messageInput.addEventListener('input', () => {
+        if (
+            lastMessageActionInjectedPrefix &&
+            !messageInput.value.startsWith(`${lastMessageActionInjectedPrefix}:`)
+        ) {
+            messageActionContext = null;
+            messageActionPrefix = null;
+            lastMessageActionInjectedPrefix = null;
         }
     });
     

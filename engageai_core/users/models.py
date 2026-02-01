@@ -95,53 +95,6 @@ class CEFRLevel(models.TextChoices):
         except ValueError:
             return cls.A1.value
 
-#
-# class StudyProfile(models.Model):
-#     """Профиль расширяющий данные по Telegram аккаунту пользователя"""
-#     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="study_profile")
-#     english_level = models.CharField(verbose_name="Уровень CEFR", max_length=2,
-#                                      choices=CEFRLevel.choices, default=CEFRLevel.A1)
-#
-#     learning_goals = models.JSONField(default=list, blank=True)  # ["career", "travel", "business"]
-#     profession = models.CharField(max_length=200, blank=True)
-#     available_time_per_week = models.IntegerField(null=True, blank=True)  # минуты
-#
-#     # Системные метрики
-#     engagement_level = models.IntegerField(default=5)  # 1-10 шкала
-#     trust_level = models.IntegerField(default=4)  # 1-10 шкала
-#
-#     # Прогресс обучения
-#     learning_path = models.JSONField(default=dict, blank=True)  # текущий план обучения
-#     completed_lessons = models.JSONField(default=list, blank=True)
-#
-#     def update_engagement(self, delta):
-#         self.engagement_level = max(1, min(10, self.engagement_level + delta))
-#         self.save()
-#
-#     def add_learning_goal(self, goal):
-#         if goal not in self.learning_goals:
-#             self.learning_goals.append(goal)
-#             self.save()
-#
-#     def to_dict(self) -> Dict[str, Any]:
-#         """Преобразует модель в словарь для работы с состоянием"""
-#         return {
-#             'user_id': self.user.id,
-#             'profile': {
-#                 'english_level': self.english_level,
-#                 'learning_goals': self.learning_goals or [],
-#                 'profession': self.profession,
-#                 'available_time_per_week': self.available_time_per_week,
-#                 'challenges': self.challenges or []
-#             },
-#             'metrics': {
-#                 'engagement_level': self.engagement_level
-#             },
-#             'learning_plan': self.learning_path,
-#             'current_lesson': self.current_lesson,
-#             'last_interaction': self.last_interaction.isoformat()
-#         }
-
 
 class Student(models.Model):
     """
@@ -184,10 +137,9 @@ class Student(models.Model):
         default=5,
         help_text=_("Scale 1-10")
     )
-    trust_level = models.IntegerField(
-        verbose_name=_("Trust Level"),
-        default=4,
-        help_text=_("Scale 1-10")
+    confidence_level = models.FloatField(
+        default=5,
+        help_text="Уровень уверенности студента (1-10)"
     )
 
     # Дополнительные поля из оригинального Student

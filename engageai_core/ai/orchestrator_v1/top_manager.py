@@ -1,0 +1,105 @@
+import json
+from typing import List, Dict
+
+from ai.llm_service.factory import llm_factory
+from ai.orchestrator_v1.agents.base import BaseAgent, AgentResponse
+from ai.orchestrator_v1.context.agent_context import AgentContext
+
+
+class TopManagerAgent:
+    """
+    Специализированный агент для агрегации ответов нескольких агентов.
+
+    Задача: Принять ответы от основного и вспомогательных агентов,
+    собрать гармоничный финальный ответ через LLM.
+
+    Почему НЕ шаблонное конкатенирование:
+    ❌ "Объяснение: ... [разрыв] Микро-успех: ... [разрыв] Пример: ..."
+    ✅ Единый связный текст с плавными переходами
+
+    Пример:
+    Вход:
+    - ContentAgent: "Past Perfect используется для действия, завершившегося до другого..."
+    - SupportAgent: {"micro_success": "Вы правильно заметили сложность!", "soft_cta": "Давайте закрепим?"}
+    - ProfessionalAgent: "Пример из бэкенда: 'Код уже был задеплоен...'"
+
+    Выход (через LLM):
+    "Past Perfect здесь потому, что одно действие завершилось РАНЬШЕ другого в прошлом.
+    Вы правильно заметили сложность этой темы — это уже половина успеха!
+    Пример из вашей сферы (бэкенд): 'Код уже был задеплоен, когда я пришёл на работу'.
+    Давайте закрепим на коротком примере?"
+    """
+    name = "TopManagerAgent"
+    description = "Агрегация ответов нескольких агентов в единый связный текст"
+
+    def __init__(self):
+        """Инициализация агента"""
+        self.llm = llm_factory
+
+    async def handle(
+            self,
+            agents_responses: List[Dict],
+            context: AgentContext
+    ) -> AgentResponse:
+        """
+        Агрегация ответов через LLM.
+
+        Алгоритм:
+        1. Собрать все компоненты в структурированный промпт
+        2. Передать в LLM с инструкцией собрать единый текст
+        3. Вернуть финальный ответ
+        """
+        # Формирование компонентов для агрегации
+        print(agents_responses)
+        print(context)
+        agents_responses = [
+            {
+                "agent": ar["agent_name"],
+                "role": ar["agent_role"],
+                "response": ar["agent_response"].response.response.message,
+            } for ar in agents_responses
+        ]
+
+        user_context = {
+                "cefr_level": context.user_context.cefr_level,
+                # "professional_tags": context.professional_tags,
+                "frustration_signals": context.user_context.frustration_signals,
+                "confidence_level": context.user_context.confidence_level
+        }
+
+        system_prompt = """Вы — эксперт по составлению связных, естественных ответов.
+Ваша задача: собрать финальный ответ из компонентов, сгенерированных разными агентами.
+
+Правила:
+1. Сохраняйте СОДЕРЖАНИЕ основного ответа без искажений
+2. Интегрируйте микро-успехи и примеры ПЛАВНО, без разрывов
+3. Адаптируйте тон под эмоциональное состояние студента:
+   - При фрустрации: поддерживающий, без давления
+   - При высокой уверенности: более экспертный тон
+4. Максимальная длина: 250 слов
+5. Завершайте мягким призывом к действию (если есть в компонентах)
+
+Формат ответа: ТОЛЬКО финальный текст, без мета-комментариев."""
+
+        user_prompt = f"""Компоненты для агрегации:
+
+Ответы агентов:
+{agents_responses}
+
+Контекст студента:
+Уровень: {user_context['cefr_level']}
+Фрустрация: {user_context['frustration_signals']}/10
+Уверенность: {user_context['confidence_level']}/10
+
+Соберите единый связный ответ."""
+
+        result = await self.llm.generate_text_response(
+            system_prompt=system_prompt,
+            user_message=user_prompt,
+            max_tokens=400,
+            temperature=0.3  # Низкая креативность для сохранения смысла
+        )
+
+        return AgentResponse(
+            response=result,
+        )

@@ -1,6 +1,7 @@
 import json
 import logging
 
+from asgiref.sync import async_to_sync
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
@@ -12,12 +13,14 @@ from django.views import View
 from django.views.generic import ListView
 
 from ai.orchestrator import Orchestrator
+from ai.orchestrator_v1.orchestrator import UniversalOrchestrator
 from ai_assistant.models import AIAssistant
 from .models import Chat, Message, MessageSource, ChatPlatform, MessageType, ChatScope
 from chat.services.interfaces.ai_message_service import AiMediaService
 from .services.interfaces.chat_service import ChatService
 from .services.interfaces.exceptions import AssistantNotFoundError, ChatCreationError, MediaProcessingError
 from .services.interfaces.message_service import MessageService
+from .services.page_context_service import PageContextService
 from .services.user_media_service import UserMediaService
 
 logger = logging.getLogger(__name__)
@@ -901,11 +904,13 @@ class AiChatView(LoginRequiredMixin, View):
         """Формирует AJAX-ответ для чата с поддержкой медиа"""
         return self.message_service.get_ajax_response(user_message, ai_message)
 
-    def _process_ai_response(self, user_id, user_context):
+    def _process_ai_response(self, user_id, user_context, page_context):
         """Обрабатывает запрос к AI и возвращает ответ"""
         try:
-            orchestrator = Orchestrator(user_id=user_id, user_context=user_context)
-            ai_response = orchestrator.process_message(user_context)
+            o = UniversalOrchestrator()
+            ai_response = async_to_sync(o.route_message)(
+                user_message="Не понял я это ваш Past Perfect", user_id=user_id, message_context=page_context)
+            print(ai_response)
 
             if not ai_response.get('success', False):
                 logger.warning(f"AI вернул неуспешный ответ: {ai_response}")
@@ -965,6 +970,24 @@ class AiChatView(LoginRequiredMixin, View):
                 return JsonResponse({"error": str(e)}, status=404)
             return render(request, "chat/assistant_not_found.html", {"error": str(e)}, status=404)
 
+        # получаем контекст страницы с которой пришло сообщение, на странице должен быть блок с
+        # id="page-environment-context-for-message" (который обработает JS) вида:
+        # .. <div id="page-info-for-chat" class="Lesson"
+        # .... data-page-type="Активный урок"
+        # .... data-context-objects='[
+        #         {"type":"Lesson","id":{{ lesson.id }}},
+        #         {"type":"Course","id":{{ enrollment.course.id }}}
+        #     ]'>
+        # .... data-enrollment-id="{{ enrollment }}"></div>
+        environment_context = request.POST.get("environment_context", [])
+        print(environment_context)
+        action_context = request.POST.get("action_context", {})
+        raw_message_context = {
+            "environment_context": environment_context,
+            "action_context": action_context,
+        }
+        message_context = PageContextService.validate_data(raw_message_context=raw_message_context, user=request.user)
+        print(message_context)
         try:
             with transaction.atomic():
                 # Создаем сообщение пользователя
@@ -972,7 +995,10 @@ class AiChatView(LoginRequiredMixin, View):
                     chat=chat,
                     sender=request.user,
                     content=user_message_text,
-                    message_type=MessageType.TEXT if not has_file else MessageType.DOCUMENT
+                    message_type=MessageType.TEXT if not has_file else MessageType.DOCUMENT,
+                    metadata={
+                        "message_context": message_context,
+                    }
                 )
 
                 # Обрабатываем загруженный файл
@@ -995,9 +1021,11 @@ class AiChatView(LoginRequiredMixin, View):
                         logger.error(f"Ошибка при обработке файла: {str(e)}")
                         raise MediaProcessingError(f"Ошибка при загрузке файла: {str(e)}")
 
+
                 # Подготавливаем контекст для AI
                 user_context = {
                     'text': user_message_text,
+                    "message_context": message_context,
                     'media': [{
                         'url': media.get_absolute_url(),
                         'type': media.file_type,
@@ -1007,7 +1035,9 @@ class AiChatView(LoginRequiredMixin, View):
                 }
 
                 # Получаем ответ от AI
-                ai_response = self._process_ai_response(request.user.id, user_context)
+                ai_response = self._process_ai_response(
+                    user_id=request.user.id, user_context=user_context)
+                print(ai_response)
                 ai_message_text = ai_response['text']
                 ai_media_data = ai_response['media']
 

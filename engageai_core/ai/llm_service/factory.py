@@ -101,7 +101,7 @@ class LLMFactory:
             media_context=media_context,
             temperature=temperature,
             max_tokens=max_tokens,
-            context_for_logging=context,
+            context=context,
             **kwargs,
         )
 
@@ -110,8 +110,10 @@ class LLMFactory:
         system_prompt: str,
         user_message: str,
         conversation_history: Optional[List[Dict[str, Any]]] = None,
+        media_context: Optional[List[Dict[str, Any]]] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        context: Optional[Dict[str, Any]] = None,  # для логирования
         **kwargs,
     ) -> GenerationResult:
         """
@@ -119,13 +121,15 @@ class LLMFactory:
         """
         # Можно добавить отдельный метод в GenerationService позже
         # Пока используем тот же механизм, но с response_format="text"
-        return await self._service.generate_json_response(
+        # TODO универсальный метод надо доделать
+        return await self._service.generate_text_response(
             system_prompt=system_prompt,
             user_message=user_message,
             conversation_history=conversation_history,
+            media_context=media_context,
             temperature=temperature,
             max_tokens=max_tokens,
-            response_schema=None,
+            context=context,
             **kwargs,
         )
 

@@ -38,3 +38,62 @@ class UserContext:
             "is_critically_frustrated": self.is_critically_frustrated,
             "confidence_level": self.confidence_level
         }
+
+    def to_prompt(self) -> str:
+        """
+        Человекочитаемое представление пользовательского контекста
+        для включения в LLM-промпт.
+
+        Правила:
+        - включаются только непустые поля
+        - значения 0 / False считаются валидными и включаются
+        - без интерпретаций и бизнес-логики
+        """
+        lines = ["Student context:"]
+
+        def add(label: str, value):
+            if value is None:
+                return
+            if isinstance(value, list) and not value:
+                return
+            lines.append(f"- {label}: {value}")
+
+        # Basic user info
+        # add("User ID", self.user_id)
+        # add("Username", self.username)
+        # add("Email", self.email)
+
+        # Profile info
+        if self.cefr_level:
+            add("English level (CEFR)", self.cefr_level)
+        if self.profession:
+            add("Profession", self.profession)
+        if self.learning_goals:
+            add("Learning goals", ", ".join(self.learning_goals))
+
+        # Behavioral signals (always include, even if 0 / False)
+        add("Frustration signals", self.frustration_signals)
+        add("Critically frustrated", self.is_critically_frustrated)
+        add("Confidence level (1–10)", self.confidence_level)
+
+        # --- Convert behavioral signals into LLM instructions ---
+        # Emotional guidance
+        if self.frustration_signals >= 7:
+            lines.append("- Respond in a highly supportive and very gentle manner.")
+        elif self.frustration_signals >= 3:
+            lines.append("- Respond in a supportive manner, without pressure.")
+        else:
+            lines.append("- Respond in a neutral, professional manner.")
+
+        # Critical state guidance
+        if self.is_critically_frustrated:
+            lines.append("- Avoid evaluative judgments; emphasize encouragement and small steps.")
+
+        # Complexity guidance
+        if self.confidence_level <= 4:
+            lines.append("- Use maximally simple language, avoid jargon.")
+        else:
+            lines.append("- Use standard complexity language suitable for the user's level.")
+
+        return "\n".join(lines)
+

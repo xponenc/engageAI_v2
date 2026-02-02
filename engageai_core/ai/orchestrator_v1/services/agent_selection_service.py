@@ -1,15 +1,13 @@
 import json
 import logging
 from typing import List, Dict, Optional, Any
-from datetime import datetime
 
 from django.core.cache import cache # TODO разбираться с кешем
 
 from ai.llm_service.factory import llm_factory
 from ai.orchestrator_v1.agents.agents_registry import agent_registry
 from ai.orchestrator_v1.context.agent_context import AgentContext
-
-logger = logging.getLogger(__name__)
+from utils.setup_logger import setup_logger
 
 
 class AgentSelectionLLM:
@@ -34,9 +32,13 @@ class AgentSelectionLLM:
     def __init__(self):
         self.llm = llm_factory
         self.cache_ttl = 300  # 5 минут
+        self.logger = setup_logger(name=__file__, log_dir="logs/universal_orchestrator",
+                                   log_file="agent_selection_llm.log")
+
 
     async def select_agents(
             self,
+            request_id: str,
             context: AgentContext,
             force_use_llm: bool = False
     ) -> Dict:
@@ -58,9 +60,10 @@ class AgentSelectionLLM:
             "selection_method": "llm"
         }
         """
+
         # Шаг 1: Проверка кэша
         # cache_key = self._build_cache_key(context)
-        # cached_result = self._get_from_cache(cache_key)
+        # cached_result = self._get_from_cache(request_id=request_id, cache_key=cache_key)
         #
         # if cached_result and not force_use_llm:
         #     logger.debug(f"Выбор агентов из кэша: {cached_result['agent_names']}")
@@ -69,8 +72,6 @@ class AgentSelectionLLM:
         # Шаг 2: Формирование промпта
         system_prompt = self._build_system_prompt()
         user_prompt = self._build_user_prompt(context)
-        print(system_prompt)
-        print(user_prompt)
 
         # Шаг 3: Вызов LLM
         try:
@@ -83,28 +84,24 @@ class AgentSelectionLLM:
                 }
             )
 
-            print(result)
-
             if result.error:
-                logger.error(f"Ошибка выбора агентов через LLM: {result.error}")
+                self.logger.error(f"[REQ:{request_id}] Ошибка выбора агентов через LLM: {result.error}")
                 return self._get_fallback_selection()
 
             # Шаг 4: Парсинг и валидация результата
-            selection = self._parse_and_validate_result(result.response.message)
+            selection = self._parse_and_validate_result(
+                request_id=request_id,
+                llm_response=result.response.message)
 
             # Шаг 5: Кэширование
-            # self._save_to_cache(cache_key, selection)
-
-            logger.info(
-                f"LLM выбрал агентов: {selection['agent_names']} | "
-                f"Уверенность: {selection['confidence']:.2f} | "
-            )
+            # self._save_to_cache(request_id=request_id, cache_key=cache_key, result=selection)
 
             return selection
 
         except Exception as e:
-            logger.error(f"Ошибка при выборе агентов через LLM: {e}", exc_info=True)
+            self.logger.error(f"[REQ:{request_id}] Ошибка при выборе агентов через LLM: {e}", exc_info=True)
             return self._get_fallback_selection()
+
 
     def _build_system_prompt(self) -> str:
         """
@@ -168,58 +165,17 @@ class AgentSelectionLLM:
         - Контекст урока
         - Поведенческие сигналы
         """
-        print(f"_build_user_prompt\n{context=}")
         user_context = context.user_context
+        prompt= f"""
+Контекст ученика:
+{user_context.to_prompt()}
 
-        # Базовый контекст
-        prompt_parts = [
-            f"Сообщение студента: \"{context.user_message}\"",
-            "",
-            "КОНТЕКСТ СТУДЕНТА:",
-            f"- Уровень (CEFR): {user_context.cefr_level}",
-            # f"- Профессиональные теги: {', '.join(context.get_professional_tags()) if context.get_professional_tags() else 'не указаны'}",
-            # f"- Слабые места: {', '.join(context.get_weak_areas()) if context.get_weak_areas() else 'не выявлены'}",
-            # f"- Цели обучения: {', '.join(context.user_context.get_learning_goals()) if context.user_context.get_learning_goals() else 'не указаны'}",
-        ]
+Сообщение ученика: 
+{context.user_message}
+"""
+        return prompt
 
-        # Контекст урока
-        # if context.lesson_context:
-        #     prompt_parts.extend([
-        #         "",
-        #         "КОНТЕКСТ УРОКА:",
-        #         f"- Тип урока: {context.get_lesson_type()}",
-        #         f"- Состояние: {context.get_lesson_state()}",
-        #         f"- Прогресс: {context.lesson_context.progress.progress_percent:.0f}%",
-        #         f"- Последний результат: {context.lesson_context.progress.last_task_result or 'нет данных'}",
-        #     ])
-
-        # Поведенческие сигналы
-        frustration = user_context.confidence_level
-        confidence = user_context.frustration_signals
-
-        prompt_parts.extend([
-            "",
-            "ПОВЕДЕНЧЕСКИЕ СИГНАЛЫ:",
-            f"- Фрустрация: {'да' if frustration else 'нет'}",
-            f"- Уровень уверенности: {confidence}/10",
-            # f"- Текущий стрик дней: {context.user_context.progress.current_streak_days}",
-        ])
-
-        # История разговора (последние 3 сообщения)
-        # if context.conversation_history:
-        #     history = context.conversation_history[-3:]
-        #     if history:
-        #         prompt_parts.extend([
-        #             "",
-        #             "ИСТОРИЯ РАЗГОВОРА (последние 3 сообщения):",
-        #         ])
-        #         for msg in history:
-        #             role = "Студент" if msg.role == "user" else "Ассистент"
-        #             prompt_parts.append(f"- {role}: {msg.content[:100]}")
-
-        return "\n".join(prompt_parts)
-
-    def _parse_and_validate_result(self, llm_response: Any) -> Dict:
+    def _parse_and_validate_result(self,request_id:str, llm_response: Any) -> Dict:
         """
         Парсинг и валидация результата от LLM.
 
@@ -234,7 +190,7 @@ class AgentSelectionLLM:
             try:
                 llm_response = json.loads(llm_response)
             except json.JSONDecodeError:
-                logger.warning(f"Невалидный JSON от LLM: {llm_response}")
+                self.logger.warning(f"[REQ:{request_id}] Невалидный JSON от LLM: {llm_response}")
                 return self._get_fallback_selection()
 
         # Валидация структуры
@@ -245,7 +201,7 @@ class AgentSelectionLLM:
         required_fields = ["agent_names", "reasoning", "confidence"]
         for field in required_fields:
             if field not in llm_response:
-                logger.warning(f"Отсутствует обязательное поле: {field}")
+                self.logger.warning(f"[REQ:{request_id}] Отсутствует обязательное поле: {field}")
                 return self._get_fallback_selection()
 
         # Валидация имён агентов
@@ -276,14 +232,15 @@ class AgentSelectionLLM:
     def _get_fallback_selection(self) -> Dict:
         """
         Фолбэк-выбор агентов при ошибках LLM.
-
-
         """
+        agents_metadata = agent_registry.get_agents_with_metadata()
 
-        # TODO вернуть базовый набор агентов
+        # Формируем описание агентов
+        agents = [agent['name'] for agent in agents_metadata if agent.get("fallback_agent", False) == True]
+
         return {
-            "agent_names": [],
-            "reasoning": "fallback",
+            "agent_names": agents,
+            "reasoning": "fallback on AgentSelectionLLM error",
             "confidence": 0,
             "selection_method": "llm-fallback"
         }
@@ -300,17 +257,17 @@ class AgentSelectionLLM:
         ]
         return "agent_selection_llm:" + "|".join(str(p) for p in key_parts)
 
-    def _get_from_cache(self, cache_key: str) -> Optional[Dict]:
+    def _get_from_cache(self, request_id:str, cache_key: str) -> Optional[Dict]:
         """Получение результата из кэша"""
         try:
             return cache.get(cache_key)
         except Exception as e:
-            logger.warning(f"Ошибка при чтении из кэша: {e}")
+            self.logger.warning(f"[REQ:{request_id}] Ошибка при чтении из кэша: {e}")
             return None
 
-    def _save_to_cache(self, cache_key: str, result: Dict):
+    def _save_to_cache(self,request_id:str, cache_key: str, result: Dict):
         """Сохранение результата в кэш"""
         try:
             cache.set(cache_key, result, timeout=self.cache_ttl)
         except Exception as e:
-            logger.warning(f"Ошибка при записи в кэш: {e}")
+            self.logger.warning(f"[REQ:{request_id}] Ошибка при записи в кэш: {e}")

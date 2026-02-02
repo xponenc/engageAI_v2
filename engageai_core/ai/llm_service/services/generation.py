@@ -109,7 +109,6 @@ class GenerationService:
             conversation_history=conversation_history,
             media_context=media_context,
         )
-        print(f"{messages=}")
 
         try:
             # 2. Генерация
@@ -270,7 +269,6 @@ class GenerationService:
             conversation_history=conversation_history,
             media_context=media_context,
         )
-        print(f"{messages=}")
 
         try:
             # 2. Генерация
@@ -280,7 +278,6 @@ class GenerationService:
                 max_tokens=max_tokens,
                 response_format="text",
             )
-            print(f"{text=}")
 
             # 4. Расчёт стоимости (если не локально)
             cost = self.cost_calculator.calculate(
@@ -335,7 +332,7 @@ class GenerationService:
                 provider=self.provider.__class__.__name__,
                 full_prompt=messages,
                 generation_result=result,  # даже при ошибке
-                context=context_for_logging,
+                context=context,
                 status="ERROR",
                 error_message=str(exc),
             )

@@ -1,22 +1,6 @@
-# curriculum/chat/agents/base.py
-"""
-BaseAgent: Абстрактный базовый класс для всех агентов чат-оркестратора.
-
-Соответствует ТЗ:
-- Задача 1.1: Единый путь для студента через специализированных агентов
-- Задача 2.1: Интеграция с событийной шиной для синхронизации
-- Задача 5.2: Гибкость архитектуры (легко добавить/заменить агентов)
-
-Ключевые принципы архитектуры:
-1. Агент НИКОГДА не игнорирует учебный вопрос студента
-2. Адаптация под эмоциональное состояние = изменение тона/структуры ответа, НЕ замена темы
-3. Все агенты работают в композиции: основной агент = содержание, вспомогательные = адаптация
-4. Единый контекст для всех агентов (состояние урока, цели, уверенность)
-"""
 import abc
 import logging
-from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
+from typing import List
 
 from ai.llm_service.dtos import GenerationResult
 from ai.llm_service.factory import llm_factory
@@ -84,179 +68,7 @@ class BaseAgent(abc.ABC):
        
        Пример:
            version = "2.1"
-    
-    === МЕТОДЫ ЭКЗЕМПЛЯРА ===
-    
-    1. __init__(self)
-       Конструктор агента.
-       
-       Что делает:
-       - Инициализирует доступ к LLM через фабрику
-       - Настраивает логгер для агента
-       - Инициализирует кэш (если используется)
-       
-       Пример:
-           def __init__(self):
-               super().__init__()
-               self.llm = llm_factory
-               self.logger = logging.getLogger(f"{__name__}.{self.name}")
-    
-    2. handle(self, context: AgentContext) -> AgentResponse
-       Основной метод обработки запроса студента.
-       
-       Аргументы:
-           context: AgentContext
-               Полный контекст запроса, включающий:
-               - Сообщение пользователя
-               - Намерение пользователя
-               - Профиль пользователя (уровень, профессия, цели)
-               - Контекст текущего урока
-               - История разговора
-               - Поведенческие сигналы (фрустрация, уверенность)
-       
-       Возвращает:
-           AgentResponse
-               Стандартизированный ответ агента с:
-               - Текстом ответа
-               - Метаданными для аналитики
-               - Флагами для оркестратора
-       
-       Требования:
-           - Метод ДОЛЖЕН быть переопределён в наследниках
-           - Агент ВСЕГДА отвечает по содержанию вопроса студента
-           - Адаптация под эмоциональное состояние происходит НА УРОВНЕ ОРКЕСТРАТОРА
-           - Любая ошибка обрабатывается через фолбэк-агента (не прерывает учебный процесс)
-       
-       Пример:
-           async def handle(self, context: AgentContext) -> AgentResponse:
-               # 1. Формируем промпт с контекстом
-               system_prompt = self._build_system_prompt(context)
-               
-               # 2. Генерируем ответ через LLM
-               response_text, tokens = await self._generate_response_with_llm(
-                   system_prompt=system_prompt,
-                   user_message=context.user_message,
-                   context=context
-               )
-               
-               # 3. Формируем ответ
-               return AgentResponse(
-                   text=response_text,
-                   metadata={
-                       "tokens_used": tokens,
-                       "agent": self.name
-                   }
-               )
-    
-    === ЗАЩИЩЁННЫЕ МЕТОДЫ (для использования в наследниках) ===
-    
-    1. _build_system_prompt(self, context: AgentContext) -> str
-       Формирование системного промпта для LLM с учётом контекста.
-       
-       Что делает:
-       - Включает профиль пользователя (уровень, профессия)
-       - Добавляет слабые места студента
-       - Учитывает эмоциональное состояние (для адаптации тона)
-       - Формулирует требования к ответу (длина, стиль)
-       
-       Пример:
-           def _build_system_prompt(self, context: AgentContext) -> str:
-               return f'''Вы — эксперт по грамматике английского языка.
-               
-               Контекст студента:
-               - Уровень: {context.get_cefr_level()}
-               - Профессия: {", ".join(context.get_professional_tags())}
-               - Слабые места: {", ".join(context.get_weak_areas())}
-               
-               Ваша задача: объяснить правило максимально понятно и кратко.'''
-    
-    2. _generate_response_with_llm(
-           self,
-           system_prompt: str,
-           user_message: str,
-           context: AgentContext,
-           temperature: float = 0.3,
-           max_tokens: int = 500
-       ) -> tuple[str, int]
-       
-       Безопасная генерация ответа через LLM.
-       
-       Что делает:
-       - Вызывает LLM с заданными параметрами
-       - Автоматически логирует вызов для аналитики (Задача 5.1 ТЗ)
-       - Обрабатывает ошибки через фолбэк
-       - Возвращает текст ответа и количество использованных токенов
-       
-       Аргументы:
-           system_prompt: Системный промпт для агента
-           user_message: Сообщение студента
-           context: Контекст для персонализации
-           temperature: Креативность ответа (0.1-0.7)
-           max_tokens: Максимальная длина ответа
-       
-       Возвращает:
-           (текст_ответа: str, токены_использовано: int)
-    
-    === СТАТИЧЕСКИЕ МЕТОДЫ ===
-    
-    1. can_handle_intent(cls, intent: str) -> bool
-       Проверка, может ли агент обрабатывать данное намерение.
-       
-       Возвращает:
-           True, если intent в supported_intents или supported_intents пустой
-           False в противном случае
-    
-    === ПРИМЕР РЕАЛИЗАЦИИ НАСЛЕДНИКА ===
-    
-    ```python
-    class ContentAgent(BaseAgent):
-        \"\"\"Агент для объяснения грамматики и лексики\"\"\"
-        
-        name = "ContentAgent"
-        description = "Объяснение грамматических правил и лексики английского языка"
-        supported_intents = ["EXPLAIN_GRAMMAR", "PRACTICE_VOCABULARY", "ANALYZE_ERROR"]
-        capabilities = ["grammar_explanation", "vocabulary_teaching", "error_analysis"]
-        version = "1.0"
-        
-        async def handle(self, context: AgentContext) -> AgentResponse:
-            # Формируем промпт с полным контекстом
-            system_prompt = self._build_system_prompt(context)
-            
-            # Генерируем ответ через LLM
-            response_text, tokens = await self._generate_response_with_llm(
-                system_prompt=system_prompt,
-                user_message=context.user_message,
-                context=context,
-                max_tokens=400,
-                temperature=0.3
-            )
-            
-            # Формируем ответ
-            return AgentResponse(
-                text=response_text,
-                metadata={
-                    "agent": self.name,
-                    "tokens_used": tokens,
-                    "intent": context.intent.value,
-                    "cefr_level": context.get_cefr_level()
-                }
-            )
-        
-        def _build_system_prompt(self, context: AgentContext) -> str:
-            \"\"\"Формирование промпта с контекстом студента\"\"\"
-            emotional_tone = "поддерживающий" if context.has_frustration() else "нейтральный"
-            
-            return f'''Вы — эксперт по грамматике английского языка.
-            
-            Контекст студента:
-            - Уровень: {context.get_cefr_level()}
-            - Профессия: {", ".join(context.get_professional_tags())}
-            - Слабые места: {", ".join(context.get_weak_areas())}
-            - Эмоциональное состояние: {emotional_tone}
-            
-            Задача: Объясните правило максимально понятно, используйте примеры из профессиональной сферы студента.
-            Максимальная длина ответа: 200 слов.'''
-    ```
+
     """
     
     # === ПОЛЯ КЛАССА (должны быть переопределены в наследниках) ===
@@ -266,6 +78,8 @@ class BaseAgent(abc.ABC):
     supported_intents: List[str] = []
     capabilities: List[str] = []
     version: str = "1.0"
+    response_max_length: int = 300 # ограничение по числу слов в ответе через system_prompt
+    fallback_agent: bool = False # использовать в списке фоллбэк, если сломался алгоритм выбора
     
     def __init__(self):
         """Инициализация агента"""
@@ -273,7 +87,7 @@ class BaseAgent(abc.ABC):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
     
     @abc.abstractmethod
-    async def handle(self, context: AgentContext) -> 'AgentResponse':
+    async def handle(self, context: AgentContext) -> GenerationResult:
         """
         Основной метод обработки запроса студента.
         
@@ -373,23 +187,3 @@ class BaseAgent(abc.ABC):
         return f"<{self.__class__.__name__}: {self.name}>"
 
 
-@dataclass
-class AgentResponse:
-    """
-    Стандартизированный ответ агента для агрегации оркестратором.
-    
-    Структура обеспечивает:
-    - Единый формат для всех агентов
-    - Метаданные для аналитики (Задача 2.3 ТЗ)
-    - Флаги для адаптации ответа оркестратором
-    - Поддержку мультимодальных ответов (текст + действия)
-    """
-    response: GenerationResult
-    metadata: Dict[str, Any] = None
-    suggested_actions: List[str] = None
-    
-    def __post_init__(self):
-        if self.metadata is None:
-            self.metadata = {}
-        if self.suggested_actions is None:
-            self.suggested_actions = []

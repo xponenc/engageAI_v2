@@ -46,6 +46,7 @@ class GenerationResult:
     metrics: GenerationMetrics
     raw_provider_response: Any = None           # для отладки
     error: Optional[Exception] = None
+    metadata: Dict[str, Any] = None
 
 
 class MediaGenerationResult(BaseModel):

@@ -13,6 +13,7 @@ from typing import List, Dict, Optional, Any, Set
 from datetime import datetime
 
 from ai.orchestrator_v1.context.lesson_context import LessonContext
+from ai.orchestrator_v1.context.task_context import TaskContext
 from ai.orchestrator_v1.context.user_context import UserContext
 
 
@@ -164,11 +165,13 @@ class AgentContext:
 
     # === ОСНОВНОЕ СООБЩЕНИЕ ===
     user_message: str
+    action_message: bool # True если пользователь задал вопрос направленно по конкретному уроку или заданию
     # intent: IntentType  # Определённое намерение пользователя
 
     # === КОНТЕКСТЫ ===
     user_context: UserContext  # Глобальный контекст пользователя
-    lesson_context: Optional[LessonContext] = None  # Контекст текущего урока
+    lesson_context: Optional[LessonContext] = None  # Контекст урока с заданиями
+    task_context: Optional[TaskContext] = None  # Контекст задания с уроком
 
     # === ИСТОРИЯ РАЗГОВОРА ===
     # conversation_history: List[ConversationMessage] = field(default_factory=list)

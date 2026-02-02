@@ -2,7 +2,7 @@ import ast
 import json
 
 from django.db.models import Count, Sum, Avg, Q, F, FloatField, ExpressionWrapper, DecimalField, Case, When, Value
-from django.db.models.functions import TruncDate, TruncWeek, TruncMonth, TruncHour, Coalesce
+from django.db.models.functions import TruncDate, TruncWeek, TruncMonth, TruncHour, Coalesce, Greatest
 from django.http import JsonResponse
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -323,11 +323,17 @@ class LLMAnalyticsView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
             avg_cost=Avg('cost_total'),
             avg_tokens=Avg(F('tokens_in') + F('tokens_out')),
             avg_duration=Avg('duration_sec'),
-            cost_share=ExpressionWrapper(
-                Sum('cost_total') * 100.0 / (Sum('cost_total', filter=Q(id__isnull=False)) or 1),
-                output_field=FloatField()
-            )
         ).order_by('-requests')
+
+        # Переносим cost_share в Python (100% безопасно)
+        total_cost = sum(stat['cost'] or 0 for stat in model_stats)
+        model_stats_list = []
+        for stat in model_stats:
+            stat_copy = stat.copy()
+            stat_copy['cost_share'] = (
+                    (stat_copy['cost'] or 0) * 100 / (total_cost or 1)
+            )
+            model_stats_list.append(stat_copy)
 
         # === 4. АНАЛИТИКА ПО ПОЛЬЗОВАТЕЛЯМ (ТОП-10 самых активных) ===
         user_stats = queryset.filter(
@@ -441,7 +447,7 @@ class LLMAnalyticsView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
             'type_stats': list(type_stats),
 
             # Аналитика по моделям (Задача 5.2)
-            'model_stats': list(model_stats),
+            'model_stats': model_stats_list,
 
             # Пользователи
             'user_stats': list(user_stats),

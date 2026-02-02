@@ -1,4 +1,3 @@
-# curriculum/chat/orchestrator.py
 """
 UniversalOrchestrator: Центральный оркестратор чата с композицией агентов.
 
@@ -30,25 +29,21 @@ UniversalOrchestrator: Центральный оркестратор чата с
    - При вызове нескольких агентов — ответы собираются через отдельный агент (TopManager)
    - НЕТ шаблонной конкатенации — естественный, связный текст через LLM
    - TopManager получает все компоненты и формирует финальный ответ
-
-5. КОНТЕКСТНАЯ ИЗОЛЯЦИЯ
-   - Каждый агент получает ТОЛЬКО нужные ему данные через `AgentContextService.build_context_for_agent()`
-   - Базовый агент НЕ содержит бизнес-логики (адаптация через промпт, не постобработку)
 """
 import asyncio
-import logging
 import os
 import sys
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 from datetime import datetime
 
+from ai.llm_service.dtos import GenerationResult, LLMResponse, GenerationMetrics
 from ai.orchestrator_v1.services.lesson_context_service import LessonContextService
+from ai.orchestrator_v1.services.task_context_service import TaskContextService
 from utils.setup_logger import setup_logger
 
 # --- добавляем корень проекта в PYTHONPATH ---
 BASE_DIR = Path(__file__).resolve().parents[2]
-print(BASE_DIR)
 
 sys.path.insert(0, str(BASE_DIR))
 
@@ -62,7 +57,6 @@ import django
 django.setup()
 
 from ai.orchestrator_v1.agents.agents_registry import agent_registry
-from ai.orchestrator_v1.agents.base import AgentResponse
 from ai.orchestrator_v1.context.agent_context import AgentContext
 from ai.orchestrator_v1.services.agent_selection_service import AgentSelectionLLM
 from llm_logger.models import LogLLMRequest, LLMRequestType
@@ -80,16 +74,6 @@ class UniversalOrchestrator:
     - Выбор агентов через LLM с кэшированием
     - Параллельный вызов агентов
     - Агрегация ответов через специализированный агент (TopManager)
-
-    Пример использования:
-    >> orchestrator = UniversalOrchestrator()
-    >> response = await orchestrator.route_message(
-    ..     user_message="Почему здесь Past Perfect?",
-    ..     user_id=42,
-    ..     lesson_id=156
-    .. )
-    >> print(response)
-    "Past Perfect здесь потому, что одно действие завершилось РАНЬШЕ другого в прошлом..."
     """
 
     def __init__(self, use_cache: bool = False, cache_ttl: int = 300):
@@ -129,8 +113,9 @@ class UniversalOrchestrator:
             self,
             user_message: str,
             user_id: int,
+            message_media: Optional[List] = None,
             message_context: Optional[Dict] = None,
-    ) -> str:
+    ) -> GenerationResult:
         """
         Полный цикл обработки сообщения студента.
 
@@ -138,16 +123,17 @@ class UniversalOrchestrator:
         1. Формирование контекста через сервисы (пользователь + урок)
         2. Выбор оптимального набора агентов через LLM
         3. Параллельный вызов всех выбранных агентов
-        4. Агрегация ответов через TopManager (если агентов > 1)
+        4. Агрегация ответов через TopManager
 
         Аргументы:
             user_message: str — сообщение студента
             user_id: int — ID пользователя
-            page_context: Optional[Dict] — контекст с дополнительными параметрам в рамках
+            message_media: медиафайлы в доработке
+            message_context: Optional[Dict] — контекст с дополнительными параметрам в рамках
             которого было отправлено сообщение
 
         Возвращает:
-            str — финальный ответ для студента
+            GenerationResult — финальный ответ для студента
 
         Исключения:
             Любая ошибка обрабатывается через фолбэк, учебный процесс НЕ прерывается
@@ -155,51 +141,43 @@ class UniversalOrchestrator:
         start_time = datetime.now()
         request_id = f"orch_{user_id}_{int(start_time.timestamp())}"
 
-        if message_context:
-            _message_context = {
-                key: value
-                for key, value in {
-                    "page": message_context.get("page"),
-                    "enrollment_id": message_context.get("enrollment_id"),
-                    "course_id": message_context.get("course_id"),
-                    "lesson_id": message_context.get("lesson_id"),
-                    "task_id": message_context.get("task_id"),
-                }.items()
-                if value is not None
-            }
-        else:
-            _message_context = {}
 
-        self.logger.info(f"{request_id} Новый входящий запрос к UniversalOrchestrator: "
-                         f"{user_id=}, {user_message=}, {_message_context=}")
+        self.logger.info(f"[REQ:{request_id}] Новый входящий запрос к UniversalOrchestrator: "
+                         f"{user_id=}, {user_message=}, {message_context=}")
         try:
             # === ЭТАП 1: Формирование контекста ===
-            context = await self._build_context(
+            agent_context = await self._build_context(
                 request_id=request_id,
                 user_message=user_message,
                 user_id=user_id,
-                message_context=_message_context,
+                message_context=message_context,
             )
+
+            self.logger.info(f"[REQ:{request_id}] Сформирован AgentContext")
 
             # === ЭТАП 2: Выбор агентов через LLM ===
             selection = await self.agent_selector.select_agents(
-                context=context,
+                request_id=request_id,
+                context=agent_context,
                 force_use_llm=False  # Использовать кэш при наличии
             )
-            print(f"{selection=}")
+            self.logger.info(f"[REQ:{request_id}] Сформирован выбор агентов: {selection}")
+
+            if selection.get("selection_method") == "llm-fallback":
+                self.logger.error(f"[REQ:{request_id}] Выбор агентов сформирован через fallback")
 
             # === ЭТАП 3: Параллельный вызов агентов ===
             agent_responses = await self._call_agents_parallel(
                 agent_names=selection["agent_names"],
-                base_context=context,
+                agent_context=agent_context,
                 request_id=request_id
             )
-            print(f"{agent_responses=}")
 
             # === ЭТАП 4: Агрегация ответов ===
             final_response = await self._aggregate_responses(
+                request_id=request_id,
                 agent_responses=agent_responses,
-                context=context,
+                agent_context=agent_context,
             )
 
             # === ЭТАП 5: Логирование для аналитики ===
@@ -264,22 +242,32 @@ class UniversalOrchestrator:
 
         user_context = await UserContextService.get_context(user_id=user_id, user_message=user_message)
 
-        page = message_context.get("page")
-        enrollment_id = message_context.get("enrollment_id")
-        course_id = message_context.get("course_id")
-        lesson_id = message_context.get("lesson_id")
-        task_id = message_context.get("task_id")
+        resolve_message_context = self._resolve_context(message_context)
 
-        lesson_context = {}
-        if lesson_id:
-            lesson_context = await LessonContextService.get_context(
-                lesson_id=lesson_id, user_id=user_id, user_message=user_message
+        task_context = None
+        lesson_context = None
+
+        if resolve_message_context["task_id"]:
+            task_context = await TaskContextService.get_context(
+                task_id=resolve_message_context["task_id"],
+                user_id=user_id,
             )
+
+        elif resolve_message_context["lesson_id"]:
+            lesson_context = await LessonContextService.get_context(
+                lesson_id=resolve_message_context["lesson_id"],
+                user_id=user_id,
+                user_message=user_message,
+            )
+
+        action_message = resolve_message_context["source"] == "action"
 
         context = AgentContext(
             user_message=user_message,
+            action_message=action_message,
             user_context=user_context,
             lesson_context=lesson_context,
+            task_context=task_context,
         )
 
         self.logger.debug(
@@ -289,10 +277,33 @@ class UniversalOrchestrator:
 
         return context
 
+    @staticmethod
+    def _resolve_context(_context):
+        message_action_context = _context.get("action_context")
+        message_environment_context = _context.get("environment_context")
+
+        if message_action_context:
+            # Пользователь задал прямой вопрос по данному контексту
+            return {
+                "task_id": message_action_context.get("task_id"),
+                "lesson_id": message_action_context.get("lesson_id"),
+                "source": "action",
+            }
+
+        if message_environment_context:
+            # Пользователь написал вопрос со страницы с данным контекстом
+            return {
+                "task_id": message_environment_context.get("task_id"),
+                "lesson_id": message_environment_context.get("lesson_id"),
+                "source": "environment",
+            }
+
+        return {"task_id": None, "lesson_id": None, "source": None}
+
     async def _call_agents_parallel(
             self,
             agent_names: List[str],
-            base_context: AgentContext,
+            agent_context: AgentContext,
             request_id: str
     ) -> List[dict]:
         """
@@ -303,6 +314,11 @@ class UniversalOrchestrator:
         - Обработка ошибок каждого агента изолирована (ошибка одного не ломает всех)
         - Таймаут 30 секунд на все вызовы
         """
+        self.logger.info(
+            f"[REQ:{request_id}] Запуск агентов: {agent_names}",
+            extra={"request_id": request_id, "agents": agent_names}
+        )
+
         # Формирование задач для параллельного выполнения
         tasks = []
 
@@ -322,15 +338,39 @@ class UniversalOrchestrator:
             # Добавление задачи
             tasks.append(
                 asyncio.wait_for(
-                    agent.handle(base_context),
+                    agent.handle(agent_context),
                     timeout=25.0  # Таймаут на один агент
                 )
             )
 
         # Параллельное выполнение с обработкой ошибок
         if not tasks:
-            self.logger.warning("Нет агентов для вызова — возвращаем фолбэк")
-            return [AgentResponse(text="Я не могу ответить на этот вопрос. Давайте обсудим что-то другое?")]
+            self.logger.error(f"[REQ:{request_id}] Нет агентов для вызова — возвращаем фолбэк")
+            fallback_response = GenerationResult(
+                response=LLMResponse(
+                    message="Я не могу ответить на этот вопрос. Давайте обсудим что-то другое?",
+                    agent_state={},
+                    metadata={"fallback": True, "reason": "no_agents_available"}
+                ),
+                metrics=GenerationMetrics(  # пустые метрики
+                    input_tokens=0,
+                    output_tokens=0,
+                    total_tokens=0,
+                    cost_in=0.0,
+                    cost_out=0.0,
+                    cost_total=0.0,
+                    generation_time_sec=0.0,
+                    model_used="fallback",
+                    cached=False
+                ),
+                metadata={"request_id": request_id, "fallback": True}
+            )
+
+            return [{
+                "agent_name": "system_fallback",
+                "agent_role": "Fallback Agent",
+                "agent_response": fallback_response,
+            }]
 
         # Выполнение всех задач параллельно
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -342,14 +382,18 @@ class UniversalOrchestrator:
 
             if isinstance(result, Exception):
                 self.logger.error(
-                    f"Ошибка агента {agent_name}: {result}",
-                    exc_info=True,
-                    extra={"request_id": request_id}
+                    f"[REQ:{request_id}] Ошибка {agent_name}: {result}",
+                    extra={"request_id": request_id, "agent": agent_name, "error": str(result)}
                 )
                 # Фолбэк для сломанного агента
                 # valid_responses.append(AgentResponse(text=""))
-            elif isinstance(result, AgentResponse):
+            elif isinstance(result, GenerationResult):
                 agent = self._agents_cache[agent_name]
+
+                self.logger.info(
+                    f"[REQ:{request_id}] {agent_name}: OK",
+                    extra={"request_id": request_id, "agent": agent_name}
+                )
 
                 valid_responses.append({
                     "agent_name": agent.__class__.__name__,
@@ -357,76 +401,90 @@ class UniversalOrchestrator:
                     "agent_response": result
                 })
             else:
+                self.logger.warning(
+                    f"[REQ:{request_id}] {agent_name}: invalid result",
+                    extra={"request_id": request_id, "agent": agent_name}
+                )
                 self.logger.warning(f"Невалидный ответ от агента {agent_name}: {type(result)}")
                 # valid_responses.append(AgentResponse(text=""))
 
-        self.logger.debug(f"Вызвано агентов: {len(agent_names)}, успешных: {len(valid_responses)}")
+        self.logger.info(
+            f"[REQ:{request_id}] ИТОГО агентов: {len(valid_responses)}/{len(agent_names)} агентов OK",
+            extra={"request_id": request_id, "success": len(valid_responses), "total": len(agent_names)}
+        )
 
         return valid_responses
 
     async def _aggregate_responses(
             self,
+            request_id: str,
             agent_responses: List[Dict],
-            context: AgentContext,
-    ) -> str:
+            agent_context: AgentContext,
+    ) -> GenerationResult:
         """
-        Агрегация ответов через TopManager.
-
-        Логика:
-        - 1 агент → возвращаем его ответ напрямую (без агрегации)
-        - 2+ агентов → вызываем TopManager для сборки связного текста
-
-        Почему НЕ конкатенация:
-        ❌ "Объяснение: ... [разрыв] Микро-успех: ... [разрыв] Пример: ..."
-        ✅ "Объяснение с плавно вплетённым микро-успехом и примером"
+        Агрегация ответов агентов через TopManager.
         """
         try:
             # Получение TopManager
             top_manager = TopManagerAgent()
 
-            # # Формирование контекста для агрегации
-            # aggregation_context = await top_manager.agg(
-            #     base_context=context,
-            #     extra_={
-            #         "agent_responses": [
-            #             {
-            #                 "agent": resp.metadata.get("agent", f"agent_{i}"),
-            #                 "text": resp.text,
-            #                 "metadata": resp.metadata
-            #             }
-            #             for i, resp in enumerate(agent_responses)
-            #         ],
-            #         "selection_reasoning": selection.get("reasoning", ""),
-            #         "selection_confidence": selection.get("confidence", 0.5)
-            #     }
-            # )
-
             # Вызов агрегатора
             aggregation_result = await asyncio.wait_for(
-                top_manager.handle(agents_responses=agent_responses, context=context),
+                top_manager.handle(agents_responses=agent_responses, agent_context=agent_context),
                 timeout=30.0
             )
-
-            print(aggregation_result)
-
-            self.logger.debug(f"Агрегация завершена: {aggregation_result}")
+            self.logger.debug(f"[REQ:{request_id}] Агрегация завершена: {aggregation_result}")
 
             return aggregation_result
 
         except Exception as e:
-            self.logger.error(f"Ошибка агрегации через TopManager: {e}", exc_info=True)
+            self.logger.error(f"[REQ:{request_id}] Ошибка агрегации через TopManager: {e}", exc_info=True)
 
-            # Фолбэк: умная конкатенация (не идеально, но лучше пустого ответа)
-            parts = []
-            for resp in agent_responses:
-                text = resp.text.strip()
-                if text and len(text) > 5:
-                    parts.append(text)
+            if agent_responses:
+                parts = []
+                for resp_dict in agent_responses:
+                    if isinstance(resp_dict, dict) and 'agent_response' in resp_dict:
+                        agent_resp = resp_dict['agent_response']
+                        if isinstance(agent_resp, GenerationResult) and agent_resp.response:
+                            text = agent_resp.response.message.strip()
+                            if text and len(text) > 5:
+                                parts.append(text)
 
-            if parts:
-                return " ".join(parts[:3])  # Берём первые 3 части
+                if parts:
+                    fallback_message = " ".join(parts[:3])  # первые 3 ответа агентов
+                else:
+                    fallback_message = "Получены ответы агентов, но обработка временно недоступна."
             else:
-                return "Спасибо за ваш вопрос. Я работаю над тем, чтобы дать вам лучший ответ."
+                # нет агентов совсем
+                fallback_message = "Спасибо за ваш вопрос. Я работаю над тем, чтобы дать вам лучший ответ."
+            self.logger.error(f"[REQ:{request_id}] сформирован fallback ответ TopManager: {fallback_message}")
+            return GenerationResult(
+                response=LLMResponse(
+                    message=fallback_message,
+                    agent_state={},
+                    metadata={
+                        "aggregation_failed": True,
+                        "reason": "top_manager_error",
+                        "agent_count": len(agent_responses)
+                    }
+                ),
+                metrics=GenerationMetrics(
+                    input_tokens=0,
+                    output_tokens=len(fallback_message),
+                    total_tokens=len(fallback_message),
+                    cost_in=0.0,
+                    cost_out=0.0,
+                    cost_total=0.0,
+                    generation_time_sec=0.0,
+                    model_used="fallback_aggregation",
+                    cached=False
+                ),
+                metadata={
+                    "request_id": request_id,
+                    "fallback": "aggregation",
+                    "original_agent_count": len(agent_responses)
+                }
+            )
 
     async def _log_orchestration_event(
             self,

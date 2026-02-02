@@ -21,7 +21,6 @@ class PageContextService:
 
         if not user.is_authenticated or not raw_message_context:
             return context
-
         action_context = raw_message_context.get("action_context")
         environment_context = raw_message_context.get("environment_context")
 
@@ -31,7 +30,6 @@ class PageContextService:
             context["action_context"] = {}
         except json.JSONDecodeError:
             pass
-        print(action_payload)
         # --- context objects ---
         obj_type = action_payload.get("type")
         obj_id = action_payload.get("id")

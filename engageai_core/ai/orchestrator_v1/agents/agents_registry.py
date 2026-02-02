@@ -179,7 +179,8 @@ class AgentRegistry:
                 "name": instance.name,
                 "description": instance.description,
                 "supported_intents": instance.supported_intents,
-                "capabilities": instance.capabilities if hasattr(instance, 'capabilities') else []
+                "capabilities": instance.capabilities if hasattr(instance, 'capabilities') else [],
+                "fallback_agent": instance.fallback_agent if hasattr(instance, 'fallback_agent') else False
             })
         return metadata
 

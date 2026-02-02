@@ -1,5 +1,6 @@
 import json
 import logging
+import markdown
 
 from asgiref.sync import async_to_sync
 from django.contrib import messages
@@ -12,7 +13,7 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import ListView
 
-from ai.orchestrator import Orchestrator
+from ai.llm_service.dtos import GenerationResult
 from ai.orchestrator_v1.orchestrator import UniversalOrchestrator
 from ai_assistant.models import AIAssistant
 from .models import Chat, Message, MessageSource, ChatPlatform, MessageType, ChatScope
@@ -904,24 +905,32 @@ class AiChatView(LoginRequiredMixin, View):
         """Формирует AJAX-ответ для чата с поддержкой медиа"""
         return self.message_service.get_ajax_response(user_message, ai_message)
 
-    def _process_ai_response(self, user_id, user_context, page_context):
+    def _process_ai_response(self, user_id:int, user_message: str, message_media: list, message_context: dict):
         """Обрабатывает запрос к AI и возвращает ответ"""
         try:
             o = UniversalOrchestrator()
             ai_response = async_to_sync(o.route_message)(
-                user_message="Не понял я это ваш Past Perfect", user_id=user_id, message_context=page_context)
+                user_id=user_id,
+                user_message=user_message,
+                message_media=message_media,
+                message_context=message_context)
             print(ai_response)
+            if isinstance(ai_response, GenerationResult):
+                ai_message = ai_response.response.message
+                ai_message = markdown.markdown(ai_message)
+            else:
+                ai_message = ai_response
 
-            if not ai_response.get('success', False):
-                logger.warning(f"AI вернул неуспешный ответ: {ai_response}")
-                return {
-                    'text': "Извините, произошла ошибка при генерации ответа.",
-                    'media': []
-                }
+            # if not ai_response.get('success', False):
+            #     logger.warning(f"AI вернул неуспешный ответ: {ai_response}")
+            #     return {
+            #         'text': "Извините, произошла ошибка при генерации ответа.",
+            #         'media': []
+            #     }
 
             return {
-                'text': ai_response.get('response_message', "Извините, я пока не могу ответить на ваш вопрос."),
-                'media': ai_response.get('media_files', [])
+                'text': ai_message,
+                # 'media': ai_response.get('media_files', [])
             }
 
         except Exception as e:
@@ -979,15 +988,14 @@ class AiChatView(LoginRequiredMixin, View):
         #         {"type":"Course","id":{{ enrollment.course.id }}}
         #     ]'>
         # .... data-enrollment-id="{{ enrollment }}"></div>
-        environment_context = request.POST.get("environment_context", [])
-        print(environment_context)
-        action_context = request.POST.get("action_context", {})
+        environment_context = request.POST.get("environment_context", "")
+        action_context = request.POST.get("action_context", "")
         raw_message_context = {
             "environment_context": environment_context,
             "action_context": action_context,
         }
         message_context = PageContextService.validate_data(raw_message_context=raw_message_context, user=request.user)
-        print(message_context)
+
         try:
             with transaction.atomic():
                 # Создаем сообщение пользователя
@@ -1023,23 +1031,24 @@ class AiChatView(LoginRequiredMixin, View):
 
 
                 # Подготавливаем контекст для AI
-                user_context = {
-                    'text': user_message_text,
-                    "message_context": message_context,
-                    'media': [{
+                message_media = [{
                         'url': media.get_absolute_url(),
                         'type': media.file_type,
                         'mime_type': media.mime_type,
                         'path': media.file.path if hasattr(media.file, 'path') else None
                     } for media in user_message.media_files.all()]
-                }
 
                 # Получаем ответ от AI
                 ai_response = self._process_ai_response(
-                    user_id=request.user.id, user_context=user_context)
+                    user_id=request.user.id,
+                    user_message=user_message_text,
+                    message_media=message_media,
+                    message_context=message_context
+                )
                 print(ai_response)
                 ai_message_text = ai_response['text']
-                ai_media_data = ai_response['media']
+                # ai_media_data = ai_response['media']
+                ai_media_data = None
 
                 # Создаем сообщение AI
                 ai_message = self.message_service.create_ai_message(

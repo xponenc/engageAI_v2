@@ -10,6 +10,7 @@ class AssessmentResult:
     Хранит результаты по навыкам и краткое резюме с советами.
     """
     task_id: int
+    is_correct: bool
     cefr_target: str
     skill_evaluation: Dict[str, Dict[str, Any]]
     summary: Dict[str, Any]

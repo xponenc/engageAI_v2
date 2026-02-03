@@ -127,8 +127,9 @@ Rules:
 - Learning_objectives: 1 to 3 objectives per lesson.
   Use format: {{"name": "Use Present Simple for routines", "cefr_level": "A2", "skill_domain": "grammar", "description": "Detailed explanation for methodologists"}}
   Do NOT invent fake identifiers — use logical ones like grammar-A2-01, vocabulary-B1-03, etc.
-- Theory_content: detailed ENGLISH LANGUAGE theory in English (HTML, 1500–2000 characters):
-  explanation of language rules, examples, key phrases, tables, dialogues.
+- Theory_content: detailed ENGLISH LANGUAGE theory in English (HTML, Length: 300–450 words):
+  Must fully explain the language material of the lesson:
+  rule explanation, examples, key phrases, short tables or lists, and short dialogues.
   Professional context may appear ONLY inside examples and dialogues.
 - All text (title, description, theory_content, objective names) must be in ENGLISH.
 

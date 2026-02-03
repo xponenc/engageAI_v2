@@ -1,22 +1,28 @@
 import asyncio
 import json
 import logging
+from typing import Type, TypeVar, Optional
 
-from ai.llm.llm_factory import llm_factory
+from asgiref.sync import async_to_sync
+
+from ai.llm_service.factory import llm_factory
 from curriculum.models.assessment.assessment_result import AssessmentResult
 from curriculum.models.content.task import Task, ResponseFormat
 from curriculum.models.student.student_response import StudentTaskResponse
 from curriculum.services.base_assessment_adapter import AssessmentPort
+from curriculum.validation.task_schemas import TASK_CONTENT_SCHEMAS
+from llm_logger.models import LLMRequestType
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_BLOCK = (
-    """Вы — эксперт по оценке английского языка по шкале CEFR. Оцените ответ студента **только по навыкам,
-     проверяемым заданием**. Используйте шкалу 0.0–1.0. Если навык не проверялся — укажите null.
-      Верните ТОЛЬКО валидный JSON по схеме:
+T = TypeVar("T")
+
+SYSTEM_PROMPT = """
+Вы — эксперт по оценке английского языка по шкале CEFR. Оцените ответ студента **только по навыкам,
+проверяемым заданием**. Используйте шкалу 0.0–1.0. Если навык не проверялся — укажите null.
+Верните ТОЛЬКО валидный JSON по схеме:
 {
-  "task_id": число,
-  "cefr_target": "уровень (например, B1)",
+  "is_correct": True|False правильный или неправильный ответ
   "skill_evaluation": {
     "grammar": {"score": число|null, "confidence": число|null, "evidence": []},
     "vocabulary": {"score": число|null, "confidence": число|null, "evidence": []},
@@ -30,8 +36,8 @@ SYSTEM_BLOCK = (
     "advice": ["практический совет", "..."]
   }
 }
-Никаких пояснений вне JSON. Только JSON."""
-)
+Никаких пояснений вне JSON. Только JSON.
+"""
 
 
 class LLMAssessmentAdapter(AssessmentPort):
@@ -41,111 +47,141 @@ class LLMAssessmentAdapter(AssessmentPort):
 
     def __init__(self):
         # Используем глобальный экземпляр llm_factory
-        self.llm_factory = llm_factory
+        self.llm = llm_factory
 
     def assess_task(self, task: Task, response: StudentTaskResponse) -> AssessmentResult:
-        """
-        Main entry point: assess a single task with LLM.
-        """
+        """Assess a single task with LLM"""
         try:
-            prompt = self._build_prompt(task, response)
-            return self._call_llm(task, prompt)
+            user_message = self._build_user_message(task, response)
+            lesson = task.lesson
+            course = lesson.course
+            user = response.student.user
+            context = {
+                "course_id": course.pk,
+                "lesson_id": lesson.pk,
+                "task_id": task.pk,
+                "user_id": user.id,
+                "request_type": LLMRequestType.TASK_REVIEW,
+            }
+
+            result = self._safe_llm_call(
+                system_prompt=SYSTEM_PROMPT,
+                user_message=user_message,
+                temperature=0.2,
+                context=context,
+                response_format=dict
+            )
+
+            return self._parse_llm_response(payload=result, task=task)
         except Exception as exc:
             raise RuntimeError(f"LLM assessment failed: {exc}") from exc
 
-    # PROMPT CONSTRUCTION
 
-    def _build_context_block(self, task: Task, response: StudentTaskResponse) -> str:
-        prompt = task.content.get("prompt", "").strip()
-        expected_skills = set(task.content.get("expected_skills", []))
+    def _build_user_message(self, task: Task, response: StudentTaskResponse) -> str:
+        lesson = task.lesson
+
+        task_schema_info = self._get_task_schema_info(task.content_schema_version)
+        if task_schema_info:
+            task_schema_info = "Дополнительная информация по заданию:\n" + task_schema_info
 
         # Определяем текст ответа
-        student_text = response.response_text
+        student_response = response.response_text
         if task.response_format == ResponseFormat.AUDIO:
-            student_text = getattr(response, "transcript", None)
+            student_response = getattr(response, "transcript", None)
 
         # Обработка отсутствующего/некорректного ответа
-        if not student_text or not student_text.strip():
-            student_text = "[No valid student response provided]"
+        if not student_response or not student_response.strip():
+            student_response = "[No valid student response provided]"
 
-        # Формируем контекст, ориентируясь на то, что модельу действительно нужно
-        lines = [
-            f"CEFR target level: {task.difficulty_cefr}",
-            "",
-            "Задание:",
-            prompt,
-            "",
-            "Skills to assess (ONLY these):",
-            ", ".join(sorted(expected_skills)) if expected_skills else "None specified",
-            "",
-            "Ответ студента:",
-            student_text.strip()
-        ]
+        prompt = f"""
+Оцените ответ ученика
+        
+Урок:
+Lesson title: {lesson.title}
+Lesson description: {lesson.description}
+Lesson CEFR level: {lesson.cefr_level}
 
-        return "\n".join(lines)
+Оцениваемое задание:
+CEFR level: {task.difficulty_cefr}
+Content: {task.content}
 
-    def _build_prompt(self, task: Task, response: StudentTaskResponse) -> str:
-        context_block = self._build_context_block(task, response)
-        return f"""
-    {context_block}
+{task_schema_info}
 
-    """
+Ответ студента:
+{student_response}
+        """
+        return prompt
 
-    # LLM CALL
-    def _call_llm(self, task: Task, prompt: str) -> AssessmentResult:
-        # loop = asyncio.new_event_loop()
-        # result = loop.run_until_complete(
-        #     self.llm_factory.generate_json_response(
-        #         system_prompt=SYSTEM_BLOCK,
-        #         user_message=prompt,
-        #         conversation_history=[],
-        #         media_context=self._get_media_context(task),
-        #     )
-        # )
-        # return self._parse_llm_response(result)
-        result = self.llm_factory.generate_json_response(
-            system_prompt=SYSTEM_BLOCK,
-            user_message=prompt,
-            conversation_history=[],
-            media_context=self._get_media_context(task),
-        )
-        return self._parse_llm_response(result)
+    def _get_task_schema_info(self, schema_name: str) -> str:
+        """
+        Возвращает данные о схеме задачи из TASK_CONTENT_SCHEMAS
+        """
+        task_schema = TASK_CONTENT_SCHEMAS.get(schema_name, {})
+        parts: list[str] = []
 
-    # RESPONSE PARSING
+        skills = task_schema.get("supported_skills")
+        if skills:
+            parts.append(f"Assessed skills: {', '.join(skills)}")
 
-    def _parse_llm_response(self, result) -> AssessmentResult:
+        response_format = task_schema.get("response_format")
+        if response_format:
+            parts.append(f"Expected response format: {response_format}")
+
+        description = task_schema.get("description")
+        if description:
+            parts.append(f"Task goal for the learner: {description}")
+
+        return "\n".join(parts)
+
+    def _safe_llm_call(self,
+                             system_prompt: str,
+                             user_message: str,
+                             response_format: Type[T],
+                             temperature: Optional[float] = None,
+                             context: Optional[dict] = None) -> T:
+        """
+        Безопасный вызов LLM с обработкой ошибок и логированием.
+        """
+        try:
+            result = async_to_sync(self.llm.generate_json_response)(
+                system_prompt=system_prompt,
+                user_message=user_message,
+                temperature=temperature,
+                context=context
+            )
+
+            if result.error:
+                logger.error(f"LLM error: {result.error}", extra={"raw_response": result.raw_provider_response})
+                raise ValueError(f"LLM generation failed: {result.error}")
+
+            data = result.response.message
+            if not isinstance(data, response_format):
+                raise ValueError(f"Invalid LLM response format: expected {response_format}, got {type(data).__name__}")
+
+            return data
+
+        except Exception as e:
+            logger.exception("Critical error during LLM call",
+                             extra={"system_prompt": system_prompt[:100], "user_message": user_message[:100],
+                                    "context": context})
+            raise
+
+    def _parse_llm_response(self, payload: dict, task: Task) -> AssessmentResult:
         """
         Конвертация ответа LLM в валидный AssessmentResult
         """
 
-        # result.response — это dict
-        llm_payload = result.response
-        print("_parse_llm_response llm_payload =", llm_payload)
-
-        raw = llm_payload.get("response")
-        print("_parse_llm_response raw =", raw)
-
-        if not raw or not isinstance(raw, str) or not raw.strip():
-            raise ValueError("Empty LLM response")
-
-        try:
-            payload = json.loads(raw)
-        except json.JSONDecodeError as e:
-            logger.error("LLM returned non-JSON:\n%s", raw)
-            raise RuntimeError("LLM returned invalid JSON") from e
-
-        print("_parse_llm_response parsed payload =", payload)
-
         # Проверка наличия ключевых полей
-        if "skill_evaluation" not in payload or "summary" not in payload:
+        if "skill_evaluation" not in payload or "summary" not in payload or "is_correct" not in payload:
             logger.warning(
                 "Invalid LLM response format for task_id %s: missing 'skill_evaluation' or 'summary'",
                 payload.get("task_id")
             )
             # Возвращаем нейтральный AssessmentResult
             return AssessmentResult(
-                task_id=payload.get("task_id", -1),
-                cefr_target=payload.get("cefr_target", ""),
+                is_correct=False,
+                task_id=task.pk,
+                cefr_target=task.difficulty_cefr,
                 skill_evaluation={
                     skill: {"score": 0.5, "confidence": 0.5, "evidence": []}
                     for skill in ["grammar", "vocabulary", "reading", "listening", "writing", "speaking"]
@@ -156,8 +192,9 @@ class LLMAssessmentAdapter(AssessmentPort):
 
         # Валидация и создание AssessmentResult
         return AssessmentResult(
-            task_id=payload.get("task_id"),
-            cefr_target=payload.get("cefr_target", ""),
+            is_correct=payload.get("is_correct"),
+            task_id=task.pk,
+            cefr_target=task.difficulty_cefr,
             skill_evaluation=payload["skill_evaluation"],
             summary=payload["summary"],
             metadata={"raw_llm": payload}  # сохраняем весь ответ для аудита

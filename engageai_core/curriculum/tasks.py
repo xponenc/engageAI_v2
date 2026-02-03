@@ -1,15 +1,17 @@
 import json
 import os
+from platform import system
 
 import requests
+from asgiref.sync import async_to_sync
 from celery import shared_task, chain, group
 from celery.exceptions import SoftTimeLimitExceeded
 import logging
 
 from django.utils import timezone
 
-from ai.llm.llm_factory import llm_factory
-from curriculum.models.assessment.lesson_assesment import LessonAssessmentResult
+from ai.llm_service.factory import llm_factory
+from curriculum.models.assessment.lesson_assesment import LessonAssessmentResult, AssessmentStatus
 from curriculum.models.assessment.task_assessment import TaskAssessmentResult
 from curriculum.models.content.lesson import Lesson
 from curriculum.models.content.task import Task
@@ -20,6 +22,7 @@ from curriculum.services.auto_assessment_adapter import AutoAssessorAdapter
 from curriculum.services.decision_service import DecisionService
 from curriculum.services.lesson_event_service import LessonEventService
 from curriculum.services.llm_assessment_adapter import LLMAssessmentAdapter
+from llm_logger.models import LLMRequestType
 
 logger = logging.getLogger(__name__)
 
@@ -144,16 +147,17 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
 
     lesson = Lesson.objects.get(id=assessed_lesson_id)
     try:
-
-        print(f"{lesson=}")
-
         logger.info(f"Оценка урока {lesson.title} ({assessed_lesson_id}) для enrollment {enrollment_id}")
 
         # Все ответы по этому уроку
         responses = StudentTaskResponse.objects.filter(
             enrollment=enrollment,
             task__lesson=lesson
-        ).select_related('task')
+        ).select_related(
+            'task', 'task__lesson__course', 'student__user',
+        ).prefetch_related(
+            'assessment'
+        )
         print(f"{responses=}")
 
         if not responses:
@@ -164,25 +168,30 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
 
         total_score = 0.0
         task_count = responses.count()
+        task_assessments = []
 
         for resp in responses:
             task = resp.task
-
+            # TODO проверка уже отвеченных задач
             if task.response_format in AutoAssessorAdapter.SUPPORTED_FORMATS:
                 result = auto_adapter.assess_task(task, resp)
             else:
                 result = llm_adapter.assess_task(task, resp)
-
+            print(task)
+            print(resp)
+            print(result)
             # Сохраняем результат оценки задания
-            TaskAssessmentResult.objects.create(
+            task_assessment = TaskAssessmentResult.objects.create(
                 enrollment=enrollment,
                 task=task,
                 response=resp,
                 score=result.skill_evaluation.get(task.task_type, {}).get("score"),
                 feedback=result.summary.get("text", ""),
                 structured_feedback=result.skill_evaluation,
-                is_correct=result.skill_evaluation.get(task.task_type, {}).get("score", 0) >= 0.8
+                # is_correct=result.skill_evaluation.get(task.task_type, {}).get("score", 0) >= 0.8
+                is_correct=result.is_correct
             )
+            task_assessments.append(task_assessment)
 
             total_score += result.skill_evaluation.get(task.task_type, {}).get("score", 0.0) or 0.0
 
@@ -193,28 +202,70 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
             enrollment=enrollment,
             lesson=lesson,
             overall_score=overall_score,
-            status='COMPLETED',
-            completed_at=timezone.now()
+            status=AssessmentStatus.PROCESSING,
         )
+        user_message = f"Дайте экспертную оценку по уроку.\nУровень CEFR ученика {enrollment.student.english_level}\n"
+        for response in responses:
+            task = response.task
+            assessment = response.assessment
+            user_message += f"""
+Задание:
+ - № {task.order}
+ - Контекст: 
+{json.dumps(task.context, indent=2, ensure_ascii=False)}
+
+ - Ответ ученика:
+{response.response_text or responses.transcript}
+
+ - Оценка:
+    Правильность: {assessment.is_correct}
+    Отзыв {assessment.feedback} 
+    Оценка skills: {json.dumps(assessment.structured_feedback, indent=2, ensure_ascii=False)}
+             """
 
         # Итоговое резюме LLM по уроку
-        summary_prompt = f"""
-        Подведи итог урока для студента уровня {enrollment.student.english_level}.
-        Общий score: {overall_score:.2f}
+        system_prompt = f"""
+Вы — эксперт по оценке английского языка по шкале CEFR. Оцените ответ студента результат студента о прохождении урока
+ и усвоении знаний по результатам тестовых заданий. В ответе укажите краткое резюме по результатам урока (2–3 предложения), 
+ 2–3 конкретные рекомендации по улучшению и рекомендацию по учебному плану: повторить урок/следующий урок.
+ 
+ Ответ дайте в формате JSON:
+ {{
+ "resume": "краткое резюме по результатам урока",
+ "recommendations": "рекомендации по улучшению",
+ "learning_plan": "рекомендация по учебному плану",
+ }}
         """
-        user_message = f"""Задания: {json.dumps({r.task.id: r.score for r in responses}, indent=2)}
-
-        Дай краткое резюме (2–3 предложения) и 2–3 конкретные рекомендации по улучшению.
-        """
-        print(summary_prompt)
+        print(system_prompt)
         print(user_message)
 
-        summary_response = llm_factory.generate_json_response(
-            system_prompt=summary_prompt,
-            user_message=user_message,
-        )
-        lesson_result.llm_summary = summary_response.get("text", "")
-        lesson_result.llm_recommendations = "\n".join(summary_response.get("advice", []))
+        context = {
+            "course_id":  enrollment.course.pk,
+            "lesson_id": lesson.pk,
+            "user_id": enrollment.student.user.id,
+            "request_type": LLMRequestType.LESSON_REVIEW,
+        }
+
+        result = async_to_sync(self.llm.generate_json_response)(
+                system_prompt=system_prompt,
+                user_message=user_message,
+                temperature=0.1,
+                context=context
+            )
+
+        if result.error:
+            logger.error(f"LLM error: {result.error}", extra={"raw_response": result.raw_provider_response})
+            raise ValueError(f"LLM generation failed: {result.error}")
+
+        summary_response = result.response.message
+        if not isinstance(summary_response, dict):
+            raise ValueError(f"Invalid LLM response format: expected {dict}, got {type(summary_response).__name__}")
+
+
+        lesson_result.llm_summary = summary_response.get("resume", "")
+        lesson_result.llm_recommendations = (summary_response.get("recommendations", ""))
+        lesson_result.status = AssessmentStatus.COMPLETED,
+        lesson_result.completed_at = timezone.now()
         lesson_result.save()
 
         # Создаём событие завершения оценки

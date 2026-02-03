@@ -6,6 +6,7 @@ from curriculum.models.content.response_format import ResponseFormat
 from curriculum.models.content.task import Task
 from curriculum.models.student.student_response import StudentTaskResponse
 from curriculum.services.base_assessment_adapter import AssessmentPort
+from curriculum.validation.task_schemas import TASK_CONTENT_SCHEMAS
 from curriculum.validators import SkillDomain
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ class AutoAssessorAdapter(AssessmentPort):
     SUPPORTED_FORMATS = {
         ResponseFormat.SINGLE_CHOICE: ['scq_v1'],
         ResponseFormat.MULTIPLE_CHOICE: ['mcq_v1'],
-        ResponseFormat.SHORT_TEXT: ['short_text_v1'],
+        # ResponseFormat.SHORT_TEXT: ['short_text_v1'],
     }
 
     def assess_task(self, task: Task, response: StudentTaskResponse) -> AssessmentResult:
@@ -50,26 +51,62 @@ class AutoAssessorAdapter(AssessmentPort):
             logger.error(f"Auto assessment failed for task {task.id}: {str(e)}", exc_info=True)
             return self._neutral_assessment(task, error_tags=["assessment_error"])
 
-    def _validate_format_schema(self, task: Task):
-        fmt = task.response_format
-        schema = task.content_schema_version
 
-        if fmt not in self.SUPPORTED_FORMATS:
-            raise SchemaValidationError(f"Формат {fmt} не поддерживается автооценщиком")
+    def _validate_format_schema(self, task: Task) -> None:
+        """
+        Проверяет, что формат ответа задания и версия схемы контента
+        поддерживаются автооценщиком, а также что все обязательные поля
+        присутствуют в content задания.
 
-        if schema not in self.SUPPORTED_FORMATS[fmt]:
-            raise SchemaValidationError(f"Схема {schema} не поддерживается для формата {fmt}")
+        Этапы валидации:
+        1. Проверка, что формат ответа поддерживается автооценщиком.
+        2. Проверка, что версия схемы разрешена для данного формата ответа.
+        3. Загрузка определения схемы из TASK_CONTENT_SCHEMAS.
+        4. Проверка наличия всех обязательных полей,
+           определённых схемой, в task.content.
 
-        # Дополнительная проверка наличия нужных полей в content
-        required = {
-            'scq_v1': ['prompt', 'options', 'correct_idx'],
-            'mcq_v1': ['prompt', 'options', 'correct_indices', 'min_selections', 'max_selections'],
-            'short_text_v1': ['prompt', 'correct', 'case_sensitive'],
-        }.get(schema, [])
+        Исключения:
+            SchemaValidationError:
+                - если формат ответа не поддерживается
+                - если схема не совместима с форматом ответа
+                - если определение схемы отсутствует
+                - если в task.content отсутствуют обязательные поля
+        """
 
-        missing = [f for f in required if f not in task.content]
-        if missing:
-            raise SchemaValidationError(f"Отсутствуют обязательные поля в content: {missing}")
+        response_format = task.response_format
+        schema_name = task.content_schema_version
+
+        # 1. Validate response format
+        if response_format not in self.SUPPORTED_FORMATS:
+            raise SchemaValidationError(
+                f"Response format '{response_format}' is not supported by the auto-grader"
+            )
+
+        # 2. Validate schema compatibility with response format
+        if schema_name not in self.SUPPORTED_FORMATS[response_format]:
+            raise SchemaValidationError(
+                f"Schema '{schema_name}' is not supported for response format '{response_format}'"
+            )
+
+        # 3. Load schema definition
+        schema_definition = TASK_CONTENT_SCHEMAS.get(schema_name)
+        if not schema_definition:
+            raise SchemaValidationError(
+                f"Unknown task content schema: '{schema_name}'"
+            )
+
+        # 4. Validate required content fields
+        required_fields = schema_definition.get("required", set())
+
+        missing_fields = [
+            field for field in required_fields
+            if field not in task.content
+        ]
+
+        if missing_fields:
+            raise SchemaValidationError(
+                f"Missing required fields in task content: {missing_fields}"
+            )
 
     def _neutral_assessment(self, task: Task, error_tags=None):
         error_tags = error_tags or []
@@ -81,6 +118,7 @@ class AutoAssessorAdapter(AssessmentPort):
                 skill_eval[skill] = {"score": None, "confidence": None, "evidence": []}
 
         return AssessmentResult(
+            is_correct=False,
             task_id=task.pk,
             cefr_target="N/A",
             skill_evaluation=skill_eval,
@@ -118,6 +156,7 @@ class AutoAssessorAdapter(AssessmentPort):
             }
 
             return AssessmentResult(
+                is_correct=is_correct,
                 task_id=task.pk,
                 cefr_target="N/A",
                 skill_evaluation=skill_eval,
@@ -197,6 +236,7 @@ class AutoAssessorAdapter(AssessmentPort):
             }
 
             return AssessmentResult(
+                is_correct=False,
                 task_id=task.pk,
                 cefr_target="N/A",
                 skill_evaluation=skill_eval,
@@ -314,6 +354,7 @@ class AutoAssessorAdapter(AssessmentPort):
             }
 
             return AssessmentResult(
+                is_correct=True if set(student_indices)==set(correct_indices) else False,
                 task_id=task.pk,
                 cefr_target="N/A",
                 skill_evaluation=skill_eval,
@@ -381,6 +422,7 @@ class AutoAssessorAdapter(AssessmentPort):
                 }
 
                 return AssessmentResult(
+                    is_correct=False,
                     task_id=task.pk,
                     cefr_target="N/A",
                     skill_evaluation=skill_eval,
@@ -440,6 +482,7 @@ class AutoAssessorAdapter(AssessmentPort):
             }
 
             return AssessmentResult(
+                is_correct=is_correct,
                 task_id=task.pk,
                 cefr_target="N/A",
                 skill_evaluation=skill_eval,

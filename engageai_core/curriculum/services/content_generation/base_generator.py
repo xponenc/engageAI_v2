@@ -49,7 +49,7 @@ class BaseContentGenerator(ABC):
                 system_prompt=system_prompt,
                 user_message=user_message,
                 temperature=temperature,
-                context=context or {}
+                # context=context or {}
             )
 
             if result.error:

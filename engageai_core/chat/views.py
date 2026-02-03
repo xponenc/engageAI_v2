@@ -16,6 +16,7 @@ from django.views.generic import ListView
 from ai.llm_service.dtos import GenerationResult
 from ai.orchestrator_v1.orchestrator import UniversalOrchestrator
 from ai_assistant.models import AIAssistant
+from llm_logger.models import LLMRequestType
 from .models import Chat, Message, MessageSource, ChatPlatform, MessageType, ChatScope
 from chat.services.interfaces.ai_message_service import AiMediaService
 from .services.interfaces.chat_service import ChatService
@@ -913,7 +914,9 @@ class AiChatView(LoginRequiredMixin, View):
                 user_id=user_id,
                 user_message=user_message,
                 message_media=message_media,
-                message_context=message_context)
+                message_context=message_context,
+                request_type=LLMRequestType.CHAT
+            )
             print(ai_response)
             if isinstance(ai_response, GenerationResult):
                 ai_message = ai_response.response.message

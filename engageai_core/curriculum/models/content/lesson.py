@@ -48,6 +48,7 @@ class Lesson(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True, verbose_name=_("Is Active"))
+    metadata = models.JSONField(default=dict, verbose_name=_("Metadata"))
 
     class Meta:
         verbose_name = _("Lesson")

@@ -108,43 +108,51 @@ class LessonGenerationService(BaseContentGenerator):
                          " writing, speaking. Choose 1–3 relevant skills")
         system_prompt = """You are an expert English curriculum designer. """
         user_prompt = f"""
-                       Generate ONE lesson for course: 
-                       "{course.title if course else 'Adaptive professional English'}".
-                       Lesson CEFR level: {level}
-                       {professional_tags_str}
-                       {focus_str}
+Generate ONE lesson for course: 
+This is an ENGLISH LANGUAGE lesson. The learner studies English, not a profession.
 
-                       Rules:
-                       - skill_focus: array of EXACTLY these values only: grammar, vocabulary, reading, listening, writing, speaking. No more than 3.
-                       - learning_objectives: 1 to 3 objectives per lesson.
-                         Use format: {{"name": "Use Present Simple for routines", "cefr_level": "A2", "skill_domain": "grammar", "description": "Detailed explanation for methodologists"}}
-                         Do NOT invent fake identifiers — use logical ones like grammar-A2-01, vocabulary-B1-03, etc.
-                       - theory_content: detailed lesson theory in English (HTML, 1500–2000 characters): explanation, examples, key phrases, tables, dialogues.
-                       - All text (title, description, theory_content, objective names) must be in ENGLISH.
+"{course.title if course else 'Adaptive professional English'}".
+Lesson CEFR level: {level}
+{professional_tags_str}
+{focus_str}
 
-                       Return ONLY a valid JSON (no comments, no text):
-                       [
-                           {{
-                               "title": "short, attractive title in English",
-                               "description": "150–250 characters in English",
-                               "duration_minutes": int (20–40),
-                               "skill_focus": ["grammar", "vocabulary"],
-                               "theory_content": "HTML or Markdown text of the theory in English (1000–1500 characters)",
-                               "theory_content_ru": "HTML or Markdown — an exact translation of theory_content into Russian (same length, same formatting, do not translate important terms, you can limit yourself to translating explanations)",
-                               "learning_objectives": [
-                                   {{"name": "Use Present Simple for routines", "cefr_level": "A2", "skill_domain": "grammar", "description": "Detailed explanation for methodologists"}},
-                                   ...
-                               ]
-                           }}
-                       ]
+Rules:
+- PRIMARY GOAL: teaching ENGLISH language skills.
+  The lesson title, description, objectives, and theory must explicitly focus on learning English.
+  Professional or thematic context is SECONDARY and may be used ONLY as examples, situations, dialogues, or vocabulary context.
+- Professional or thematic context must NOT dominate the lesson.
+  Do NOT teach the profession itself.
+  Use professional context only to illustrate grammar, vocabulary, or communication in English.
+- Skill_focus: array of EXACTLY these values only: grammar, vocabulary, reading, listening, writing, speaking. No more than 3.
+- Learning_objectives: 1 to 3 objectives per lesson.
+  Use format: {{"name": "Use Present Simple for routines", "cefr_level": "A2", "skill_domain": "grammar", "description": "Detailed explanation for methodologists"}}
+  Do NOT invent fake identifiers — use logical ones like grammar-A2-01, vocabulary-B1-03, etc.
+- Theory_content: detailed ENGLISH LANGUAGE theory in English (HTML, 1500–2000 characters):
+  explanation of language rules, examples, key phrases, tables, dialogues.
+  Professional context may appear ONLY inside examples and dialogues.
+- All text (title, description, theory_content, objective names) must be in ENGLISH.
+
+Return ONLY a valid JSON (no comments, no text):
+[
+   {{
+       "title": "title": "short, attractive title in English with a clear focus on learning English (grammar, vocabulary, or communication), not the profession",
+       "description": "description": "150–250 characters in English explaining what ENGLISH SKILL the learner will practice; professional context may be mentioned only as an example",
+       "duration_minutes": int (20–40),
+       "skill_focus": ["grammar", "vocabulary"],
+       "theory_content": "HTML or Markdown text of the theory in English (1000–1500 characters)",
+       "theory_content_ru": "HTML or Markdown — an exact translation of theory_content into Russian (same length, same formatting, do not translate important terms, you can limit yourself to translating explanations)",
+       "learning_objectives": [
+           {{"name": "Use Present Simple for routines", "cefr_level": "A2", "skill_domain": "grammar", "description": "Detailed explanation for methodologists"}},
+           ...
+       ]
+   }}
+]
                        """
         context = {
             "course_id": course.pk,
             "user_id": user_id,
             "request_type": LLMRequestType.LESSON_GENERATION.value,
         }
-
-        print(user_prompt)
 
         data = await self._safe_llm_call(
             system_prompt=system_prompt,

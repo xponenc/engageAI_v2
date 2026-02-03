@@ -1,6 +1,7 @@
 from ai.llm_service.dtos import GenerationResult
 from ai.orchestrator_v1.agents.base import BaseAgent
 from ai.orchestrator_v1.context.agent_context import AgentContext
+from llm_logger.models import LLMRequestType
 
 
 class ContentAgent(BaseAgent):
@@ -10,7 +11,7 @@ class ContentAgent(BaseAgent):
     response_max_length = 300 # максимальная длина ответа
     fallback_agent = True
 
-    async def handle(self, context: AgentContext, response_max_length: int = None) -> GenerationResult:
+    async def handle(self, context: AgentContext, request_type: LLMRequestType, response_max_length: int = None) -> GenerationResult:
         """
         Промпт уже включает контекст для персонализации:
         - Уровень студента (CEFR)
@@ -27,7 +28,11 @@ class ContentAgent(BaseAgent):
             user_message=user_message,
             max_tokens=response_max_length or self.response_max_length,
             temperature=0.3,
-            context={"agent": self.name, "user_id": context.user_context.user_id}
+            context={
+                "agent": f"{self.__class__.__name__}: {self.name}",
+                "user_id": context.user_context.user_id,
+                "request_type": LLMRequestType.CHAT.value
+            }
         )
         return result
 

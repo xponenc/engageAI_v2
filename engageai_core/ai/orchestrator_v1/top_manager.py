@@ -4,6 +4,7 @@ from typing import List, Dict
 from ai.llm_service.dtos import GenerationResult
 from ai.llm_service.factory import llm_factory
 from ai.orchestrator_v1.context.agent_context import AgentContext
+from llm_logger.models import LLMRequestType
 
 
 class TopManagerAgent:
@@ -12,10 +13,6 @@ class TopManagerAgent:
 
     Задача: Принять ответы от основного и вспомогательных агентов,
     собрать гармоничный финальный ответ через LLM.
-
-    Почему НЕ шаблонное конкатенирование:
-    ❌ "Объяснение: ... [разрыв] Микро-успех: ... [разрыв] Пример: ..."
-    ✅ Единый связный текст с плавными переходами
 
     Пример:
     Вход:
@@ -39,6 +36,7 @@ class TopManagerAgent:
 
     async def handle(
             self,
+            request_type: LLMRequestType,
             agents_responses: List[Dict],
             agent_context: AgentContext,
             response_max_length: int = None
@@ -94,7 +92,9 @@ class TopManagerAgent:
             user_message=user_prompt,
             temperature=0.1,  # Низкая креативность для сохранения смысла
             context= {
-                "user_id": user_context.user_id,
+                   "user_id": user_context.user_id,
+                    "request_type": request_type,
+                    "agent": f"{self.__class__.__name__}: {self.name}",
             }
         )
 

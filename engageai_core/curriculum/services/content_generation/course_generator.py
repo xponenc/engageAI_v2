@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Optional
+from typing import Optional, Dict
 
 from asgiref.sync import sync_to_async
 from django.db import transaction
@@ -68,7 +68,7 @@ class CourseGenerationService(BaseContentGenerator):
             self.logger.exception(
                 f"КРИТИЧЕСКАЯ ОШИБКА: не удалось сгенерировать теги для курса '{course.title}'",
                 extra={
-                    "course_id": course.id,
+                    "course_id": course.pk,
                     "theme": theme,
                     "error_type": type(e).__name__
                 }
@@ -80,13 +80,13 @@ class CourseGenerationService(BaseContentGenerator):
             await self._create_and_attach_tags(tags_data, course)
             self.logger.info(
                 f"Успешно привязано {len(tags_data)} тегов к курсу '{course.title}'",
-                extra={"course_id": course.id, "tags_count": len(tags_data)}
+                extra={"course_id": course.pk, "tags_count": len(tags_data)}
             )
         except Exception as e:
             self.logger.exception(
                 f"Ошибка привязки тегов к курсу '{course.title}'",
                 extra={
-                    "course_id": course.id,
+                    "course_id": course.pk,
                     "tags_count": len(tags_data),
                     "error_type": type(e).__name__
                 }
@@ -98,12 +98,12 @@ class CourseGenerationService(BaseContentGenerator):
             await self._create_course_balance(course)
             self.logger.info(
                 f"Баланс уроков создан для курса '{course.title}'",
-                extra={"course_id": course.id}
+                extra={"course_id": course.pk}
             )
         except Exception as e:
             self.logger.exception(
                 f"Ошибка создания баланса уроков для курса '{course.title}'",
-                extra={"course_id": course.id, "error_type": type(e).__name__}
+                extra={"course_id": course.pk, "error_type": type(e).__name__}
             )
             raise
 
@@ -140,7 +140,7 @@ class CourseGenerationService(BaseContentGenerator):
             is_active=True
         )
 
-    async def _generate_professional_tags_data(self, theme: str, course: Course, user_id: Optional[int] = None,) -> list[str]:
+    async def _generate_professional_tags_data(self, theme: str, course: Course, user_id: Optional[int] = None,) -> list[Dict]:
         system_prompt = """
         You are an expert curriculum designer for professional English courses.
 

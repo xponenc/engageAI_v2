@@ -7,6 +7,7 @@ from django.core.cache import cache # TODO разбираться с кешем
 from ai.llm_service.factory import llm_factory
 from ai.orchestrator_v1.agents.agents_registry import agent_registry
 from ai.orchestrator_v1.context.agent_context import AgentContext
+from llm_logger.models import LLMRequestType
 from utils.setup_logger import setup_logger
 
 
@@ -28,6 +29,7 @@ class AgentSelectionLLM:
     - Использовать кэширование для частых комбинаций
     - Для простых случаев можно использовать правила как фолбэк
     """
+    name = "AgentSelectionLLM"
 
     def __init__(self):
         self.llm = llm_factory
@@ -39,6 +41,7 @@ class AgentSelectionLLM:
     async def select_agents(
             self,
             request_id: str,
+            request_type: LLMRequestType,
             context: AgentContext,
             force_use_llm: bool = False
     ) -> Dict:
@@ -81,6 +84,8 @@ class AgentSelectionLLM:
                 temperature=0.2,  # Низкая креативность для консистентности
                 context={
                     "user_id": context.user_context.user_id,
+                    "request_type": request_type,
+                    "agent": f"{self.__class__.__name__}: {self.name}",
                 }
             )
 

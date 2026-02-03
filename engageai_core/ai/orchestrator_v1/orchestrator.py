@@ -59,7 +59,7 @@ django.setup()
 from ai.orchestrator_v1.agents.agents_registry import agent_registry
 from ai.orchestrator_v1.context.agent_context import AgentContext
 from ai.orchestrator_v1.services.agent_selection_service import AgentSelectionLLM
-from llm_logger.models import LogLLMRequest, LLMRequestType
+from llm_logger.models import LLMRequestType
 from ai.orchestrator_v1.services.user_context_service import UserContextService
 from ai.orchestrator_v1.top_manager import TopManagerAgent
 
@@ -113,6 +113,7 @@ class UniversalOrchestrator:
             self,
             user_message: str,
             user_id: int,
+            request_type: LLMRequestType,
             message_media: Optional[List] = None,
             message_context: Optional[Dict] = None,
     ) -> GenerationResult:
@@ -158,6 +159,7 @@ class UniversalOrchestrator:
             # === ЭТАП 2: Выбор агентов через LLM ===
             selection = await self.agent_selector.select_agents(
                 request_id=request_id,
+                request_type=request_type,
                 context=agent_context,
                 force_use_llm=False  # Использовать кэш при наличии
             )
@@ -170,29 +172,22 @@ class UniversalOrchestrator:
             agent_responses = await self._call_agents_parallel(
                 agent_names=selection["agent_names"],
                 agent_context=agent_context,
-                request_id=request_id
+                request_id=request_id,
+                request_type=request_type,
             )
 
             # === ЭТАП 4: Агрегация ответов ===
             final_response = await self._aggregate_responses(
                 request_id=request_id,
+                request_type=request_type,
                 agent_responses=agent_responses,
                 agent_context=agent_context,
             )
 
-            # === ЭТАП 5: Логирование для аналитики ===
-            await self._log_orchestration_event(
-                request_id=request_id,
-                user_id=user_id,
-                user_message=user_message,
-                selection=selection,
-                agent_responses=agent_responses,
-                final_response=final_response,
-                processing_time_ms=int((datetime.now() - start_time).total_seconds() * 1000)
-            )
+            self.logger.info(f"[REQ:{request_id}] Сформирован финальный ответ: {final_response}")
 
             self.logger.info(
-                f"Запрос обработан: user={user_id}, "
+                f"[REQ:{request_id}] Запрос обработан: "
                 f"агенты={selection['agent_names']}, "
                 f"время={int((datetime.now() - start_time).total_seconds() * 1000)}мс"
             )
@@ -201,23 +196,36 @@ class UniversalOrchestrator:
 
         except Exception as e:
             self.logger.error(
-                f"Критическая ошибка в оркестраторе: {e}",
+                f"[REQ:{request_id}] Критическая ошибка в оркестраторе: {e}",
                 exc_info=True,
                 extra={"user_id": user_id, "request_id": request_id}
             )
 
             # Фолбэк-ответ без прерывания учебного процесса
-            fallback_response = (
+            fallback_msg = (
                 "Извините, произошла временная техническая сложность. "
                 "Ваш запрос очень важен для нас — пожалуйста, повторите его через несколько секунд."
             )
 
-            # Логирование ошибки
-            await self._log_orchestration_error(
-                request_id=request_id,
-                user_id=user_id,
-                error=str(e),
-                user_message=user_message
+            self.logger.warning(f"[REQ:{request_id}] Сформирован фоллбек ответ")
+            fallback_response = GenerationResult(
+                response=LLMResponse(
+                    message=fallback_msg,
+                    agent_state={},
+                    metadata={"fallback": True, "reason": f"{self.__class__.__name__} ошибка обработки запроса"}
+                ),
+                metrics=GenerationMetrics(  # пустые метрики
+                    input_tokens=0,
+                    output_tokens=0,
+                    total_tokens=0,
+                    cost_in=0.0,
+                    cost_out=0.0,
+                    cost_total=0.0,
+                    generation_time_sec=0.0,
+                    model_used="fallback",
+                    cached=False
+                ),
+                metadata={"request_id": request_id, "fallback": True}
             )
 
             return fallback_response
@@ -304,7 +312,9 @@ class UniversalOrchestrator:
             self,
             agent_names: List[str],
             agent_context: AgentContext,
-            request_id: str
+            request_id: str,
+            request_type: LLMRequestType,
+
     ) -> List[dict]:
         """
         Параллельный вызов всех выбранных агентов.
@@ -338,7 +348,7 @@ class UniversalOrchestrator:
             # Добавление задачи
             tasks.append(
                 asyncio.wait_for(
-                    agent.handle(agent_context),
+                    agent.handle(context=agent_context, request_type=request_type),
                     timeout=25.0  # Таймаут на один агент
                 )
             )
@@ -418,6 +428,7 @@ class UniversalOrchestrator:
     async def _aggregate_responses(
             self,
             request_id: str,
+            request_type: LLMRequestType,
             agent_responses: List[Dict],
             agent_context: AgentContext,
     ) -> GenerationResult:
@@ -430,7 +441,7 @@ class UniversalOrchestrator:
 
             # Вызов агрегатора
             aggregation_result = await asyncio.wait_for(
-                top_manager.handle(agents_responses=agent_responses, agent_context=agent_context),
+                top_manager.handle(agents_responses=agent_responses, agent_context=agent_context, request_type=request_type),
                 timeout=30.0
             )
             self.logger.debug(f"[REQ:{request_id}] Агрегация завершена: {aggregation_result}")
@@ -486,88 +497,9 @@ class UniversalOrchestrator:
                 }
             )
 
-    async def _log_orchestration_event(
-            self,
-            request_id: str,
-            user_id: int,
-            user_message: str,
-            selection: Dict[str, Any],
-            agent_responses: List[dict],
-            final_response: str,
-            processing_time_ms: int
-    ):
-        """
-        Логирование события оркестрации для административного дашборда (Задача 2.3 ТЗ).
-
-        Сохраняет:
-        - Выбранных агентов и обоснование выбора
-        - Время обработки
-        - Длину ответов
-        - Уверенность LLM в выборе
-        """
-        try:
-            await LogLLMRequest.objects.acreate(
-                request_type=LLMRequestType.CHAT,
-                model_name="orchestrator_v2",
-                prompt=user_message,
-                response=final_response,
-                tokens_in=0,  # Оркестратор не тратит токены напрямую
-                tokens_out=0,
-                cost_in=0,
-                cost_out=0,
-                cost_total=0,
-                duration_sec=processing_time_ms / 1000.0,
-                error_message="",
-                metadata={
-                    "request_id": request_id,
-                    "selected_agents": selection["agent_names"],
-                    "selection_reasoning": selection.get("reasoning", ""),
-                    "selection_confidence": selection.get("confidence", 0.5),
-                    "selection_method": selection.get("selection_method", "unknown"),
-                    "agent_count": len(agent_responses),
-                    # "agent_responses": agent_responses, # TODO надо сериализовать ответы агентов
-                    "processing_time_ms": processing_time_ms
-                },
-                user_id=user_id,
-                status="SUCCESS"
-            )
-        except Exception as e:
-            self.logger.warning(f"Не удалось записать лог оркестрации: {e}")
-
-    async def _log_orchestration_error(
-            self,
-            request_id: str,
-            user_id: int,
-            error: str,
-            user_message: str
-    ):
-        """Логирование критической ошибки оркестратора"""
-        try:
-            await LogLLMRequest.objects.acreate(
-                request_type=LLMRequestType.CHAT,
-                model_name="orchestrator_v2",
-                prompt=user_message[:500],
-                response="",
-                tokens_in=0,
-                tokens_out=0,
-                cost_in=0,
-                cost_out=0,
-                cost_total=0,
-                duration_sec=0,
-                error_message=error[:500],
-                metadata={
-                    "request_id": request_id,
-                    "error_type": "orchestrator_critical"
-                },
-                user_id=user_id,
-                status="ERROR"
-            )
-        except Exception as e:
-            self.logger.error(f"Не удалось записать лог ошибки: {e}")
 
 
 if __name__ == "__main__":
     o = UniversalOrchestrator()
-    resp = asyncio.run(o.route_message(user_message="Не понял я это ваш Past Perfect", user_id=2))
-    print(resp.response.response.message)
-
+    resp = asyncio.run(o.route_message(user_message="Не понял я это ваш Past Perfect", user_id=2, request_type=LLMRequestType.CHAT))
+    print(resp.response.message)

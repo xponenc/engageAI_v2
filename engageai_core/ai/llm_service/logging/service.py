@@ -161,6 +161,7 @@ class LLMLloggingService:
             "status": status,
             "error_message": error_trunc,
             "metadata": {
+
                 "cached": metrics.cached,
                 "temperature": self.config.llm_temperature,
                 "max_tokens": self.config.llm_max_tokens,
@@ -169,8 +170,11 @@ class LLMLloggingService:
             },
         }
 
+        if context.get("agent"):
+            data["metadata"]["agent"] = context.get("agent")
+
         # Контекстные связи (если есть)
-        for field in ["user_id", "course_id", "lesson_id", "session_id", "task_id", "request_type"]:
+        for field in ["user_id", "course_id", "lesson_id", "session_id", "task_id", "request_type", ]:
             if field in context and context[field]:
                 data[field] = context[field]
 

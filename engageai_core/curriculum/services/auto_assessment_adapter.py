@@ -9,8 +9,6 @@ from curriculum.services.base_assessment_adapter import AssessmentPort
 from curriculum.validation.task_schemas import TASK_CONTENT_SCHEMAS
 from curriculum.validators import SkillDomain
 
-logger = logging.getLogger(__name__)
-
 
 class SchemaValidationError(Exception):
     """Исключение для ошибок валидации схемы контента задания"""
@@ -45,10 +43,10 @@ class AutoAssessorAdapter(AssessmentPort):
                 return self._neutral_assessment(task)
 
         except SchemaValidationError as e:
-            logger.error(f"Schema validation failed for task {task.id}: {str(e)}")
+            self.logger.error(f"Schema validation failed for task {task.id}: {str(e)}")
             return self._neutral_assessment(task, error_tags=["schema_error"])
         except Exception as e:
-            logger.error(f"Auto assessment failed for task {task.id}: {str(e)}", exc_info=True)
+            self.logger.error(f"Auto assessment failed for task {task.id}: {str(e)}", exc_info=True)
             return self._neutral_assessment(task, error_tags=["assessment_error"])
 
 
@@ -165,7 +163,7 @@ class AutoAssessorAdapter(AssessmentPort):
                 metadata={"student_choice": student_choice, "correct_idx": correct_idx, "options": options}
             )
         except Exception as e:
-            logger.error(f"SINGLE_CHOICE assessment failed for task {task.pk}: {str(e)}")
+            self.logger.error(f"SINGLE_CHOICE assessment failed for task {task.pk}: {str(e)}")
             return self._neutral_assessment(task)
 
     def _parse_student_choice_scq(self, response_text: str, task: Task) -> int | None:
@@ -267,7 +265,7 @@ class AutoAssessorAdapter(AssessmentPort):
                     option_to_index = {opt: i for i, opt in enumerate(options)}
                     for value in parsed:
                         if value not in option_to_index:
-                            logger.warning(
+                            self.logger.warning(
                                 "Unknown option value in MULTIPLE_CHOICE",
                                 extra={
                                     "task_id": task.pk,
@@ -301,7 +299,7 @@ class AutoAssessorAdapter(AssessmentPort):
 
             # ===== 4. Out-of-range =====
             if any(i < 0 or i >= len(options) for i in student_indices):
-                logger.warning(
+                self.logger.warning(
                     "Out-of-range option index in MULTIPLE_CHOICE",
                     extra={
                         "task_id": task.pk,
@@ -369,7 +367,7 @@ class AutoAssessorAdapter(AssessmentPort):
             )
 
         except Exception as e:
-            logger.error(
+            self.logger.error(
                 f"MULTIPLE_CHOICE assessment failed for task {task.pk}: {e}",
                 exc_info=True,
             )
@@ -497,5 +495,5 @@ class AutoAssessorAdapter(AssessmentPort):
                 }
             )
         except Exception as e:
-            logger.error(f"SHORT_TEXT assessment failed for task {task.pk}: {str(e)}")
+            self.logger.error(f"SHORT_TEXT assessment failed for task {task.pk}: {str(e)}")
             return self._neutral_assessment(task)

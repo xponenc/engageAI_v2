@@ -12,7 +12,7 @@ class TaskAssessmentResult(models.Model):
     """
     enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, related_name='task_assessments')
     task = models.ForeignKey(Task, on_delete=models.CASCADE, )
-    response = models.ForeignKey(StudentTaskResponse, on_delete=models.SET_NULL, null=True, related_name='assessment')
+    response = models.OneToOneField(StudentTaskResponse, on_delete=models.SET_NULL, null=True, related_name='assessment')
 
     score = models.FloatField(null=True, blank=True, help_text="0.0–1.0")
     is_correct = models.BooleanField(null=True, blank=True, help_text="Для closed-заданий")

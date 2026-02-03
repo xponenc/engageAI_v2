@@ -49,7 +49,7 @@ class BaseContentGenerator(ABC):
                 system_prompt=system_prompt,
                 user_message=user_message,
                 temperature=temperature,
-                # context=context or {}
+                context=context
             )
 
             if result.error:
@@ -67,23 +67,3 @@ class BaseContentGenerator(ABC):
                              extra={"system_prompt": system_prompt[:100], "user_message": user_message[:100],
                                     "context": context})
             raise
-
-    # def _log_critical_step_error(
-    #         self,
-    #         step_name: str,
-    #         context: dict,
-    #         error: Exception,
-    #         is_critical: bool = True
-    # ):
-    #     """Стандартизированное логирование ошибок этапов генерации"""
-    #     log_method = self.logger.critical if is_critical else self.logger.error
-    #
-    #     log_method(
-    #         f"{'КРИТИЧЕСКАЯ ОШИБКА' if is_critical else 'Ошибка'} на этапе '{step_name}': {str(error)}",
-    #         extra={
-    #             "step": step_name,
-    #             "error_type": type(error).__name__,
-    #             **context
-    #         },
-    #         exc_info=True
-    #     )

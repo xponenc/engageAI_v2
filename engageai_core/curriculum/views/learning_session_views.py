@@ -551,77 +551,6 @@ class LearningSessionView(LoginRequiredMixin, ChatContextMixin, TemplateView):
 
         return lesson, current_node
 
-    # def _collect_responses(self, request, lesson_tasks):
-    #     """
-    #     Собирает ответы для ВСЕХ заданий урока.
-    #     Пустые/отсутствующие → дефолтные значения, оценщик обработает как skip или 0.
-    #     """
-    #     responses = {}
-    #
-    #     for task in lesson_tasks:
-    #         field_name = f'task_{task.id}'
-    #         audio_field = f'task_{task.id}_audio'
-    #
-    #         # Всегда добавляем запись для задачи
-    #         responses[task.id] = {
-    #             'text': request.POST.get(field_name, '').strip(),
-    #             'audio_file': request.FILES.get(audio_field)
-    #         }
-    #
-    #         # Для multiple_choice — отдельно
-    #         if task.response_format == 'multiple_choice':
-    #             values = request.POST.getlist(field_name)
-    #             if values:
-    #                 options = set(task.content.get('options', []))
-    #                 invalid = [v for v in values if v not in options]
-    #                 if invalid:
-    #                     logger.warning(f"Invalid multiple_choice for task {task.id}: {invalid}")
-    #                 responses[task.id]['text'] = json.dumps(values)
-    #
-    #     return responses
-
-    # def _save_student_responses(self, enrollment, responses):
-    #     """
-    #     Сохраняет ответы студента с защитой от дубликатов в рамках одного enrollment.
-    #     """
-    #     student = enrollment.student
-    #     task_ids = list(responses.keys())
-    #
-    #     existing_responses = {
-    #         r.task_id: r for r in StudentTaskResponse.objects.filter(
-    #             student=student,
-    #             enrollment=enrollment,
-    #             task_id__in=task_ids
-    #         )
-    #     }
-    #
-    #     for task_id, response_data in responses.items():
-    #         response_text = response_data.get("text", "")
-    #         audio_file = response_data.get("audio_file")
-    #
-    #         existing = existing_responses.get(task_id)
-    #
-    #         if existing:
-    #             # Обновляем только если ответ новый или старый не был отправлен сегодня
-    #             if existing.submitted_at.date() != timezone.now().date():
-    #                 logger.info(f"Updating response {existing.id} for task {task_id}")
-    #                 existing.response_text = response_text or existing.response_text
-    #                 if audio_file:
-    #                     existing.audio_file = audio_file
-    #                 existing.submitted_at = timezone.now()
-    #                 existing.save(update_fields=["response_text", "audio_file", "submitted_at"])
-    #             else:
-    #                 logger.info(f"Skipping update — response for task {task_id} already submitted today")
-    #         else:
-    #             logger.info(f"Creating new response for task {task_id}")
-    #             StudentTaskResponse.objects.create(
-    #                 student=student,
-    #                 enrollment=enrollment,
-    #                 task_id=task_id,
-    #                 response_text=response_text,
-    #                 audio_file=audio_file,
-    #             )
-
     def _collect_responses(self, request, lesson_tasks):
         """
         Собирает ответы из запроса.
@@ -769,6 +698,9 @@ class LearningSessionView(LoginRequiredMixin, ChatContextMixin, TemplateView):
         lesson_nodes = [
             node for node in learning_path.nodes
         ]
+
+        pprint(learning_path.nodes)
+        pprint(learning_path.current_node_index)
 
         # 1. Общий прогресс по всем нодам (включая preview)
         completed_count = sum(1 for n in learning_path.nodes if n["status"] == "completed")
@@ -1361,8 +1293,9 @@ class CheckLessonAssessmentView(LoginRequiredMixin, ChatContextMixin, View):
             return JsonResponse(assessment_status)
 
         # Для обычных запросов рендерим шаблон
-        context = self._build_template_context(enrollment, assessment_status)
-        context.update(self.get_chat_context(request))
+        context = super().get_context_data()
+        print(context)
+        context.update(self._build_template_context(enrollment, assessment_status))
 
         return render(
             request,

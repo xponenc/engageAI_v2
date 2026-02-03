@@ -48,8 +48,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
-    
-
     // Кнопка "Проверить статус"
     refreshBtn.addEventListener('click', e => {
         fetchStatus(button);

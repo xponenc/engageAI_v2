@@ -166,7 +166,6 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
         auto_adapter = AutoAssessorAdapter()
         llm_adapter = LLMAssessmentAdapter()
 
-        total_score = 0.0
         task_count = responses.count()
         task_assessments = []
 
@@ -193,15 +192,9 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
             )
             task_assessments.append(task_assessment)
 
-            total_score += result.skill_evaluation.get(task.task_type, {}).get("score", 0.0) or 0.0
-
-        # Итоговый результат урока
-        overall_score = total_score / task_count if task_count > 0 else 0.0
-
         lesson_result = LessonAssessmentResult.objects.create(
             enrollment=enrollment,
             lesson=lesson,
-            overall_score=overall_score,
             status=AssessmentStatus.PROCESSING,
         )
         user_message = f"Дайте экспертную оценку по уроку.\nУровень CEFR ученика {enrollment.student.english_level}\n"
@@ -212,7 +205,7 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
 Задание:
  - № {task.order}
  - Контекст: 
-{json.dumps(task.context, indent=2, ensure_ascii=False)}
+{json.dumps(task.content, indent=2, ensure_ascii=False)}
 
  - Ответ ученика:
 {response.response_text or responses.transcript}
@@ -240,18 +233,18 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
         print(user_message)
 
         context = {
-            "course_id":  enrollment.course.pk,
+            "course_id": enrollment.course.pk,
             "lesson_id": lesson.pk,
             "user_id": enrollment.student.user.id,
             "request_type": LLMRequestType.LESSON_REVIEW,
         }
-
-        result = async_to_sync(self.llm.generate_json_response)(
-                system_prompt=system_prompt,
-                user_message=user_message,
-                temperature=0.1,
-                context=context
-            )
+        # TODO более изящный вызов фабрики
+        result = async_to_sync(llm_factory.generate_json_response)(
+            system_prompt=system_prompt,
+            user_message=user_message,
+            temperature=0.1,
+            context=context
+        )
 
         if result.error:
             logger.error(f"LLM error: {result.error}", extra={"raw_response": result.raw_provider_response})
@@ -261,10 +254,9 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
         if not isinstance(summary_response, dict):
             raise ValueError(f"Invalid LLM response format: expected {dict}, got {type(summary_response).__name__}")
 
-
         lesson_result.llm_summary = summary_response.get("resume", "")
         lesson_result.llm_recommendations = (summary_response.get("recommendations", ""))
-        lesson_result.status = AssessmentStatus.COMPLETED,
+        lesson_result.status = AssessmentStatus.COMPLETED.value,
         lesson_result.completed_at = timezone.now()
         lesson_result.save()
 
@@ -278,7 +270,6 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
             metadata={
                 # "node_id": current_node["node_id"],
                 "lesson_id": assessed_lesson_id,
-                "overall_score": overall_score,
                 "tasks_evaluated": task_count,
                 "job_id": self.request.id
             }
@@ -287,22 +278,25 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
         # Обновляем узел пути
         path = enrollment.learning_path
         current_index = path.current_node_index
+        print(f"{current_index=}")
+        print(f"{path.nodes[current_index]=}")
         path.nodes[current_index]["status"] = "completed"
         path.nodes[current_index]["completed_at"] = timezone.now().isoformat()
+        path.save()
 
         # Запускаем адаптацию пути (remedial, skip и т.д.)
         DecisionService.evaluate_and_adapt_path(enrollment, lesson)
 
         # Переход к следующему узлу — только если нет новых recommended/remedial
         if path.next_node and not any(
-            n["status"] in ["recommended", "remedial"] for n in path.nodes[current_index + 1:]
+                n["status"] in ["recommended", "remedial"] for n in path.nodes[current_index + 1:]
         ):
             path.current_node_index += 1
 
         path.save()
 
-        logger.info(f"Оценка завершена для enrollment {enrollment_id}, score={overall_score:.2f}")
-        return {"status": "success", "overall_score": overall_score}
+        logger.info(f"Оценка завершена для enrollment {enrollment_id}")
+        return {"status": "success"}
 
     except Exception as e:
         logger.error(f"Ошибка оценки {enrollment_id}: {str(e)}", exc_info=True)

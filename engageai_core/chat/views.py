@@ -853,7 +853,10 @@ class ChatContextMixin:
         """
         Автоматически расширяет основной context
         """
-        context = super().get_context_data(**kwargs)
+        try:
+            context = super().get_context_data(**kwargs)
+        except AttributeError:
+            context = {}
         context.update(self.get_chat_context())
         return context
 

@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from typing import Type, TypeVar, Optional
+from typing import Type, TypeVar, Optional, Dict, Any
 
 from asgiref.sync import async_to_sync
 
@@ -11,9 +11,8 @@ from curriculum.models.content.task import Task, ResponseFormat
 from curriculum.models.student.student_response import StudentTaskResponse
 from curriculum.services.base_assessment_adapter import AssessmentPort
 from curriculum.validation.task_schemas import TASK_CONTENT_SCHEMAS
+from curriculum.validators import SkillDomain
 from llm_logger.models import LLMRequestType
-
-logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
@@ -64,6 +63,8 @@ class LLMAssessmentAdapter(AssessmentPort):
                 "request_type": LLMRequestType.TASK_REVIEW,
             }
 
+            print(user_message)
+
             result = self._safe_llm_call(
                 system_prompt=SYSTEM_PROMPT,
                 user_message=user_message,
@@ -72,10 +73,22 @@ class LLMAssessmentAdapter(AssessmentPort):
                 response_format=dict
             )
 
+            print(f"\n{result=}\n")
+
             return self._parse_llm_response(payload=result, task=task)
         except Exception as exc:
-            raise RuntimeError(f"LLM assessment failed: {exc}") from exc
-
+            self.logger.error(f"LLM assessment failed: {exc}")
+            return AssessmentResult(
+                is_correct=False,
+                task_id=task.pk,
+                cefr_target=task.difficulty_cefr,
+                skill_evaluation={
+                    skill: {"score": 0.5, "confidence": 0.5, "evidence": []}
+                    for skill in ["grammar", "vocabulary", "reading", "listening", "writing", "speaking"]
+                },
+                summary={"text": "No valid assessment could be generated.", "advice": []},
+                metadata={"error": "invalid_llm_response", }
+            )
 
     def _build_user_message(self, task: Task, response: StudentTaskResponse) -> str:
         lesson = task.lesson
@@ -99,7 +112,7 @@ class LLMAssessmentAdapter(AssessmentPort):
 Урок:
 Lesson title: {lesson.title}
 Lesson description: {lesson.description}
-Lesson CEFR level: {lesson.cefr_level}
+Lesson CEFR level: {lesson.required_cefr}
 
 Оцениваемое задание:
 CEFR level: {task.difficulty_cefr}
@@ -134,11 +147,11 @@ Content: {task.content}
         return "\n".join(parts)
 
     def _safe_llm_call(self,
-                             system_prompt: str,
-                             user_message: str,
-                             response_format: Type[T],
-                             temperature: Optional[float] = None,
-                             context: Optional[dict] = None) -> T:
+                       system_prompt: str,
+                       user_message: str,
+                       response_format: Type[T],
+                       temperature: Optional[float] = None,
+                       context: Optional[dict] = None) -> T:
         """
         Безопасный вызов LLM с обработкой ошибок и логированием.
         """
@@ -151,7 +164,7 @@ Content: {task.content}
             )
 
             if result.error:
-                logger.error(f"LLM error: {result.error}", extra={"raw_response": result.raw_provider_response})
+                self.logger.error(f"LLM error: {result.error}", extra={"raw_response": result.raw_provider_response})
                 raise ValueError(f"LLM generation failed: {result.error}")
 
             data = result.response.message
@@ -161,7 +174,7 @@ Content: {task.content}
             return data
 
         except Exception as e:
-            logger.exception("Critical error during LLM call",
+            self.logger.exception("Critical error during LLM call",
                              extra={"system_prompt": system_prompt[:100], "user_message": user_message[:100],
                                     "context": context})
             raise
@@ -173,9 +186,9 @@ Content: {task.content}
 
         # Проверка наличия ключевых полей
         if "skill_evaluation" not in payload or "summary" not in payload or "is_correct" not in payload:
-            logger.warning(
-                "Invalid LLM response format for task_id %s: missing 'skill_evaluation' or 'summary'",
-                payload.get("task_id")
+            self.logger.warning(
+                f"Invalid LLM response format for task_id {task.pk}: missing 'skill_evaluation' or 'summary' "
+                f"or 'is_correct': {payload}",
             )
             # Возвращаем нейтральный AssessmentResult
             return AssessmentResult(
@@ -195,10 +208,39 @@ Content: {task.content}
             is_correct=payload.get("is_correct"),
             task_id=task.pk,
             cefr_target=task.difficulty_cefr,
-            skill_evaluation=payload["skill_evaluation"],
+            skill_evaluation=self.normalize_skill_evaluation(payload.get("skill_evaluation")),
             summary=payload["summary"],
             metadata={"raw_llm": payload}  # сохраняем весь ответ для аудита
         )
+
+    @staticmethod
+    def normalize_skill_evaluation(
+            raw: Dict[str, Any] | None
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        Приводит LLM-ответ к полной и валидной структуре skill_evaluation.
+        Гарантирует наличие всех SkillDomain.
+        """
+        raw = raw or {}
+        normalized: Dict[str, Dict[str, Any]] = {}
+
+        for skill in SkillDomain.values:
+            value = raw.get(skill)
+
+            if not isinstance(value, dict):
+                normalized[skill] = {
+                    "score": None,
+                    "confidence": None,
+                    "evidence": [],
+                }
+            else:
+                normalized[skill] = {
+                    "score": value.get("score"),
+                    "confidence": value.get("confidence"),
+                    "evidence": value.get("evidence") or [],
+                }
+
+        return normalized
 
     # MEDIA CONTEXT
 

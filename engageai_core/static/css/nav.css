@@ -153,6 +153,7 @@
     z-index: var(--md-z-index-notification);
     box-shadow: var(--md-shadow-3);
     opacity: 0;
+    visibility: hidden;
     transition-property: transform, visibility, opacity;
     transition-timing-function: ease-in-out;
     transition-duration: var(--md-transition-normal);

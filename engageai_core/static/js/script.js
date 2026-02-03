@@ -435,6 +435,12 @@ function world_helper() {
             // Игнорируем клики не по тексту (например, по пробелам или краям)
             if (!e.target.closest('.word-helper')) return;
 
+            console.log(e.clientX, e.clientY)
+            const pageX = e.clientX + window.scrollX;
+            const pageY = e.clientY + window.scrollY;
+            console.log(pageX, pageY)
+
+
             // Получаем слово под курсором
             const range = document.caretRangeFromPoint?.(e.clientX, e.clientY) ||
                 document.caretPositionFromPoint?.(e.clientX, e.clientY);
@@ -461,9 +467,10 @@ function world_helper() {
 
             // Кэширование: если это то же слово — просто покажем
             if (lastWordCache && lastWordCache.word === word) {
-                showHelper(lastWordCache.data, e.clientX, e.clientY);
+                showHelper(lastWordCache.data, pageX, pageY);
                 return;
             }
+            console.log(word)
 
             // Запрос к API
             try {
@@ -471,7 +478,7 @@ function world_helper() {
                 const data = await res.json();
                 if (res.ok) {
                     lastWordCache = { word, data };
-                    showHelper(data, e.clientX, e.clientY);
+                    showHelper(data, pageX, pageY);
                 } else {
                     // Можно показать "Not found", но для минимализма — тихо игнорируем
                     helperEl.style.display = 'none';
@@ -483,19 +490,30 @@ function world_helper() {
         });
     });
 
+    function isClickInsideRange(range, x, y) {
+        // Утилита проверки «клик по слову»
+        const rect = range.getBoundingClientRect();
+        return (
+            x >= rect.left &&
+            x <= rect.right &&
+            y >= rect.top &&
+            y <= rect.bottom
+        );
+    }
+
     function showHelper(data, x, y) {
         // Выбираем первое доступное произношение
         const audioUrl = data.pronunciations?.[0]?.audio_url || null;
 
         let html = `
-        <div style="margin-bottom: 8px;">
-        <strong>${data.word}</strong> 
-        ${data.pos ? `<small>(${data.pos})</small>` : ''}
-        ${data.ipa ? `<br><span style="color:#555; font-family:monospace;">${data.ipa}</span>` : ''}
-        </div>
-    `;
+            <div style="margin-bottom: 8px;">
+                <strong>${data.word}</strong> 
+                ${data.pos ? `<small>(${data.pos})</small>` : ''}
+                ${data.ipa ? `<br><span style="color:#555; font-family:monospace;">${data.ipa}</span>` : ''}
+            </div>
+        `;
 
-        if (data.senses && data.senses.length) {
+        if (data.senses?.length) {
             html += `<ul style="padding-left:16px; margin:4px 0;">`;
             data.senses.slice(0, 2).forEach(s => {
                 html += `<li style="margin:2px 0;">${s.gloss}</li>`;
@@ -505,28 +523,36 @@ function world_helper() {
 
         if (audioUrl) {
             html += `
-        <div style="margin-top:6px;">
-            <audio controls style="width:100%; height:28px; outline:none;">
-            <source src="${audioUrl}" type="audio/mpeg">
-            </audio>
-        </div>
-        `;
+                <div style="margin-top:6px;">
+                    <audio controls style="width:100%; height:28px; outline:none;">
+                        <source src="${audioUrl}" type="audio/mpeg">
+                    </audio>
+                </div>
+            `;
         }
 
         helperEl.innerHTML = html;
         helperEl.style.display = 'block';
 
-        // Позиционирование рядом с курсором
+        // Размеры тултипа
         const rect = helperEl.getBoundingClientRect();
+
+        // Начальная позиция (document space)
         let top = y + 10;
         let left = x + 10;
 
-        // Не уходить за край экрана
-        if (left + rect.width > window.innerWidth) {
-            left = window.innerWidth - rect.width - 10;
+        // Границы viewport в document space
+        const viewportRight = window.scrollX + window.innerWidth;
+        const viewportBottom = window.scrollY + window.innerHeight;
+
+        // Ограничение по горизонтали
+        if (left + rect.width > viewportRight) {
+            left = viewportRight - rect.width - 10;
         }
-        if (top + rect.height > window.innerHeight) {
-            top = window.innerHeight - rect.height - 10;
+
+        // Ограничение по вертикали
+        if (top + rect.height > viewportBottom) {
+            top = viewportBottom - rect.height - 10;
         }
 
         helperEl.style.top = `${top}px`;
@@ -537,56 +563,76 @@ function world_helper() {
         let activeSpan = null;
 
         document.querySelectorAll('.word-helper').forEach(container => {
-
             container.addEventListener('mousemove', (e) => {
-                const range =
-                    document.caretRangeFromPoint?.(e.clientX, e.clientY) ||
-                    document.caretPositionFromPoint?.(e.clientX, e.clientY);
-
-                if (!range || !range.startContainer) return;
-                if (range.startContainer.nodeType !== Node.TEXT_NODE) return;
-
-                const textNode = range.startContainer;
-                const text = textNode.textContent;
-                const offset = range.startOffset;
-
-                if (!text || !/\w/.test(text[offset])) {
+                const wordRange = findWordUnderCursor(e.clientX, e.clientY);
+                
+                if (!wordRange) {
                     clearActive();
                     return;
                 }
 
-                // находим границы слова
-                let start = offset;
-                let end = offset;
+                // ГЛАВНАЯ проверка: курсор НАД словом
+                const wordRect = wordRange.getBoundingClientRect();
+                if (e.clientX < wordRect.left || e.clientX > wordRect.right) {
+                    clearActive();
+                    return;
+                }
 
-                while (start > 0 && /\w/.test(text[start - 1])) start--;
-                while (end < text.length && /\w/.test(text[end])) end++;
+                const wordText = wordRange.toString().trim();
+                if (wordText.length < 2) {
+                    clearActive();
+                    return;
+                }
 
-                // если уже подсвечено это же слово — ничего не делаем
-                if (
-                    activeSpan &&
-                    activeSpan.textContent === text.slice(start, end)
-                ) return;
+                // То же слово уже подсвечено
+                if (activeSpan && activeSpan.textContent === wordText) {
+                    return;
+                }
 
                 clearActive();
-
-                const wordRange = document.createRange();
-                wordRange.setStart(textNode, start);
-                wordRange.setEnd(textNode, end);
-
-                const span = document.createElement('span');
-                span.className = 'word-hover';
-
-                wordRange.surroundContents(span);
-                activeSpan = span;
+                wrapWord(wordRange);
             });
 
             container.addEventListener('mouseleave', clearActive);
         });
 
+        function findWordUnderCursor(x, y) {
+            const range = document.caretRangeFromPoint?.(x, y);
+            if (!range || range.startContainer.nodeType !== Node.TEXT_NODE) {
+                return null;
+            }
+
+            const textNode = range.startContainer;
+            const text = textNode.textContent || '';
+            let offset = range.startOffset;
+
+            while (offset > 0 && /\w/.test(text[offset - 1])) offset--;
+            let end = offset;
+            while (end < text.length && /\w/.test(text[end])) end++;
+
+            if (end - offset < 2) return null;
+
+            const wordRange = document.createRange();
+            wordRange.setStart(textNode, offset);
+            wordRange.setEnd(textNode, end);
+            return wordRange;
+        }
+
+        function wrapWord(range) {
+            const span = document.createElement('span');
+            span.className = 'word-hover';
+            
+            try {
+                range.surroundContents(span);
+                activeSpan = span;
+            } catch (e) {
+                console.log('wrap failed');
+            }
+        }
+
         function clearActive() {
             if (!activeSpan) return;
-
+            
             const parent = activeSpan.parentNode;
             while (activeSpan.firstChild) {
                 parent.insertBefore(activeSpan.firstChild, activeSpan);
@@ -594,8 +640,6 @@ function world_helper() {
             parent.removeChild(activeSpan);
             activeSpan = null;
         }
-
-        
     }
 
     enableWordHover();

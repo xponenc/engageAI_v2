@@ -1380,6 +1380,7 @@ class CheckLessonAssessmentView(LoginRequiredMixin, ChatContextMixin, View):
         """Создает контекст для шаблона"""
         return {
             'enrollment': enrollment,
+            'task_id': enrollment.assessment_job_id,
             'course': enrollment.course,
             'current_lesson': enrollment.current_lesson,
             'assessment_status': assessment_status,

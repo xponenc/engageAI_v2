@@ -1,8 +1,10 @@
+import logging
 from pprint import pprint
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
@@ -20,9 +22,12 @@ from curriculum.models.student.enrollment import Enrollment
 # from curriculum.config.dependency_factory import CurriculumServiceFactory
 
 from curriculum.models.student.skill_snapshot import SkillSnapshot
+from curriculum.services.learning_path_initialization import LearningPathInitializationService
 from curriculum.services.lesson_event_service import LessonEventService
 from curriculum.services.path_generation_service import PathGenerationService
 
+
+logger = logging.getLogger(__file__)
 
 class CourseListView(LoginRequiredMixin, ChatContextMixin, ListView):
     """
@@ -194,61 +199,71 @@ class EnrollCourseView(LoginRequiredMixin, View):
                 return JsonResponse({'error': msg, 'already_enrolled': True}, status=400)
             messages.warning(request, msg)
             return redirect('curriculum:course_detail', pk=course_id)
-
-        # 2. Создание Enrollment — правильная версия
-        enrollment = Enrollment.objects.create(
-            student=student,
-            course=course,
-            is_active=True,
-            adaptive_path_enabled=True  # включаем адаптивный путь сразу
-        )
-
-        # 3. Baseline SkillSnapshot (PLACEMENT)
-        latest_snapshot = student.skill_snapshots.order_by("-snapshot_at").first()
-        baseline_skills = latest_snapshot.skills if latest_snapshot else {
-            "grammar": 0.5, "vocabulary": 0.5, "listening": 0.5,
-            "reading": 0.5, "writing": 0.5, "speaking": 0.5
-        }
-
-        SkillSnapshot.objects.create(
-            student=student,
-            enrollment=enrollment,
-            associated_lesson=None,
-            snapshot_context="PLACEMENT",
-            skills=baseline_skills,
-            metadata={
-                "source": "enrollment_baseline",
-                "trigger": "new_course_enrollment"
-            }
-        )
-
-        # 4. Генерация персонализированного пути
         try:
-            learning_path = PathGenerationService.generate_personalized_path(enrollment)
-            path_type = learning_path.path_type
-        except Exception as e:
-            learning_path = PathGenerationService.generate_linear_fallback(enrollment)
-            path_type = "LINEAR (fallback)"
-        learning_path.enrollment = enrollment
-        learning_path.save(update_fields=['enrollment'])
+            with transaction.atomic():
+                # 2. Создание Enrollment
+                enrollment = Enrollment.objects.create(
+                    student=student,
+                    course=course,
+                    is_active=True,
+                )
 
-        # 5. Логирование события зачисления
-        LessonEventService.create_event(
-            student=student,
-            enrollment=enrollment,
-            lesson=None,
-            event_type="ENROLLMENT_START",
-            channel="WEB",
-            metadata={
-                "course_id": course.id,
-                "course_title": course.title,
-                "path_type": path_type,
-                "nodes_count": len(learning_path.nodes)
-            }
-        )
+                # 3. Baseline SkillSnapshot (PLACEMENT)
+                latest_snapshot = student.skill_snapshots.order_by("-snapshot_at").first()
+                baseline_skills = latest_snapshot.skills if latest_snapshot else {
+                    "grammar": 0.5, "vocabulary": 0.5, "listening": 0.5,
+                    "reading": 0.5, "writing": 0.5, "speaking": 0.5
+                }
+
+                SkillSnapshot.objects.create(
+                    student=student,
+                    enrollment=enrollment,
+                    associated_lesson=None,
+                    snapshot_context="PLACEMENT",
+                    skills=baseline_skills,
+                    metadata={
+                        "source": "enrollment_baseline",
+                        "trigger": "new_course_enrollment"
+                    }
+                )
+
+                # 4. Генерация персонализированного пути
+                learning_path = LearningPathInitializationService.initialize_for_enrollment(
+                    enrollment=enrollment
+                )
+
+                # 5. Логирование события зачисления
+                LessonEventService.create_event(
+                    student=student,
+                    enrollment=enrollment,
+                    lesson=None,
+                    event_type="ENROLLMENT_START",
+                    channel="WEB",
+                    metadata={
+                        "course_id": course.id,
+                        "course_title": course.title,
+                        "nodes_count": len(learning_path.nodes)
+                    }
+                )
+        except Exception as exc:
+            logger.exception(
+                "Enrollment failed",
+                extra={
+                    "student_id": student.id,
+                    "course_id": course.id
+                }
+            )
+
+            msg = "Не удалось зачислиться на курс. Пожалуйста, попробуйте ещё раз."
+
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({"error": msg}, status=500)
+
+            messages.error(request, msg)
+            return redirect("curriculum:course_detail", pk=course_id)
 
         # 6. Формирование ответа
-        success_msg = f"Вы успешно зачислены на курс «{course.title}»! Сгенерирован {path_type.lower()} путь."
+        success_msg = f"Вы успешно зачислены на курс «{course.title}»!"
 
         if (request.headers.get('X-Requested-With') == 'XMLHttpRequest'
                 or request.headers.get("Accept") == "application/json"):
@@ -257,10 +272,8 @@ class EnrollCourseView(LoginRequiredMixin, View):
                 'enrollment_id': enrollment.id,
                 'redirect_url': reverse_lazy('curriculum:learning_session', kwargs={'pk': enrollment.id})
             }
-            print(response_data)
             return JsonResponse(response_data)
 
         # Обычный HTML-ответ
-        print("# Обычный HTML-ответ")
         messages.success(request, success_msg)
         return redirect('curriculum:learning_session', pk=enrollment.id)

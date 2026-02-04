@@ -122,17 +122,17 @@ class ContentOrchestrator:
                 current_order += 1
 
                 # Генерация заданий для урока
-                num_tasks = tasks_per_lesson or (5 if level in ["A2", "B1"] else 6)
-                await self.task_generator.generate_tasks_for_lesson(
+                tasks_per_lesson = tasks_per_lesson or (5 if level in ["A2", "B1"] else 6)
+                await self.task_generator.generate(
                     lesson=lesson,
-                    num_tasks=num_tasks,
+                    tasks_per_lesson=tasks_per_lesson,
                     include_media=include_media,
                     user_id=user_id,
                 )
 
                 logger.debug(
                     f"Урок {current_order}/{num_lessons} создан: {lesson.title} "
-                    f"(уровень {level}, {num_tasks} заданий)"
+                    f"(уровень {level}, {tasks_per_lesson} заданий)"
                 )
                 if current_order > 3: # TODO временная заглушка
                     return lessons
@@ -144,6 +144,7 @@ class ContentOrchestrator:
             course: Course,
             level: str,
             skill_focus: list[str],
+            tasks_per_lesson: int = None,
             order: int = 0
     ) -> 'Lesson':
         """
@@ -157,9 +158,9 @@ class ContentOrchestrator:
             theme_tags=[]
         )
 
-        await self.task_generator.generate_tasks_for_lesson(
+        await self.task_generator.generate(
             lesson=lesson,
-            num_tasks=5
+            tasks_per_lesson=tasks_per_lesson or 5
         )
 
         return lesson

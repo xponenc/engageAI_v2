@@ -7,6 +7,7 @@ from .assessment.task_assessment import TaskAssessmentResult
 from .content.balance import CourseBalance
 from .content.course import Course
 from .content.lesson import Lesson
+from .content.methodological_plan import MethodologicalPlan
 from .content.task import Task
 from .content.task_media import TaskMedia
 

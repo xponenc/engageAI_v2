@@ -7,11 +7,76 @@ class LearningPath(models.Model):
     """
     Персонализированный учебный путь студента в рамках зачисления.
 
-    Заменяет жёсткую линейную последовательность (current_lesson).
-    Позволяет:
-    - Линейные пути (по умолчанию для MVP)
-    - Адаптивные пути с ветвлениями и remedial уроками
-    - AI-генерацию пути (GPT-4o-mini на основе профиля + SkillDelta)
+    структура узла в nodes
+        {
+            "node_id": "remedial-grammar-B1-02-9f3a2c",
+            "lesson_id": null,
+            "learning_objective": "grammar-B1-02",
+            "title": "Повтор: Past Simple vs Present Perfect",
+            "type": "remedial",
+            "status": "locked",
+            "prerequisites": ["lesson-42"],
+            "created_at": "2026-02-04T10:12:00Z",
+            "completed_at": null,
+            "metadata": {
+                "source": "auto",
+                "trigger": "multiple_failures"
+            }
+        }
+
+    node_id : string Уникальный идентификатор узла внутри LearningPath. {node_type}-{lesson_or_objective}-{uuid4}
+        Примеры:
+            lesson-42
+            remedial-grammar-B1-02-9f3a2c
+            diagnostic-speaking-B2-7b12f9
+
+    lesson_id : int | null ID урока, если узел привязан к Lesson.
+        int → обычный урок курса
+        null → виртуальный узел (remedial, diagnostic, practice)
+
+    title : string Отображаемое название узла:
+        берётся из Lesson
+        либо генерируется (remedial)
+
+    type : string Тип узла.
+        Допустимые значения v1:
+        type	Назначение
+        core	Основной урок курса
+        remedial	Повтор / восстановление
+        diagnostic	Проверка уровня
+        practice	Практика без теории
+
+    status : string Текущее состояние узла.
+        Допустимые значения
+        status	Значение
+        locked	Недоступен, нельзя начинать
+        in_progress	Текущий активный узел
+        completed	Успешно завершён
+        skipped	Пропущен осознанно
+        recommended	Рекомендован (не блокирует путь)
+
+    prerequisites : list[str]
+        Список node_id, которые должны быть:
+        completed или skipped
+        Используется:
+        для remedial
+        для сложных ветвлений
+
+    triggers : list[object]
+        Будущая точка расширения.
+        Примеры:
+        {
+          "condition": "objective.grammar-B1-02 < 0.6",
+          "action": "insert_remedial"
+        }
+
+    created_at : ISO datetime Когда узел был добавлен в путь.
+
+    metadata : object
+        Свободное поле:
+        explainability
+        source ("auto", "teacher", "diagnostic")
+        confidence, reason и т.д.
     """
 
     enrollment = models.OneToOneField(
@@ -41,15 +106,19 @@ class LearningPath(models.Model):
         Пример структуры:
         [
             {
-                "node_id": 1,
-                "lesson_id": 5,
-                "title": "Grammar: Present Simple",
-                "prerequisites": [], 
-                "triggers": [
-                    {"condition": "skill_delta.speaking < 0", "action": "add_remedial", "remedial_lesson_id": 12}
-                ],
-                "status": "completed",  // in_progress, locked, recommended
-                "completed_at": "2025-12-28T15:30:00Z"
+                "node_id": "remedial-grammar-B1-02-9f3a2c",
+                "lesson_id": null,
+                "learning_objective": "grammar-B1-02",
+                "title": "Повтор: Past Simple vs Present Perfect",
+                "type": "remedial",
+                "status": "locked",
+                "prerequisites": ["lesson-42"],
+                "created_at": "2026-02-04T10:12:00Z",
+                "completed_at": null,
+                "metadata": {
+                    "source": "auto",
+                    "trigger": "multiple_failures"
+                }
             },
             ...
         ]

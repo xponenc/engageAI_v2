@@ -5,7 +5,7 @@ from curriculum.models.content.response_format import ResponseFormat
 from curriculum.models.systematization.professional_tag import ProfessionalTag
 from users.models import CEFRLevel
 from curriculum.models.content.lesson import Lesson
-from curriculum.validators import validate_task_content_schema
+from curriculum.validators import validate_task_content_schema, validate_skill_focus
 
 
 class TaskType(models.TextChoices):
@@ -74,6 +74,9 @@ class Task(models.Model):
     # схема задается в engageai_core/curriculum/schemas.py:TASK_CONTENT_SCHEMAS
     content_schema_version = models.CharField(default="v1", verbose_name=_("Content Schema"))
     difficulty_cefr = models.CharField(max_length=2, choices=CEFRLevel, verbose_name=_("Difficulty CEFR"))
+    # skill_focus = models.JSONField(default=list, validators=[validate_skill_focus], verbose_name=_("Skill Focus"),
+    #                                help_text=_("e.g., ['listening', 'vocabulary']")
+    #                                ) # TODO это если надо будет оценивать скилы точечно
     is_diagnostic = models.BooleanField(default=False, verbose_name=_("Used in Diagnostic"))
     professional_tags = models.ManyToManyField(ProfessionalTag, blank=True, verbose_name=_("Professional Tags"))
     is_active = models.BooleanField(default=True, verbose_name=_("Задание актуально"))

@@ -40,17 +40,28 @@ class TaskGenerationService(BaseContentGenerator):
     Ответственность: создание заданий всех типов с детальным логированием.
     """
 
-    async def generate(self, lesson, **kwargs) -> list[Task]:
-        """Единая точка входа"""
-        return await self.generate_tasks_for_lesson(lesson, **kwargs)
-
-    async def generate_tasks_for_lesson(
+    async def generate(
             self,
-            lesson,
-            num_tasks: Optional[int] = None,
+            lesson: Lesson,
+            tasks_per_lesson: Optional[int] = None,
             include_media: bool = True,
             user_id: Optional[int] = None,
+    ) -> list[Task]:
+        """Единая точка входа"""
+        return await self._generate_tasks_for_lesson(
+            lesson=lesson,
+            tasks_per_lesson=tasks_per_lesson,
+            include_media=include_media,
+            user_id=user_id,
+            )
 
+    async def _generate_tasks_for_lesson(
+            self,
+            lesson: Lesson,
+            tasks_per_lesson: Optional[int] = None,
+            include_media: bool = True,
+            user_id: Optional[int] = None,
+            **kwargs
     ) -> list[Task]:
         """
         Генерация заданий для урока
@@ -70,15 +81,15 @@ class TaskGenerationService(BaseContentGenerator):
             raise
 
         # Этап 2: Определение количества заданий
-        if num_tasks is None:
-            num_tasks = 5 if lesson.required_cefr in ["A1", "A2", "B1"] else 6
+        if tasks_per_lesson is None:
+            tasks_per_lesson = 5 if lesson.required_cefr in ["A1", "A2", "B1"] else 6
 
         # Этап 3: Генерация данных заданий через LLM
         try:
             tasks_data = await self._llm_generate_tasks_data(
                 lesson=lesson,
                 lesson_context=lesson_context,
-                num_tasks=num_tasks,
+                tasks_per_lesson=tasks_per_lesson,
                 user_id=user_id,
             )
         except Exception as e:
@@ -87,7 +98,7 @@ class TaskGenerationService(BaseContentGenerator):
                 extra={
                     "lesson_id": lesson.pk,
                     "lesson_title": lesson.title,
-                    "num_requested": num_tasks,
+                    "tasks_per_lesson": tasks_per_lesson,
                     "error_type": type(e).__name__,
                     "error_message": str(e)[:200]
                 }
@@ -170,7 +181,7 @@ class TaskGenerationService(BaseContentGenerator):
         }
 
     async def _llm_generate_tasks_data(self, lesson, lesson_context: dict,
-                                       num_tasks: int, user_id: Optional[int] = None) -> list[dict]:
+                                       tasks_per_lesson: int, user_id: Optional[int] = None) -> list[dict]:
         """Генерация данных заданий через LLM"""
         # Определение доступных типов заданий
         available_schemas = self._get_available_schemas(lesson_context["skill_focus"])
@@ -196,6 +207,65 @@ Your task is to generate high-quality lesson exercises that:
 
 You follow instructions precisely and return only valid JSON.
 """
+#         user_message = f"""
+# Lesson: "{lesson_context['title']}" (CEFR Level: {lesson_context['level']})
+#
+# Skills assessed in this lesson:
+# {', '.join(lesson_context['skill_focus'])}
+#
+# Professional Context:
+# {', '.join(lesson_context['professional_tags']) or 'general'}
+#
+# Learning Objectives:
+# {self._format_objectives(lesson_context['learning_objectives'])}
+#
+# Theory Snippet:
+# {self.remove_html_tags(lesson_context['theory_content'])}
+#
+# Available exercise types:
+# Each exercise type below defines:
+# - a validation version ("version")
+# - a response format
+# - an example that represents the exact required content structure
+# {json.dumps(schemas_info, indent=2, ensure_ascii=False)}
+#
+# Generate exactly {tasks_per_lesson} diverse exercises covering all lesson objectives.
+# RULES (STRICT):
+# 1. Each exercise MUST include:
+#    - task_type: one of [{', '.join(lesson_context['skill_focus'])}]
+#    - version: one of the available exercise type keys
+#    - response_format: must match the response_format of the chosen version
+#    - content: MUST strictly match the example structure of that version
+# 2. All fields shown in the example are REQUIRED.
+# 3. Do NOT add extra fields inside "content".
+# 4. Field names must match the example exactly.
+# 5. Use only the provided versions. Do NOT invent new versions.
+# 6. Exercises must collectively cover ALL listed learning objectives.
+# 7. Listening exercises are NOT required for this lesson.
+#
+# MEDIA RULES:
+# - requires_media:  boolean (true if the exercise is a listening task, false otherwise)
+# - media_script: string (the transcript for listening exercises; empty string "" if not applicable)
+#
+# Return ONLY valid JSON in the following format:
+#
+# {{
+#   "exercises": [
+#     {{
+#       "task_type": "grammar",
+#       "version": "scq_v1",
+#       "response_format": "single_choice",
+#       "content": {{
+#         "...": "exactly as in the example of the chosen version"
+#       }},
+#       "requires_media": false,
+#       "media_script": null
+#     }}
+#   ]
+# }}
+#         """
+
+
         user_message = f"""
 Lesson: "{lesson_context['title']}" (CEFR Level: {lesson_context['level']})
 
@@ -218,7 +288,13 @@ Each exercise type below defines:
 - an example that represents the exact required content structure
 {json.dumps(schemas_info, indent=2, ensure_ascii=False)}
 
-Generate exactly {num_tasks} diverse exercises covering all lesson objectives.
+Choose the optimal number of exercises for objective lesson assessment 
+(NOT LESS THAN {tasks_per_lesson}). 
+
+RECOMMENDED:
+- Each learning objective should have 1-2 dedicated exercises
+- Mix exercise types within skill domains when possible
+
 RULES (STRICT):
 1. Each exercise MUST include:
    - task_type: one of [{', '.join(lesson_context['skill_focus'])}]

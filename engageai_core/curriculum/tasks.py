@@ -1,6 +1,8 @@
 import json
 import os
-from platform import system
+import time
+
+from celery_progress.backend import ProgressRecorder
 
 import requests
 from asgiref.sync import async_to_sync
@@ -28,11 +30,12 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task
-def transcribe_response(response_id: int) -> int:
+def transcribe_response(self, response_id: int) -> int:
     """
     Транскрибирует один StudentTaskResponse с аудио.
     Возвращает ID ответа (для совместимости с group).
     """
+
     try:
         response = StudentTaskResponse.objects.get(id=response_id)
 
@@ -143,6 +146,13 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
     7. Запускает DecisionService для адаптации
     8. Переходит к следующему узлу (если нет remedial)
     """
+
+
+    progress_recorder = ProgressRecorder(self)
+
+    current_assessment = 0
+
+
     enrollment = Enrollment.objects.select_related('student', 'course').get(id=enrollment_id)
 
     lesson = Lesson.objects.get(id=assessed_lesson_id)
@@ -162,6 +172,13 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
 
         if not responses:
             raise ValueError("Нет ответов для оценки")
+
+        total_assessment_counter = len(responses) + 1
+        progress_recorder.set_progress(
+            current_assessment,
+            total_assessment_counter,
+            description=f"Обработано {current_assessment}/{total_assessment_counter} оценок"
+        )
 
         auto_adapter = AutoAssessorAdapter()
         llm_adapter = LLMAssessmentAdapter()
@@ -191,6 +208,21 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
                 is_correct=result.is_correct
             )
             task_assessments.append(task_assessment)
+            current_assessment += 1
+            progress_recorder.set_progress(
+                current_assessment,
+                total_assessment_counter,
+                description=f"Обработано {current_assessment - 1}/{total_assessment_counter} задач"
+            )
+            time.sleep(60)
+
+        current_assessment += 1
+        progress_recorder.set_progress(
+            current_assessment,
+            total_assessment_counter,
+            description=f"Оценивается урок"
+        )
+        time.sleep(60)
 
         lesson_result = LessonAssessmentResult.objects.create(
             enrollment=enrollment,

@@ -24,6 +24,8 @@ from django.views.generic import RedirectView, TemplateView
 urlpatterns = [
     path('', TemplateView.as_view(template_name="index.html"), name="index"),
     path('admin/', admin.site.urls),
+    path(r'^celery-progress/', include('celery_progress.urls')),
+
     path('accounts/', include('users.urls')),
 
     # API версия 1 (единый префикс для всех API)

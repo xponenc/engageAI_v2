@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Optional
+from typing import Optional, List, Dict
 
 from asgiref.sync import sync_to_async
 from django.db import transaction
@@ -26,8 +26,9 @@ class LessonGenerationService(BaseContentGenerator):
             course,
             order: int,
             level: str,
-            skill_focus: list[str],
-            theme_tags: list[str],
+            skill_focus: List[str],
+            theme_tags: List[str],
+            methodological_tags: Optional[List[Dict]] = None,
             user_id: Optional[int] = None
     ) -> Lesson:
         """
@@ -42,7 +43,8 @@ class LessonGenerationService(BaseContentGenerator):
                 level=level,
                 skill_focus=skill_focus,
                 theme_tags=theme_tags,
-                user_id=user_id
+                user_id=user_id,
+                methodological_tags=methodological_tags
             )
         except Exception as e:
             self.logger.exception(
@@ -92,29 +94,50 @@ class LessonGenerationService(BaseContentGenerator):
                                         level: str,
                                         skill_focus: list[str],
                                         theme_tags: list[str],
-                                        user_id: Optional[int] = None
+                                        user_id: Optional[int] = None,
+                                        methodological_tags: Optional[List[Dict]] = None,
                                         ) -> dict:
         """Генерация данных урока через LLM"""
         professional_tags_str = ""
         if theme_tags:
             professional_tags_str = "Professional tags for the topic: " + ', '.join(theme_tags)
 
+        lesson_objectives = ""
+        if methodological_tags:
+            objectives_list = []
+            for unit in methodological_tags:
+                objectives_list.append(
+                    f"• {unit['name']} ({unit['skill_domain']}) - {unit['description']}"
+                )
 
-        if skill_focus:
-            focus_str = (f"Pay special attention to the following skills: {', '.join(skill_focus)}. "
-                         f"These skills should dominate this lesson.")
+            lesson_objectives = (
+                f"MANDATORY LESSON OBJECTIVES (methodological plan):\n"
+                f"{chr(10).join(objectives_list)}\n\n"
+                f"CRITICAL: This lesson MUST fully cover ALL listed objectives.\n"
+                f"Theory, examples, and tasks must directly address each objective."
+            )
+            skill_emphasis = f"Skills from objectives: {', '.join(skill_focus)}"
+        elif skill_focus:
+            # Fallback для обратной совместимости
+            lesson_objectives = f"Focus skills: {', '.join(skill_focus)}"
+            skill_emphasis = "These skills should dominate this lesson."
         else:
-            focus_str = ("Balance skills: grammar, vocabulary, reading, listening,"
-                         " writing, speaking. Choose 1–3 relevant skills")
-        system_prompt = """You are an expert English curriculum designer. """
+            lesson_objectives = f"Balance skills: grammar, vocabulary, reading, listening, writing, speaking. "
+            skill_emphasis = "Choose 2–3 relevant skills"
+
+        system_prompt = """You are an expert English language curriculum designer specializing in CEFR-aligned courses."""
+
         user_prompt = f"""
 Generate ONE lesson for course: 
 This is an ENGLISH LANGUAGE lesson. The learner studies English, not a profession.
 
-"{course.title if course else 'Adaptive professional English'}".
+Course: "{course.title if course else 'Adaptive professional English'}".
 Lesson CEFR level: {level}
 {professional_tags_str}
-{focus_str}
+
+{lesson_objectives}
+
+SKILL EMPHASIS: {skill_emphasis}
 
 Rules:
 - PRIMARY GOAL: teaching ENGLISH language skills.
@@ -123,7 +146,7 @@ Rules:
 - Professional or thematic context must NOT dominate the lesson.
   Do NOT teach the profession itself.
   Use professional context only to illustrate grammar, vocabulary, or communication in English.
-- Skill_focus: array of EXACTLY these values only: grammar, vocabulary, reading, listening, writing, speaking. No more than 3.
+- Skill_focus: array of EXACTLY these values only - {', '.join(skill_focus)}. No more than 3.
 - Learning_objectives: 1 to 3 objectives per lesson.
   Use format: {{"name": "Use Present Simple for routines", "cefr_level": "A2", "skill_domain": "grammar", "description": "Detailed explanation for methodologists"}}
   Do NOT invent fake identifiers — use logical ones like grammar-A2-01, vocabulary-B1-03, etc.

@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.postgres',
     'users.apps.AppUsersConfig',
+    'celery_progress',
     'assessment',
     'chat',
     'ai_assistant',

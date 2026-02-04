@@ -101,57 +101,31 @@ class LearningPathAdaptationService:
     # Public API
     # ========================================================
 
-    @classmethod
-    def handle_lesson_completion(
-            cls,
-            enrollment,
-            lesson,
-            lo_results: dict[str, float]
-    ):
+
+    @staticmethod
+    def _get_current_node(learning_path) -> dict:
         """
-        Обрабатывает успешное завершение урока.
-
-        :param enrollment: Enrollment
-        :param lesson: Lesson
-        :param lo_results: dict {learning_objective.identifier: score}
+        Возвращает текущий активный node.
         """
+        idx = learning_path.current_node_index
 
-        learning_path = enrollment.learning_path
-        nodes = learning_path.nodes
+        try:
+            return learning_path.nodes[idx]
+        except (IndexError, TypeError):
+            raise RuntimeError(
+                f"Invalid current_node_index={idx} for learning_path={learning_path.id}"
+            )
 
-        # 1️⃣ Находим node урока
-        lesson_node = cls._find_lesson_node(nodes, lesson.id)
-        if not lesson_node:
-            raise ValueError(f"Lesson node not found for lesson_id={lesson.id}")
-
-        # 2️⃣ Проверяем LO урока
-        lesson_los = lesson.learning_objectives.all()
-
-        all_passed = True
-        for lo in lesson_los:
-            score = lo_results.get(lo.identifier)
-            if score is None or score < cls.COMPLETION_THRESHOLD:
-                all_passed = False
-                break
-
-        if not all_passed:
-            # ❗ НЕ этот сценарий — handled в 4.3
-            return
-
-        # 3️⃣ Помечаем текущий урок завершённым
-        lesson_node["status"] = "completed"
-        lesson_node["completed_at"] = timezone.now().isoformat()
-
-        # 4️⃣ Находим следующий допустимый node
-        next_node = cls._find_next_available_node(nodes, lesson_node["node_id"])
-
-        if next_node:
-            next_node["status"] = "in_progress"
-        else:
-            learning_path.is_completed = True
-            learning_path.completed_at = timezone.now()
-
-        learning_path.save(update_fields=["nodes", "is_completed", "completed_at"])
+    @staticmethod
+    def _find_next_available_index(nodes, start_index: int) -> int | None:
+        """
+        Возвращает индекс следующего допустимого node,
+        применяя правило soft skip.
+        """
+        for idx in range(start_index + 1, len(nodes)):
+            if nodes[idx]["status"] in ("unlocked", "recommended"):
+                return idx
+        return None
 
     def adapt_after_lesson(
         self,

@@ -15,7 +15,7 @@
             <h1 class="assessment__course">{{ course.title }}</h1>
             <h2 class="assessment__lesson">{{ current_lesson.title }}</h2>
             <div class="assessment__meta">
-                Урок {{ current_lesson.order }} из {{ course.lessons.count }}
+                Урок {{ course_progress.current_lesson_number }} из {{ course_progress.total_lessons }} (пройдено {{ course_progress.course_progress.total_lessons }})
             </div>
         </header>
 
@@ -34,19 +34,27 @@
 {% endblock %}
 
 {% block assistant_script %}
-<script src="{% static 'js/assessment-progress.js' %}"></script>
+{% comment %} <script src="{% static 'js/assessment-progress.js' %}"></script> {% endcomment %}
 <script src="{% static 'celery_progress/celery_progress.js' %}"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const bar = document.querySelector("#progress-bar");
-        console.log(bar)
         if (bar) {
             var progressUrl = "{% url 'celery_progress:task_status' task_id %}";
+            
+            // Формируем целевой URL для редиректа после успеха
+            var historyUrl = "";
+
             CeleryProgressBar.initProgressBar(progressUrl, {
-                pollInterval: 1000  // опрашивать каждую секунду
+                pollInterval: 1000,
+                onSuccess: function() {
+                    // Опционально: небольшая задержка для отображения "100%" или сообщения
+                    setTimeout(function() {
+                        window.location.href = historyUrl;
+                    }, 1000);
+                }
             });
         }
     });
-
 </script>
 {% endblock %}

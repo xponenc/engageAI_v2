@@ -22,6 +22,7 @@ from curriculum.models.student.enrollment import Enrollment
 from curriculum.models.student.student_response import StudentTaskResponse
 from curriculum.services.auto_assessment_adapter import AutoAssessorAdapter
 from curriculum.services.decision_service import DecisionService
+from curriculum.services.learning_path_adaptation import LearningPathAdaptationService
 from curriculum.services.lesson_event_service import LessonEventService
 from curriculum.services.llm_assessment_adapter import LLMAssessmentAdapter
 from llm_logger.models import LLMRequestType
@@ -146,12 +147,8 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
     7. Запускает DecisionService для адаптации
     8. Переходит к следующему узлу (если нет remedial)
     """
-
-
     progress_recorder = ProgressRecorder(self)
-
     current_assessment = 0
-
 
     enrollment = Enrollment.objects.select_related('student', 'course').get(id=enrollment_id)
 
@@ -173,11 +170,11 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
         if not responses:
             raise ValueError("Нет ответов для оценки")
 
-        total_assessment_counter = len(responses) + 1
+        total_assessment_counter = len(responses)
         progress_recorder.set_progress(
             current_assessment,
             total_assessment_counter,
-            description=f"Обработано {current_assessment}/{total_assessment_counter} оценок"
+            description=f"Обработано {current_assessment}/{total_assessment_counter} заданий"
         )
 
         auto_adapter = AutoAssessorAdapter()
@@ -212,17 +209,14 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
             progress_recorder.set_progress(
                 current_assessment,
                 total_assessment_counter,
-                description=f"Обработано {current_assessment - 1}/{total_assessment_counter} задач"
+                description=f"Обработано {current_assessment}/{total_assessment_counter} задач"
             )
-            time.sleep(60)
 
-        current_assessment += 1
         progress_recorder.set_progress(
-            current_assessment,
-            total_assessment_counter,
+            0,
+            1,
             description=f"Оценивается урок"
         )
-        time.sleep(60)
 
         lesson_result = LessonAssessmentResult.objects.create(
             enrollment=enrollment,
@@ -307,28 +301,70 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
             }
         )
 
-        # Обновляем узел пути
-        path = enrollment.learning_path
-        current_index = path.current_node_index
-        print(f"{current_index=}")
-        print(f"{path.nodes[current_index]=}")
-        path.nodes[current_index]["status"] = "completed"
-        path.nodes[current_index]["completed_at"] = timezone.now().isoformat()
-        path.save()
+        task_assessments = TaskAssessmentResult.objects.filter(
+            enrollment=enrollment,
+            task__lesson=lesson
+        ).select_related("task")
 
-        # Запускаем адаптацию пути (remedial, skip и т.д.)
-        DecisionService.evaluate_and_adapt_path(enrollment, lesson)
+        task_evaluation_payload = []
 
-        # Переход к следующему узлу — только если нет новых recommended/remedial
-        if path.next_node and not any(
-                n["status"] in ["recommended", "remedial"] for n in path.nodes[current_index + 1:]
-        ):
-            path.current_node_index += 1
+        for ta in task_assessments:
+            task_evaluation_payload.append({
+                "learning_objectives": ta.task.learning_objectives,
+                # ← список identifier'ов LO
+                "skill_evaluation": ta.structured_feedback,
+            })
 
-        path.save()
+        lo_evaluations = LearningObjectiveEvaluationService.evaluate(
+            task_evaluation_payload
+        )
+
+        outcome = LessonOutcomeContext(
+            lesson_id=lesson.id,
+            objective_scores={
+                lo_id: eval.avg_score
+                for lo_id, eval in lo_evaluations.items()
+            },
+            objective_attempts={
+                lo_id: eval.attempts
+                for lo_id, eval in lo_evaluations.items()
+            },
+            completed_at=lesson_result.completed_at,
+        )
+
+        adjustment = LearningPathAdaptationService().adapt_after_lesson(
+            learning_path=enrollment.learning_path,
+            outcome=outcome
+        )
+        # Результат
+        # LearningPathAdjustmentType.ADVANCE
+        # LearningPathAdjustmentType.INSERT_REMEDIAL
+        # LearningPathAdjustmentType.REWIND_LEVEL
+        # LearningPathAdjustmentType.HOLD
+
+        LessonEventService.create_event(
+            student=enrollment.student,
+            enrollment=enrollment,
+            lesson=lesson,
+            event_type=LessonEventType.LEARNING_PATH_ADJUSTED,
+            channel="SYSTEM",
+            metadata={
+                "adjustment": adjustment.value,
+                "lesson_id": lesson.id,
+            }
+        )
+
+        learning_adaptation_service = LearningPathAdaptationService
+        ???
+
+        progress_recorder.set_progress(
+            1,
+            1,
+            description=f"Оценивается урок"
+        )
 
         logger.info(f"Оценка завершена для enrollment {enrollment_id}")
-        return {"status": "success"}
+        return {"Оценка завершена"}
 
     except Exception as e:
         logger.error(f"Ошибка оценки {enrollment_id}: {str(e)}", exc_info=True)

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 from asgiref.sync import sync_to_async
+from django.core.exceptions import ValidationError
 
 # --- добавляем корень проекта в PYTHONPATH ---
 BASE_DIR = Path(__file__).resolve().parents[3]
@@ -307,6 +308,13 @@ RULES (STRICT):
 5. Use only the provided versions. Do NOT invent new versions.
 6. Exercises must collectively cover ALL listed learning objectives.
 7. Listening exercises are NOT required for this lesson.
+8. Each exercise MUST explicitly reference which learning objective(s) it assesses.
+9. You MUST use ONLY the learning objectives listed above.
+10. Use the field:
+    "learning_objectives": ["<identifier>", "..."]
+11. Each exercise should normally assess exactly ONE learning objective.
+    Use multiple objectives only if strictly necessary.
+
 
 MEDIA RULES:
 - requires_media:  boolean (true if the exercise is a listening task, false otherwise)
@@ -320,6 +328,7 @@ Return ONLY valid JSON in the following format:
       "task_type": "grammar",
       "version": "scq_v1",
       "response_format": "single_choice",
+      "learning_objectives": ["grammar-B1-01"],
       "content": {{
         "...": "exactly as in the example of the chosen version"
       }},
@@ -342,7 +351,22 @@ Return ONLY valid JSON in the following format:
         if "exercises" not in tasks_data or not isinstance(tasks_data["exercises"], list):
             raise ValueError(f"Invalid tags format: {tasks_data}"[:200])
 
-        return tasks_data["exercises"]
+        result = self._validate_task_learning_objectives(task_data=tasks_data["exercises"], lesson=lesson)
+
+        return result
+
+    @staticmethod
+    def _validate_task_learning_objectives(task_data, lesson):
+        """Проверяет что задаче назначен LearningObjective из LO урока"""
+        lesson_lo_ids = set(
+            lesson.learning_objectives.values_list("identifier", flat=True)
+        )
+
+        for lo_id in task_data["learning_objectives"]:
+            if lo_id not in lesson_lo_ids:
+                raise ValidationError(
+                    f"Invalid learning objective {lo_id} for lesson {lesson.id}"
+                )
 
     def _get_available_schemas(self, skill_focus: list[str]) -> list[str]:
         """

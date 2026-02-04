@@ -23,7 +23,7 @@ urlpatterns = [
     #
     # # История обучения
     path('session/<int:enrollment_id>/history/', CourseHistoryView.as_view(), name='course_history'),
-    # path('session/<int:enrollment_id>/lesson/<int:lesson_id>/history/', LessonHistoryView.as_view(),
-    #      name='lesson_history'),
+    path('session/<int:enrollment_id>/lesson/<int:lesson_id>/history/', LessonHistoryView.as_view(),
+         name='lesson_history'),
 
 ]

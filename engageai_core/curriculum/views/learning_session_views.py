@@ -26,6 +26,8 @@ from curriculum.tasks import assess_lesson_tasks, launch_full_assessment
 from ..models.content.lesson import Lesson
 from ..models.learning_process.lesson_event_log import LessonEventType
 from ..models.student.student_response import StudentTaskResponse
+from ..services.learning_path_adaptation import LearningPathAdaptationService
+from ..services.learning_path_progress import LearningPathProgressService
 from ..services.lesson_assessment_service import LessonAssessmentService
 from ..services.lesson_event_service import LessonEventService
 
@@ -1258,6 +1260,7 @@ class CheckLessonAssessmentView(LoginRequiredMixin, ChatContextMixin, View):
     Проверяет статус оценки урока.
     Поддерживает как AJAX (JSON), так и обычные GET-запросы с рендерингом.
     """
+    learning_path_progress_service = LearningPathProgressService
 
     def get(self, request, enrollment_id):
         """Обработка GET-запросов для проверки статуса оценки"""
@@ -1292,10 +1295,28 @@ class CheckLessonAssessmentView(LoginRequiredMixin, ChatContextMixin, View):
         if is_ajax:
             return JsonResponse(assessment_status)
 
-        # Для обычных запросов рендерим шаблон
+        current_node_index = enrollment.learning_path.current_node_index
+        current_node = enrollment.learning_path.nodes[current_node_index]
+        current_lesson = Lesson.objects.get(id=current_node.get("lesson_id"))
+
+        l_service = self.learning_path_progress_service
+        course_progress = l_service.get_core_progress(enrollment.learning_path)
+
         context = super().get_context_data()
-        print(context)
-        context.update(self._build_template_context(enrollment, assessment_status))
+
+        context.update({
+            'enrollment': enrollment,
+            'current_lesson': current_lesson,
+            'task_id': enrollment.assessment_job_id,
+            'course': enrollment.course,
+            'course_progress': course_progress,
+            'assessment_status': assessment_status,
+            'assessment_started_at': enrollment.assessment_started_at,
+            'progress': assessment_status.get('progress', 0),
+            'current_task': assessment_status.get('current', 0),
+            'total_tasks': assessment_status.get('total', 1),
+            'status_message': assessment_status.get('message', 'Оценка выполняется')
+        })
 
         return render(
             request,
@@ -1378,19 +1399,7 @@ class CheckLessonAssessmentView(LoginRequiredMixin, ChatContextMixin, View):
 
     def _build_template_context(self, enrollment, assessment_status):
         """Создает контекст для шаблона"""
-        return {
-            'enrollment': enrollment,
-            'task_id': enrollment.assessment_job_id,
-            'course': enrollment.course,
-            'current_lesson': enrollment.current_lesson,
-            'assessment_status': assessment_status,
-            'assessment_started_at': enrollment.assessment_started_at,
-            'estimated_completion_time': assessment_status.get('estimated_remaining_time', 1),
-            'progress': assessment_status.get('progress', 0),
-            'current_task': assessment_status.get('current', 0),
-            'total_tasks': assessment_status.get('total', 1),
-            'status_message': assessment_status.get('message', 'Оценка выполняется')
-        }
+        return
 
     def _handle_error(self, request, error_msg, status_code):
         """Единая обработка ошибок для AJAX и обычных запросов"""

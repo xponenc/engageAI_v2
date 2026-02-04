@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from curriculum.models import LearningObjective
 from curriculum.models.content.response_format import ResponseFormat
 from curriculum.models.systematization.professional_tag import ProfessionalTag
 from users.models import CEFRLevel
@@ -74,6 +75,11 @@ class Task(models.Model):
     # схема задается в engageai_core/curriculum/schemas.py:TASK_CONTENT_SCHEMAS
     content_schema_version = models.CharField(default="v1", verbose_name=_("Content Schema"))
     difficulty_cefr = models.CharField(max_length=2, choices=CEFRLevel, verbose_name=_("Difficulty CEFR"))
+    learning_objectives = models.ManyToManyField(
+        LearningObjective,
+        related_name="tasks",
+        help_text="Какие учебные цели проверяет задание"
+    )
     # skill_focus = models.JSONField(default=list, validators=[validate_skill_focus], verbose_name=_("Skill Focus"),
     #                                help_text=_("e.g., ['listening', 'vocabulary']")
     #                                ) # TODO это если надо будет оценивать скилы точечно

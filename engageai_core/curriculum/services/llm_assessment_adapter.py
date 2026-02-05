@@ -1,11 +1,12 @@
 import asyncio
 import json
 import logging
-from typing import Type, TypeVar, Optional, Dict, Any
+from typing import Type, TypeVar, Optional, Dict, Any, Union
 
 from asgiref.sync import async_to_sync
 
 from ai.llm_service.factory import llm_factory
+from assessment.models import TestAnswer
 from curriculum.models.assessment.assessment_result import AssessmentResult
 from curriculum.models.content.task import Task, ResponseFormat
 from curriculum.models.student.student_response import StudentTaskResponse
@@ -48,20 +49,31 @@ class LLMAssessmentAdapter(AssessmentPort):
         # Используем глобальный экземпляр llm_factory
         self.llm = llm_factory
 
-    def assess_task(self, task: Task, response: StudentTaskResponse) -> AssessmentResult:
+    def assess_task(self, task: Task, response: Union[StudentTaskResponse, TestAnswer]) -> AssessmentResult:
         """Assess a single task with LLM"""
         try:
             user_message = self._build_user_message(task, response)
-            lesson = task.lesson
-            course = lesson.course
-            user = response.student.user
-            context = {
-                "course_id": course.pk,
-                "lesson_id": lesson.pk,
-                "task_id": task.pk,
-                "user_id": user.id,
-                "request_type": LLMRequestType.TASK_REVIEW,
-            }
+            if isinstance(response, StudentTaskResponse):
+                lesson = task.lesson
+                course = lesson.course
+                user = response.student.user
+                context = {
+                    "course_id": course.pk,
+                    "lesson_id": lesson.pk,
+                    "task_id": task.pk,
+                    "user_id": user.id,
+                    "request_type": LLMRequestType.TASK_REVIEW,
+                }
+            else:  # TestAnswer
+                user = response.question.session.user
+                test_session = response.question.session
+                task = response.question.task
+                context = {
+                    "test_session_id": test_session.pk,
+                    "task_id": task.pk,
+                    "user_id": user.id,
+                    "request_type": LLMRequestType.TEST_TASK_REVIEW,
+                }
 
             print(user_message)
 
@@ -175,8 +187,8 @@ Content: {task.content}
 
         except Exception as e:
             self.logger.exception("Critical error during LLM call",
-                             extra={"system_prompt": system_prompt[:100], "user_message": user_message[:100],
-                                    "context": context})
+                                  extra={"system_prompt": system_prompt[:100], "user_message": user_message[:100],
+                                         "context": context})
             raise
 
     def _parse_llm_response(self, payload: dict, task: Task) -> AssessmentResult:

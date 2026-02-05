@@ -1,0 +1,12 @@
+services:
+  piper-tts:
+    image: rhasspy/wyoming-piper
+    container_name: piper-tts
+    ports:
+      - "5000:5000"
+      - "10200:10200"
+    volumes:
+      - "./voices:/data"
+    command:
+      - "--voice"
+      - "en_US-lessac-medium"

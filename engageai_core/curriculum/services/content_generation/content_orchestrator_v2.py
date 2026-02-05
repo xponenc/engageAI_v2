@@ -461,9 +461,9 @@ if __name__ == "__main__":
     o = ContentOrchestrator()
     # asyncio.run(o.generate_full_course(theme="AI, LLM developer", user_id=2))
     course = Course.objects.first()
-    for level in ["B2",]:
+    for level in ["B1", "B1", "B1", "B2", "B2", "B2", "C1", "C1", "C1", ]:
         asyncio.run(o.generate_single_lesson_with_tasks(
             course=course,
             level=level,
-            user_id =2,
+            user_id=2,
         ))

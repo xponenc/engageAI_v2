@@ -6,6 +6,8 @@ class LLMRequestType(models.TextChoices):
     """Типы запроса к LLM"""
     COURSE_GENERATION = ('COURSE_GEN', 'Генерация курса')
     LESSON_GENERATION = ('LESSON_GEN', 'Генерация урока')
+    TEST_TASK_REVIEW = ('TEST TASK REVIEW', 'Оценка тестового задания')
+    TEST_SESSION_REVIEW = ('TEST SESSION REVIEW', 'Оценка тестовой сессии')
     LESSON_REVIEW = ('LESSON_REVIEW', 'Оценка урока')
     TASK_GENERATION = ('TASK_GEN', 'Генерация задания')
     TASK_REVIEW = ('TASK_REVIEW', 'Оценка задания')
@@ -13,6 +15,7 @@ class LLMRequestType(models.TextChoices):
     DIAGNOSTIC = ('DIAGNOSTIC', 'Диагностика')
     FEEDBACK = ('FEEDBACK', 'Фидбэк студенту')
     OTHER = ('OTHER', 'Другое')
+
 
 class LogLLMRequest(models.Model):
     """
@@ -22,23 +25,32 @@ class LogLLMRequest(models.Model):
     request_time = models.DateTimeField(auto_now_add=True, verbose_name=_("Время запроса"))
     model_name = models.CharField(max_length=50, verbose_name=_("Имя модели"), help_text=_("e.g., 'gpt-4o-mini'"))
     prompt = models.JSONField(verbose_name=_("Промпт запроса"), help_text=_("Полный текст запроса к LLM"))
-    response = models.TextField(verbose_name=_("Ответ LLM (текстовый)"), blank=True, null=True, help_text=_("Текстовый ответ от LLM"))
-    response_json = models.JSONField(verbose_name="Ответ LLM (структура)", blank=True, null=True, help_text=_("Структурированный JSON ответ от LLM"),)
+    response = models.TextField(verbose_name=_("Ответ LLM (текстовый)"), blank=True, null=True,
+                                help_text=_("Текстовый ответ от LLM"))
+    response_json = models.JSONField(verbose_name="Ответ LLM (структура)", blank=True, null=True,
+                                     help_text=_("Структурированный JSON ответ от LLM"), )
     tokens_in = models.PositiveIntegerField(default=0, verbose_name=_("Токены на вход"))
     tokens_out = models.PositiveIntegerField(default=0, verbose_name=_("Токены на выход"))
     cost_in = models.DecimalField(max_digits=10, decimal_places=5, default=0, verbose_name=_("Стоимость входа"))
     cost_out = models.DecimalField(max_digits=10, decimal_places=5, default=0, verbose_name=_("Стоимость выхода"))
     cost_total = models.DecimalField(max_digits=10, decimal_places=5, default=0, verbose_name=_("Общая стоимость"))
-    duration_sec = models.FloatField(null=True, blank=True, verbose_name=_("Длительность генерации, сек") )
+    duration_sec = models.FloatField(null=True, blank=True, verbose_name=_("Длительность генерации, сек"))
     request_type = models.CharField(max_length=50, choices=LLMRequestType.choices, default=LLMRequestType.OTHER,
                                     verbose_name=_("Тип запроса"), help_text=_("Классификация запроса для аналитики"))
 
     error_message = models.TextField(blank=True, verbose_name=_("Сообщение об ошибке"))
-    metadata = models.JSONField(default=dict, blank=True, verbose_name=_("Метаданные"), help_text=_("Дополнительный контекст запроса"))
-    user = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_("Пользователь"), related_name='llm_logs')
-    course = models.ForeignKey('curriculum.Course', on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_("Курс"), related_name='llm_logs')
-    lesson = models.ForeignKey('curriculum.Lesson', on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_("Урок"), related_name='llm_logs')
-    task = models.ForeignKey('curriculum.Task', on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_("Задание"), related_name='llm_logs')
+    metadata = models.JSONField(default=dict, blank=True, verbose_name=_("Метаданные"),
+                                help_text=_("Дополнительный контекст запроса"))
+    user = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True,
+                             verbose_name=_("Пользователь"), related_name='llm_logs')
+    course = models.ForeignKey('curriculum.Course', on_delete=models.SET_NULL, null=True, blank=True,
+                               verbose_name=_("Курс"), related_name='llm_logs')
+    lesson = models.ForeignKey('curriculum.Lesson', on_delete=models.SET_NULL, null=True, blank=True,
+                               verbose_name=_("Урок"), related_name='llm_logs')
+    task = models.ForeignKey('curriculum.Task', on_delete=models.SET_NULL, null=True, blank=True,
+                             verbose_name=_("Задание"), related_name='llm_logs')
+    test_session = models.ForeignKey('assessment.TestSession', on_delete=models.SET_NULL, null=True, blank=True,
+                                     verbose_name=_("Тестовая сессия"), related_name='llm_logs')
     status = models.CharField(max_length=20, default='SUCCESS', choices=[
         ('SUCCESS', 'Успех'),
         ('ERROR', 'Ошибка'),

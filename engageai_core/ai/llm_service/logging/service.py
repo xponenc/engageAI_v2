@@ -67,7 +67,6 @@ class LLMLloggingService:
                     "full_prompt": full_prompt,
                 }
 
-
             # Подготавливаем данные для модели
             log_data = self._prepare_log_data(
                 provider=provider,
@@ -174,7 +173,7 @@ class LLMLloggingService:
             data["metadata"]["agent"] = context.get("agent")
 
         # Контекстные связи (если есть)
-        for field in ["user_id", "course_id", "lesson_id", "session_id", "task_id", "request_type", ]:
+        for field in ["user_id", "course_id", "lesson_id", "session_id", "task_id", "request_type", "test_session_id"]:
             if field in context and context[field]:
                 data[field] = context[field]
 

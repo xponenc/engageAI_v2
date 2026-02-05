@@ -81,6 +81,7 @@ def get_next_question_for_session(session: TestSession, source_question_request:
 
     if not next_question and can_generate_next_main_packet(session):
         low, high = determine_range_from_diagnostic(session)
+        print(f"{low=} {high=}")
         exclude_tasks = [qi.task_id for qi in session.questions.all() if qi.task]
         load_questions_for_range(session, low, high, exclude_tasks)
         next_question = get_next_unanswered_question(session)
@@ -123,20 +124,16 @@ def get_next_question_for_session(session: TestSession, source_question_request:
 
 def submit_answer(session, qinst, answer_text):
     """Обработка ответа с учетом Task.content"""
-    ans = TestAnswer.objects.create(
-        question=qinst,
-        answer_text=answer_text.strip(),
-        answered_at=timezone.now()
-    )
+
     auto_adapter = AutoAssessorAdapter()
     llm_adapter = LLMAssessmentAdapter()
 
     task = qinst.task
 
     if task.response_format in AutoAssessorAdapter.SUPPORTED_FORMATS:
-        result = auto_adapter.assess_task(task, answer_text.strip())
+        result = auto_adapter.assess_task(task, answer_text)
     else:
-        result = llm_adapter.assess_task(task, answer_text.strip())
+        result = llm_adapter.assess_task(task, answer_text)
 
     ans.ai_feedback = {
         "task_id": result.task_id,

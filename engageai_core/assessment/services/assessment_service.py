@@ -6,6 +6,8 @@
 
 from django.utils import timezone
 
+from curriculum.services.auto_assessment_adapter import AutoAssessorAdapter
+from curriculum.services.llm_assessment_adapter import LLMAssessmentAdapter
 from users.models import Student, CEFRLevel
 from utils.setup_logger import setup_logger
 from ..models import TestSession, QuestionInstance, TestAnswer, SessionSourceType
@@ -28,7 +30,7 @@ def start_assessment_for_user(user, source=SessionSourceType.WEB):
     Создает новую сессию, если старая истекла.
     Возвращает (session, expired_flag)
     """
-    assessment_logger.debug(f"[assessment] Старт теста для user={user.id}")
+    assessment_logger.info(f"[assessment] Старт теста для user={user.id}")
 
     expired_flag = False
 
@@ -69,12 +71,18 @@ def get_next_question_for_session(session: TestSession, source_question_request:
 
     next_question = get_next_unanswered_question(session)
 
-    if session.locked_by != source_question_request:
-        assessment_logger.debug(f"{session} locked_by={session.locked_by} запрос на вопрос пришел из другого "
-                                f"источника {source_question_request}")
+    # if session.locked_by != source_question_request:
+    #     assessment_logger.debug(f"{session} locked_by={session.locked_by} запрос на вопрос пришел из другого "
+    #                             f"источника {source_question_request}")
+    # if not next_question and can_generate_next_main_packet(session):
+    #     low, high = determine_range_from_diagnostic(session)
+    #     load_questions_for_range(session, low, high)
+    #     next_question = get_next_unanswered_question(session)
+
     if not next_question and can_generate_next_main_packet(session):
         low, high = determine_range_from_diagnostic(session)
-        load_questions_for_range(session, low, high)
+        exclude_tasks = [qi.task_id for qi in session.questions.all() if qi.task]
+        load_questions_for_range(session, low, high, exclude_tasks)
         next_question = get_next_unanswered_question(session)
 
     assessment_logger.debug(f"TestSession {session.id} выдан вопрос {next_question}")
@@ -82,35 +90,65 @@ def get_next_question_for_session(session: TestSession, source_question_request:
     return next_question, None
 
 
+# def submit_answer(session, qinst, answer_text):
+#     """Сохраняет ответ пользователя и оценивает его (MCQ или open-вопрос)"""
+#     answer_text = answer_text.strip()
+#     ans = TestAnswer.objects.create(question=qinst, answer_text=answer_text, answered_at=timezone.now())
+#
+#     qj = qinst.question_json
+#     qtype = qj.get("type")
+#     if qtype == "mcq":
+#         options = qj.get("options") or []
+#         try:
+#             user_index = options.index(answer_text)
+#         except ValueError:
+#             user_index = None
+#         correct = qj.get("correct_answer", {}).get("index")
+#         if user_index is not None and correct is not None:
+#             ans.score = 1.0 if user_index == correct else 0.0
+#     else:
+#         # open-вопрос: LLM оценивает ответ
+#
+#         task_evaluate_open_answer.delay(str(ans.id))
+#         # eval_result = evaluate_open_answer(answer_text, qj)
+#         # assessment_logger.info(f"{session} LLM score for {ans}: {eval_result}")
+#         # ans.score = eval_result.get("score")
+#         # ans.ai_feedback = eval_result.get("feedback")
+#
+#     ans.save()
+#
+#     assessment_logger.info(f"{session} сохранен ответ {ans}")
+#
+#     return ans
+
 def submit_answer(session, qinst, answer_text):
-    """Сохраняет ответ пользователя и оценивает его (MCQ или open-вопрос)"""
-    answer_text = answer_text.strip()
-    ans = TestAnswer.objects.create(question=qinst, answer_text=answer_text, answered_at=timezone.now())
+    """Обработка ответа с учетом Task.content"""
+    ans = TestAnswer.objects.create(
+        question=qinst,
+        answer_text=answer_text.strip(),
+        answered_at=timezone.now()
+    )
+    auto_adapter = AutoAssessorAdapter()
+    llm_adapter = LLMAssessmentAdapter()
 
-    qj = qinst.question_json
-    qtype = qj.get("type")
-    if qtype == "mcq":
-        options = qj.get("options") or []
-        try:
-            user_index = options.index(answer_text)
-        except ValueError:
-            user_index = None
-        correct = qj.get("correct_answer", {}).get("index")
-        if user_index is not None and correct is not None:
-            ans.score = 1.0 if user_index == correct else 0.0
+    task = qinst.task
+
+    if task.response_format in AutoAssessorAdapter.SUPPORTED_FORMATS:
+        result = auto_adapter.assess_task(task, answer_text.strip())
     else:
-        # open-вопрос: LLM оценивает ответ
+        result = llm_adapter.assess_task(task, answer_text.strip())
 
-        task_evaluate_open_answer.delay(str(ans.id))
-        # eval_result = evaluate_open_answer(answer_text, qj)
-        # assessment_logger.info(f"{session} LLM score for {ans}: {eval_result}")
-        # ans.score = eval_result.get("score")
-        # ans.ai_feedback = eval_result.get("feedback")
-
+    ans.ai_feedback = {
+        "task_id": result.task_id,
+        "is_correct": result.is_correct,
+        "cefr_target": result.cefr_target,
+        "skill_evaluation": result.skill_evaluation,
+        "summary": result.summary,
+        "error_tags": result.error_tags,
+        "metadata": result.metadata,
+    }
     ans.save()
-
-    assessment_logger.info(f"{session} сохранен ответ {ans}")
-
+    assessment_logger.info(f"Обработан ответ для QuestionInstance {qinst.id}, score: {ans.score}")
     return ans
 
 

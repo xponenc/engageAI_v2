@@ -317,7 +317,7 @@ def _compact_protocol_for_prompt(session: TestSession) -> Dict[str, Any]:
             "question_instance_id": str(qi.id),
             "level": qi.question_json.get("level"),
             "type": qi.question_json.get("type"),
-            "question_text": qi.question_json.get("question_text"),
+            "question": qi.question_json,
             "answer_text": main_answer.answer_text if main_answer else None,
             "score": float(main_answer.score) if main_answer and main_answer.score is not None else None,
             "ai_feedback": main_answer.ai_feedback if main_answer else None

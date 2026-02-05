@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ai_assistant.models import AIAssistant
-from assessment.models import CEFRQuestion, QuestionType
+# from assessment.models import CEFRQuestion, QuestionType
 from chat.models import ChatPlatform, Chat, Message, ChatScope
 from chat.services.interfaces.chat_service import ChatService
 from chat.services.interfaces.message_service import MessageService

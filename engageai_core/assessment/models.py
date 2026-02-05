@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.contrib.postgres.fields import ArrayField
 import uuid
 
+from curriculum.models import Task
 from users.models import CEFRLevel
 
 
@@ -27,61 +28,61 @@ class SessionSourceType(models.TextChoices):
     TELEGRAM = "tg", "Сессия начата в боте"
 
 
-class SourceType(models.TextChoices):
-    """Источник вопроса."""
-    CEFR = "cefr", "Статический CEFR из банка"
-    LLM = "llm", "Сгенерирован LLM"
+# class SourceType(models.TextChoices):
+#     """Источник вопроса."""
+#     CEFR = "cefr", "Статический CEFR из банка"
+#     LLM = "llm", "Сгенерирован LLM"
 
+#
+# class CEFRQuestion(models.Model):
+#     """
+#     Статический банк вопросов (CEFR).
+#     Это мастер-таблица вопросов, используется для выборки и аналитики.
+#     В сессиях храним клон вопроса в QuestionInstance.question_json,
+#     чтобы гарантировать неизменность исторических данных.
+#     """
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     level = models.CharField(max_length=2, choices=CEFRLevel.choices, db_index=True)
+#     type = models.CharField(max_length=10, choices=QuestionType.choices, db_index=True)
+#     question_text = models.TextField()
+#     options = ArrayField(models.CharField(max_length=500), null=True, blank=True,
+#                          help_text="Варианты для MCQ (список строк). Для open = null")
+#     correct_answer = models.JSONField(null=True, blank=True,
+#                                       help_text='{"index": 0} для MCQ или {"text":"..."} для точной проверки')
+#     explanation = models.TextField(null=True, blank=True)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#
+#     objects = models.Manager()
+#
+#     class Meta:
+#         indexes = [
+#             models.Index(fields=["level", "type"]),
+#         ]
+#         ordering = ["level"]
+#
+#     def __str__(self):
+#         return f"{self.level} | {self.type} | {self.question_text[:50]}"
 
-class CEFRQuestion(models.Model):
-    """
-    Статический банк вопросов (CEFR).
-    Это мастер-таблица вопросов, используется для выборки и аналитики.
-    В сессиях храним клон вопроса в QuestionInstance.question_json,
-    чтобы гарантировать неизменность исторических данных.
-    """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    level = models.CharField(max_length=2, choices=CEFRLevel.choices, db_index=True)
-    type = models.CharField(max_length=10, choices=QuestionType.choices, db_index=True)
-    question_text = models.TextField()
-    options = ArrayField(models.CharField(max_length=500), null=True, blank=True,
-                         help_text="Варианты для MCQ (список строк). Для open = null")
-    correct_answer = models.JSONField(null=True, blank=True,
-                                      help_text='{"index": 0} для MCQ или {"text":"..."} для точной проверки')
-    explanation = models.TextField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    objects = models.Manager()
-
-    class Meta:
-        indexes = [
-            models.Index(fields=["level", "type"]),
-        ]
-        ordering = ["level"]
-
-    def __str__(self):
-        return f"{self.level} | {self.type} | {self.question_text[:50]}"
-
-
-class LLMGeneratedQuestion(models.Model):
-    """
-    Вопросы, сгенерированные LLM для персонализации под пользователя.
-    Храним JSON, чтобы можно было пересмотреть сгенерированный текст.
-    """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    template_id = models.CharField(max_length=128, null=True, blank=True,
-                                   help_text="Опциональный ID промпта/шаблона")
-    user_id = models.UUIDField(db_index=True, help_text="UUID пользователя, для которого сгенерирован вопрос")  # TODO FK?
-    test_session_id = models.UUIDField(db_index=True, help_text="ID TestSession при генерации")
-    question_json = models.JSONField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        indexes = [
-            models.Index(fields=["user_id"]),
-            models.Index(fields=["test_session_id"])
-        ]
-        ordering = ["-created_at"]
+#
+# class LLMGeneratedQuestion(models.Model):
+#     """
+#     Вопросы, сгенерированные LLM для персонализации под пользователя.
+#     Храним JSON, чтобы можно было пересмотреть сгенерированный текст.
+#     """
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     template_id = models.CharField(max_length=128, null=True, blank=True,
+#                                    help_text="Опциональный ID промпта/шаблона")
+#     user_id = models.UUIDField(db_index=True, help_text="UUID пользователя, для которого сгенерирован вопрос")  # TODO FK?
+#     test_session_id = models.UUIDField(db_index=True, help_text="ID TestSession при генерации")
+#     question_json = models.JSONField()
+#     created_at = models.DateTimeField(auto_now_add=True)
+#
+#     class Meta:
+#         indexes = [
+#             models.Index(fields=["user_id"]),
+#             models.Index(fields=["test_session_id"])
+#         ]
+#         ordering = ["-created_at"]
 
 
 class TestSession(models.Model):
@@ -141,9 +142,10 @@ class QuestionInstance(models.Model):
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     session = models.ForeignKey(TestSession, on_delete=models.CASCADE, related_name="questions")
-    source_type = models.CharField(max_length=10, choices=SourceType.choices, db_index=True)
-    source_question_id = models.UUIDField(help_text="ID в CEFRQuestion или LLMGeneratedQuestion")
-    question_json = models.JSONField()
+    task = models.ForeignKey(Task, on_delete=models.SET_NULL, null=True, blank=True, related_name='question_instances')
+    # source_type = models.CharField(max_length=10, choices=SourceType.choices, db_index=True)
+    # source_question_id = models.UUIDField(help_text="ID в CEFRQuestion или LLMGeneratedQuestion")
+    # question_json = models.JSONField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = models.Manager()
@@ -151,7 +153,6 @@ class QuestionInstance(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=["session", "created_at"]),
-            models.Index(fields=["source_type"]),
         ]
         ordering = ["created_at"]
 
@@ -179,3 +180,12 @@ class TestAnswer(models.Model):
 
     def __str__(self):
         return f"Answer {self.id} question {self.question_id}"
+
+
+
+class TestAnswerMedia(models.Model):
+    """
+    Медиафайл, прикреплённый к ответу.
+    """
+    answer = models.ForeignKey(TestAnswer, on_delete=models.CASCADE, related_name='media_files', verbose_name="Task")
+    file = models.FileField(upload_to='test_answer_media/', verbose_name="File")

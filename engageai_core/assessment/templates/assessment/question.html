@@ -8,6 +8,7 @@
 <link href="{% static 'css/assessment.css' %}" rel="stylesheet">
 <link href="{% static 'css/users/user.css' %}" rel="stylesheet">
 <link href="{% static 'css/users/auth.css' %}" rel="stylesheet">
+<link href="{% static 'css/learning-session.css' %}" rel="stylesheet">
 {% endblock css %}
 
 
@@ -43,11 +44,11 @@
             <div class="question">
                 <div class="question__header">
                     <div class="question__type">
-                        {% if question.options %}
+                        {% comment %} {% if question.options %}
                             <span class="question-type-badge">Выберите вариант</span>
                         {% else %}
                             <span class="question-type-badge">Текстовый ответ</span>
-                        {% endif %}
+                        {% endif %} {% endcomment %}
                     </div>
                     <div class="question__timer" id="question-timer">
                         <span class="timer__icon">⏱️</span>
@@ -56,94 +57,56 @@
                 </div>
 
                 <div class="question__content">
-                    {% if text_content %}
-                      <div class="reading-passage">
-                        <div class="reading-passage__header">
-                          <h4 class="reading-passage__title">Текст:</h4>
-                        </div>
-                        <div class="reading-passage__content">
-                          {{ text_content|linebreaks }}
-                        </div>
-                      </div>
-                      
-                      <div class="reading-question">
-                        <div class="reading-question__header">
-                          <h4 class="reading-question__title">Вопрос:</h4>
-                        </div>
-                        <h3 class="question__text">{{ question_content }}</h3>
-                      </div>
-                    {% else %}
-                      <h3 class="question__text">{{ question.question_text }}</h3>
-                    {% endif %}
-                    
-                    {% if question.instruction %}
-                    <div class="question__instruction">
-                        <div class="instruction__icon">💡</div>
-                        <div class="instruction__text">{{ question.instruction }}</div>
+                    <div class="reading-passage">
+                    <div class="reading-passage__header">
+                        <h4 class="reading-passage__title">{{ task.content.prompt|safe }}</h4>
                     </div>
-                    {% endif %}
-                    {{ question }}
-                </div>
+                    <form method="post" action="{% url 'assessment:question_view' session.id %}" class="options-form" enctype="multipart/form-data">
+                        <div class="reading-passage__content _mb">
+                            {% csrf_token %}
+                            {{ form.session_id }}
+                            {{ form.question_instance_id }}
+                            {% if form.answer and task.response_format == 'audio' %}
+                                {# Вручную рендерим только input файла #}
+                                <input type="file"
+                                    name="answer"
+                                    accept="audio/*"
+                                    class="task-file"
+                                    data-task-audio-input="{{ task.id }}"
+                                    {% if form.answer.field.required %}required{% endif %}>
 
-                <!-- Форма ответа -->
-                <div class="question__form">
-                    {% if question.options %}
-                        <!-- Вопрос с вариантами ответов -->
-                        <form method="post" action="{% url 'assessment:question_view' session.id %}" class="options-form">
-                            {% csrf_token %}
-                            {{ form.session_id }}
-                            {{ form.question_instance_id }}
-                            
-                            <div class="options-grid">
-                                {% for opt in question.options %}
-                                    <label class="option-card">
-                                        <input type="radio" name="answer_text" value="{{ opt }}" required class="option-card__input">
-                                        <div class="option-card__content">
-                                            <div class="option-card__text">{{ opt }}</div>
-                                            <div class="option-card__check"></div>
-                                        </div>
-                                    </label>
-                                {% endfor %}
-                            </div>
-                            
-                            <div class="question__actions">
-                                <button type="submit" class="btn btn_primary btn_lg question__submit">
-                                    <span class="btn__icon">🚀</span>
-                                    Следующий вопрос
-                                </button>
-                            </div>
-                        </form>
-                    {% else %}
-                        <!-- Текстовый вопрос -->
-                        <form method="post" action="{% url 'assessment:question_view' session.id %}" class="text-form">
-                            {% csrf_token %}
-                            {{ form.session_id }}
-                            {{ form.question_instance_id }}
-                            
-                            <div class="text-answer">
-                                <div class="form-field">
-                                    <label for="{{ form.answer_text.id_for_label }}" class="form-field__label">
-                                        Ваш ответ
-                                    </label>
-                                    <div class="input-wrapper">
-                                        {{ form.answer_text }}
+                                <div class="task-audio">
+                                    <button type="button"
+                                            class="task-audio__record-btn btn btn_outline"
+                                            data-task-record="{{ task.id }}">
+                                        Записать с микрофона
+                                    </button>
+
+                                    <div class="task-audio__preview"
+                                        data-task-audio-preview="{{ task.id }}"
+                                        hidden>
+                                        <audio controls></audio>
+                                        <div class="task-audio__meta">Аудио записано</div>
                                     </div>
-                                    {% if form.answer_text.errors %}
-                                    <div class="form-field__errors">
-                                        {{ form.answer_text.errors }}
-                                    </div>
-                                    {% endif %}
                                 </div>
-                            </div>
-                            
-                            <div class="question__actions">
-                                <button type="submit" class="btn btn_primary btn_lg question__submit">
-                                    <span class="btn__icon">📝</span>
-                                    Отправить ответ
-                                </button>
-                            </div>
-                        </form>
-                    {% endif %}
+
+                                {% if form.answer.errors %}
+                                    <div class="error">{{ form.answer.errors|join:", " }}</div>
+                                {% endif %}
+
+                            {% else %}
+                                {# Для всех остальных типов — используем стандартный рендер #}
+                                {{ form.answer }}
+                                {% if form.answer.errors %}
+                                    <div class="error">{{ field.errors|join:", " }}</div>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <button type="submit" class="btn btn_primary btn_lg question__submit">
+                            <span class="btn__icon">📝</span>
+                            Отправить ответ
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>

@@ -162,7 +162,7 @@ class TaskGenerationService(BaseContentGenerator):
         """Подготовка контекста урока для LLM"""
         objectives = await self._atomic_db_operation(
             lambda: list(lesson.learning_objectives.values(
-                'name', 'description', 'skill_domain', 'cefr_level'
+                'name', 'description', 'skill_domain', 'cefr_level', 'identifier'
             ))
         )
 
@@ -311,7 +311,10 @@ RULES (STRICT):
 8. Each exercise MUST explicitly reference which learning objective(s) it assesses.
 9. You MUST use ONLY the learning objectives listed above.
 10. Use the field:
-    "learning_objectives": ["<identifier>", "..."]
+    "content" field MUST strictly match the structure of the example for the selected version.
+    "learning_objectives": ["<identifier>", "..."] Lus identifiers from the Learning Objectives used for this task
+    "content": The 'content' assignment should be clearly and unambiguously understood. The assignment should also 
+    be understandable when viewed outside of the lesson context.
 11. Each exercise should normally assess exactly ONE learning objective.
     Use multiple objectives only if strictly necessary.
 
@@ -338,7 +341,7 @@ Return ONLY valid JSON in the following format:
   ]
 }}
         """
-
+        print(user_message)
         context = {
             "course_id": lesson.course.pk,
             "lesson_id": lesson.pk,
@@ -351,9 +354,11 @@ Return ONLY valid JSON in the following format:
         if "exercises" not in tasks_data or not isinstance(tasks_data["exercises"], list):
             raise ValueError(f"Invalid tags format: {tasks_data}"[:200])
 
-        result = self._validate_task_learning_objectives(task_data=tasks_data["exercises"], lesson=lesson)
+        await sync_to_async(self._validate_task_learning_objectives)(
+            task_data=tasks_data["exercises"], lesson=lesson
+        )
 
-        return result
+        return tasks_data["exercises"]
 
     @staticmethod
     def _validate_task_learning_objectives(task_data, lesson):
@@ -361,12 +366,14 @@ Return ONLY valid JSON in the following format:
         lesson_lo_ids = set(
             lesson.learning_objectives.values_list("identifier", flat=True)
         )
-
-        for lo_id in task_data["learning_objectives"]:
-            if lo_id not in lesson_lo_ids:
-                raise ValidationError(
-                    f"Invalid learning objective {lo_id} for lesson {lesson.id}"
-                )
+        print(lesson_lo_ids)
+        print(task_data)
+        for task in task_data:
+            for lo_id in task["learning_objectives"]:
+                if lo_id not in lesson_lo_ids:
+                    raise ValidationError(
+                        f"Invalid learning objective {lo_id} for lesson {lesson.id}"
+                    )
 
     def _get_available_schemas(self, skill_focus: list[str]) -> list[str]:
         """
@@ -392,23 +399,10 @@ Return ONLY valid JSON in the following format:
         if not objectives:
             return "No specific objectives"
         return "\n".join([
-            f"- {obj['name']} ({obj['skill_domain']}, {obj['cefr_level']}): {obj['description']}"
+            f"- {obj['name']} ({obj['skill_domain']}, {obj['cefr_level']})(identifier: {obj['identifier']}): {obj['description']}"
             for obj in objectives
         ])
 
-
-
-    def _detect_schema(self, content: dict) -> str:
-        """Определяет схему по структуре контента"""
-        if "options" in content:
-            return "scq_v1" if "correct_idx" in content else "mcq_v1"
-        elif "correct_answers" in content:
-            return "short_text_v1"
-        elif "min_words" in content and "max_words" in content:
-            return "free_text_v1"
-        elif "min_duration_sec" in content and "max_duration_sec" in content:
-            return "audio_v1"
-        return "scq_v1"
 
     @sync_to_async
     @transaction.atomic

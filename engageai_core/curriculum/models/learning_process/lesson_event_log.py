@@ -23,6 +23,7 @@ class LessonEventType(models.TextChoices):
     ASSESSMENT_START = "ASSESSMENT_START", _("Начало оценки урока")
     ASSESSMENT_COMPLETE = "ASSESSMENT_COMPLETE", _("Завершение оценки урока")
     ASSESSMENT_ERROR = "ASSESSMENT_ERROR", _("Ошибка оценки урока")
+    LEARNING_PATH_ADJUSTED = "LEARNING_PATH_ADJUSTED", _("Сформирован следующий шаг учебного плана")
 
 
 class LessonEventLog(models.Model):

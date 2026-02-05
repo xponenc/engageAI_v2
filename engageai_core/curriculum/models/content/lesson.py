@@ -27,7 +27,7 @@ class Lesson(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='lessons', verbose_name=_("Course"))
     title = models.CharField(max_length=200, verbose_name=_("Title"))
     description = models.TextField(verbose_name=_("Description"))
-    order = models.PositiveIntegerField(verbose_name=_("Order"))
+    order = models.PositiveIntegerField(verbose_name=_("Order"), blank=True, null=True)
     content = models.TextField(verbose_name=_("Content"),
                                help_text=_("Optional structured lesson instructions or narrative for AI"))
     content_ru = models.TextField(verbose_name=_("Content"),

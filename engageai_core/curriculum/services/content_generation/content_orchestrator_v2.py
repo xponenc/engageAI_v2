@@ -67,6 +67,42 @@ class ContentOrchestrator:
 
         return course
 
+    async def generate_single_lesson_with_tasks(
+            self,
+            course: Course,
+            level: str,
+            skill_focus: list[str] = None,
+            tasks_per_lesson: int = None,
+            methodological_tags: Optional[List[Dict]] = None,
+            user_id: Optional[int] = None
+    ) -> 'Lesson': # TODO добавить генерацию через методологические тесты
+        """
+        Утилита для генерации одного урока с заданиями (для ремедиации или адаптивного пути).
+        """
+
+        professional_tags = await sync_to_async(
+            lambda: list(course.professional_tags.values_list('description', flat=True))
+        )()
+
+        # Генерация урока с methodological_tags
+        lesson = await self.lesson_generator.generate(
+            course=course,
+            level=level,
+            order=None,
+            skill_focus=skill_focus,
+            theme_tags=professional_tags,
+            methodological_tags=methodological_tags,
+            user_id=user_id,
+        )
+
+
+        await self.task_generator.generate(
+            lesson=lesson,
+            tasks_per_lesson=tasks_per_lesson or 5
+        )
+
+        return lesson
+
     async def _generate_lessons_smart(
             self,
             course: Course,
@@ -183,9 +219,9 @@ class ContentOrchestrator:
                     methodological_tags=methodological_tags,
                     user_id=user_id,
                 )
-                # Сохраняем в metadata
-                lesson.metadata['methodological_tags'] = methodological_tags
-                await sync_to_async(lesson.save)()
+                # # Сохраняем в metadata
+                # lesson.metadata['methodological_tags'] = methodological_tags
+                # await sync_to_async(lesson.save)()
 
                 lessons.append(lesson)
                 current_order += 1
@@ -297,9 +333,9 @@ class ContentOrchestrator:
                     user_id=user_id,
                 )
 
-                # Сохраняем methodological_tags в metadata для восстановления
-                lesson.metadata['methodological_tags'] = methodological_tags
-                await sync_to_async(lesson.save)()
+                # # Сохраняем methodological_tags в metadata для восстановления
+                # lesson.metadata['methodological_tags'] = methodological_tags
+                # await sync_to_async(lesson.save)()
 
                 lessons.append(lesson)
                 current_order += 1
@@ -423,4 +459,11 @@ class ContentOrchestrator:
 
 if __name__ == "__main__":
     o = ContentOrchestrator()
-    asyncio.run(o.generate_full_course(theme="AI, LLM developer", user_id=2))
+    # asyncio.run(o.generate_full_course(theme="AI, LLM developer", user_id=2))
+    course = Course.objects.first()
+    for level in ["B2",]:
+        asyncio.run(o.generate_single_lesson_with_tasks(
+            course=course,
+            level=level,
+            user_id =2,
+        ))

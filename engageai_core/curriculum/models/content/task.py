@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from curriculum.models import LearningObjective
+from curriculum.models.systematization.learning_objective import LearningObjective
 from curriculum.models.content.response_format import ResponseFormat
 from curriculum.models.systematization.professional_tag import ProfessionalTag
 from users.models import CEFRLevel

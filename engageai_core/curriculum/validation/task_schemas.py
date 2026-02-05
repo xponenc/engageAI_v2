@@ -21,7 +21,7 @@ TASK_CONTENT_SCHEMAS = {
     "scq_v1": {
         "name": "Single Choice Question v1",
         "is_generation_enabled": True,
-        "response_format": [ResponseFormat.SINGLE_CHOICE],
+        "response_format": ResponseFormat.SINGLE_CHOICE,
         "supported_skills": {
                 "grammar", "vocabulary", "reading"
             },
@@ -44,7 +44,7 @@ TASK_CONTENT_SCHEMAS = {
                 "min_length": 5     # Текст вопроса должен быть минимум 5 символов
             }
         },
-        "description": "Задание с выбором одного правильного варианта из списка",
+        "description": "Задание с выбором одного правильного варианта из списка.",
         "example": {
             "prompt": "Choose the correct form of the verb.",
             "options": [
@@ -59,7 +59,7 @@ TASK_CONTENT_SCHEMAS = {
     "mcq_v1": {
         "name": "Multiple Choice Question v1",
         "is_generation_enabled": True,
-        "response_format": [ResponseFormat.MULTIPLE_CHOICE],
+        "response_format": ResponseFormat.MULTIPLE_CHOICE,
         "supported_skills": {
                         "grammar", "vocabulary", "reading"
                     },
@@ -111,7 +111,7 @@ TASK_CONTENT_SCHEMAS = {
     "short_text_v1": {
         "name": "Short Text Response v1",
         "is_generation_enabled": True,
-        "response_format": [ResponseFormat.SHORT_TEXT],
+        "response_format": ResponseFormat.SHORT_TEXT,
         "supported_skills": {
             "grammar", "vocabulary", "reading", "listening"
         },
@@ -154,7 +154,7 @@ TASK_CONTENT_SCHEMAS = {
     "free_text_v1": {
         "name": "Free Text Response v1",
         "is_generation_enabled": True,
-        "response_format": [ResponseFormat.FREE_TEXT],
+        "response_format": ResponseFormat.FREE_TEXT,
         "supported_skills": {
             "writing"
         },
@@ -201,7 +201,7 @@ TASK_CONTENT_SCHEMAS = {
     "audio_v1": {
         "name": "Audio Response Task v1",
         "is_generation_enabled": True,
-        "response_format": [ResponseFormat.AUDIO],
+        "response_format": ResponseFormat.AUDIO,
         "supported_skills": {
             "speaking"
         },

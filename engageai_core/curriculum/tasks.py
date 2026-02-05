@@ -22,7 +22,8 @@ from curriculum.models.student.enrollment import Enrollment
 from curriculum.models.student.student_response import StudentTaskResponse
 from curriculum.services.auto_assessment_adapter import AutoAssessorAdapter
 from curriculum.services.decision_service import DecisionService
-from curriculum.services.learning_path_adaptation import LearningPathAdaptationService
+from curriculum.services.learning_objective_evaluation import LearningObjectiveEvaluationService
+from curriculum.services.learning_path_adaptation import LearningPathAdaptationService, LessonOutcomeContext
 from curriculum.services.lesson_event_service import LessonEventService
 from curriculum.services.llm_assessment_adapter import LLMAssessmentAdapter
 from llm_logger.models import LLMRequestType
@@ -353,9 +354,6 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
                 "lesson_id": lesson.id,
             }
         )
-
-        learning_adaptation_service = LearningPathAdaptationService
-        ???
 
         progress_recorder.set_progress(
             1,

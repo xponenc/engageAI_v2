@@ -10,6 +10,7 @@ from curriculum.models import Course
 from curriculum.models.content.lesson import Lesson
 from curriculum.models.systematization.learning_objective import LearningObjective
 from curriculum.services.content_generation.base_generator import BaseContentGenerator
+from curriculum.validators import SkillDomain
 from llm_logger.models import LLMRequestType
 
 logger = logging.getLogger(__name__)
@@ -24,10 +25,10 @@ class LessonGenerationService(BaseContentGenerator):
     async def generate(
             self,
             course,
-            order: int,
             level: str,
             skill_focus: List[str],
             theme_tags: List[str],
+            order: Optional[int] = None,
             methodological_tags: Optional[List[Dict]] = None,
             user_id: Optional[int] = None
     ) -> Lesson:
@@ -64,7 +65,8 @@ class LessonGenerationService(BaseContentGenerator):
                 course=course,
                 order=order,
                 level=level,
-                lesson_data=lesson_data
+                lesson_data=lesson_data,
+                methodological_tags=methodological_tags
             )
             self.logger.info(
                 f"Урок успешно создан: {lesson.title} (ID: {lesson.pk})",
@@ -122,7 +124,8 @@ class LessonGenerationService(BaseContentGenerator):
             lesson_objectives = f"Focus skills: {', '.join(skill_focus)}"
             skill_emphasis = "These skills should dominate this lesson."
         else:
-            lesson_objectives = f"Balance skills: grammar, vocabulary, reading, listening, writing, speaking. "
+            skill_focus = list(SkillDomain.values)
+            lesson_objectives = f"Balance skills: {', '.join(skill_focus)}. "
             skill_emphasis = "Choose 2–3 relevant skills"
 
         system_prompt = """You are an expert English language curriculum designer specializing in CEFR-aligned courses."""
@@ -190,8 +193,9 @@ Return ONLY a valid JSON (no comments, no text):
 
     @sync_to_async
     @transaction.atomic
-    def _create_lesson(self, course, order: int, level: str, lesson_data: dict) -> Lesson:
-        lesson = Lesson.objects.create(
+    def _create_lesson(self, course, order: int, level: str,
+                       lesson_data: dict, methodological_tags: Optional[List[Dict]] = None,) -> Lesson:
+        lesson = Lesson(
             course=course,
             order=order,
             title=lesson_data["title"],
@@ -202,8 +206,13 @@ Return ONLY a valid JSON (no comments, no text):
             content=lesson_data["theory_content"],
             content_ru=lesson_data["theory_content_ru"],
             is_active=True,
-            is_remedial=False,
+            is_remedial=False if order else True,
         )
+
+        if methodological_tags:
+            lesson.metadata["methodological_tags"] = methodological_tags
+
+        lesson.save()
 
         # Привязка целей обучения
         objectives = []

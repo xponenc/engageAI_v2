@@ -1,33 +1,33 @@
 from django.db.models import Count
 from assessment.models import QuestionInstance, TestSession
 
-
-class QuestionPresentationService:
-    """Сервис для форматирования вопросов для разных платформ"""
-
-    def format_for_web(self, question_instance):
-        """
-        Форматирует question_json для отображения в веб-интерфейсе.
-        Разделяет текст на контекст и сам вопрос при наличии маркеров "Text:" и "Question:".
-        """
-        question_text = question_instance.question_json.get("question_text", "")
-        text_content = ""
-        question_content = question_text
-
-        if "Text:" in question_text and "Question:" in question_text:
-            try:
-                text_part = question_text.split("Text:", 1)[1]
-                parts = text_part.split("Question:", 1)
-                text_content = parts[0].strip()
-                question_content = parts[1].strip() if len(parts) > 1 else ""
-            except (IndexError, ValueError):
-                pass
-
-        return {
-            "full_text": question_text,
-            "text_content": text_content,
-            "question_content": question_content,
-        }
+#
+# class QuestionPresentationService:
+#     """Сервис для форматирования вопросов для разных платформ"""
+#
+#     def format_for_web(self, question_instance):
+#         """
+#         Форматирует question_json для отображения в веб-интерфейсе.
+#         Разделяет текст на контекст и сам вопрос при наличии маркеров "Text:" и "Question:".
+#         """
+#         question_text = question_instance.question_json.get("question_text", "")
+#         text_content = ""
+#         question_content = question_text
+#
+#         if "Text:" in question_text and "Question:" in question_text:
+#             try:
+#                 text_part = question_text.split("Text:", 1)[1]
+#                 parts = text_part.split("Question:", 1)
+#                 text_content = parts[0].strip()
+#                 question_content = parts[1].strip() if len(parts) > 1 else ""
+#             except (IndexError, ValueError):
+#                 pass
+#
+#         return {
+#             "full_text": question_text,
+#             "text_content": text_content,
+#             "question_content": question_content,
+#         }
 
 
 class AssessmentProgressService:

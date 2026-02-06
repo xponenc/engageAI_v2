@@ -6,7 +6,9 @@ from django.utils import timezone
 from django.views import View
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse, reverse_lazy
+from django.views.generic import TemplateView
 
+from chat.views import ChatContextMixin
 from utils.setup_logger import setup_logger
 from .forms import QuestionAnswerForm
 from .models import TestSession, SessionSourceType, QuestionInstance, TestAnswer, TestAnswerMedia
@@ -19,11 +21,10 @@ from .tasks import evaluate_answer_to_test_task
 assessment_logger = setup_logger(name=__file__, log_dir="logs/core/assessment", log_file="assessment.log")
 
 
-class StartAssessmentView(LoginRequiredMixin, View):
+class StartAssessmentView(LoginRequiredMixin, ChatContextMixin, TemplateView):
     """Запуск базового теста на определение уровня языка"""
 
-    def get(self, request):
-        return render(request, template_name="assessment/start.html", context={})
+    template_name="assessment/start.html"
 
     def post(self, request):
         session, expired_flag = start_assessment_for_user(request.user)

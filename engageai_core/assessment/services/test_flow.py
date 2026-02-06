@@ -21,7 +21,7 @@ DIAGNOSTIC_COUNT = len(DIAGNOSTIC_ORDER) * 2
 # количество вопросов в одном пакете
 MAIN_QUESTIONS_PACKET_SIZE = 12
 # количество пакетов (итераций)
-MAIN_QUESTIONS_ITERATION_COUNTER = 1
+MAIN_QUESTIONS_ITERATION_COUNTER = 0
 # общий максимум вопросов
 MAIN_QUESTIONS_LIMIT = DIAGNOSTIC_COUNT + MAIN_QUESTIONS_PACKET_SIZE * MAIN_QUESTIONS_ITERATION_COUNTER
 
@@ -258,16 +258,16 @@ def finalize_session(session):
         "level_scores": level_scores,
         "estimated_level": level,
     }
-
+    protocol_answers = []
     for a in answers.select_related("question"):
-        protocol["answers"].append({
+        protocol_answers.append({
             "question_id": str(a.question.task.id),
             "question": a.question.task.content,
             "response_text": a.response_text,
             "score": a.score,
             "ai_feedback": a.ai_feedback
         })
-
+    protocol["answers"] = protocol_answers
     session.estimated_level = level
     session.protocol_json = protocol
     session.finished_at = timezone.now()

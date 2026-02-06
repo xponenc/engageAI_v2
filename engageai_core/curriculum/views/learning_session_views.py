@@ -23,6 +23,7 @@ from curriculum.models.student.enrollment import Enrollment, LessonStatus
 from ..forms import LessonTasksForm
 
 from curriculum.tasks import assess_lesson_tasks, launch_full_assessment
+from ..models import LessonAssessmentResult, TaskAssessmentResult
 from ..models.content.lesson import Lesson
 from ..models.learning_process.lesson_event_log import LessonEventType
 from ..models.student.student_response import StudentTaskResponse
@@ -389,64 +390,93 @@ class LearningSessionView(LoginRequiredMixin, ChatContextMixin, TemplateView):
         messages.success(request, success_msg)
         return redirect(redirect_url)
 
-class LessonHistoryView(LoginRequiredMixin, ChatContextMixin, DetailView):
+class LessonHistoryViewOld(LoginRequiredMixin, ChatContextMixin, DetailView):
     """
     Представление для просмотра истории выполнения заданий в уроке.
     Показывает детальную статистику и позволяет анализировать прогресс.
 
-    URL: /curriculum/session/<enrollment_id>/lesson/<lesson_id>/history/
     """
-    model = Enrollment
+    model = Lesson
     template_name = 'curriculum/lesson_history.html'
-    context_object_name = 'enrollment'
-    pk_url_kwarg = 'enrollment_id'
+    queryset = Lesson.objects.select_related("course")
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
 
-        self.learning_service = CurriculumServiceFactory().create_learning_service()
-        self.enrollment_service = self.learning_service.enrollment_service
-        self.curriculum_query = self.learning_service.curriculum_query
-
-    def get_queryset(self):
-        return Enrollment.objects.filter(
-            student=self.request.user.student,
-            is_active=True
-        ).select_related('course')
-
-    def get_object(self, queryset=None):
-        obj = super().get_object(queryset)
-        if obj.student != self.request.user.student:
-            raise PermissionDenied("Вы не можете получить доступ к этой истории урока")
-        return obj
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update(self.get_chat_context(self.request))
+        lesson = self.object
 
-        enrollment = self.object
-        lesson_id = self.kwargs.get('lesson_id')
+        enrollment = Enrollment.objects.filter(course=lesson.course, student__user=self.request.user).first()
 
-        try:
-            # Получаем детальную информацию по уроку
-            lesson = Lesson.objects.get(id=lesson_id, course=enrollment.course)
+        if enrollment:
+            student_response = Prefetch("student_response", queryset=StudentTaskResponse.objects.select_related(""))
+            tasks = Task.objects.prefetch_related("student_response").filter(lesson=lesson)
+            lesson = Lesson.objects.select_related("course")#еще подгрузить LessonAssessmentResult
 
-            # Получаем полную историю урока
-            lesson_history = self.curriculum_query.get_lesson_history(enrollment, lesson)
+        context.update({
+            'lesson': lesson,
+        })
 
-            context.update({
-                'current_lesson': lesson,
-                'lesson_history': lesson_history,
-                'lesson_number': lesson.order,
-                'is_current_lesson': enrollment.current_lesson_id == lesson.id if enrollment.current_lesson else False
-            })
+        return context
 
-        except Lesson.DoesNotExist:
-            context['error'] = f"Урок {lesson_id} не найден или недоступен для просмотра"
-            logger.warning(f"Lesson {lesson_id} not found for enrollment {enrollment.id}")
-        except Exception as e:
-            logger.error(f"Error loading lesson history: {str(e)}", exc_info=True)
-            context['error'] = "Произошла ошибка при загрузке истории урока. Пожалуйста, попробуйте позже."
+class LessonHistoryView(LoginRequiredMixin, ChatContextMixin, DetailView):
+    model = Lesson
+    template_name = 'curriculum/lesson_history.html'
+
+    def get_queryset(self):
+        return Lesson.objects.select_related("course")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        lesson = self.object
+
+        enrollment = (
+            Enrollment.objects
+            .select_related("student", "course")
+            .filter(
+                course=lesson.course,
+                student__user=self.request.user,
+                is_active=True,
+            )
+            .first()
+        )
+
+        if not enrollment:
+            context["enrollment"] = None
+            return context
+
+        # ответы студента на задания урока
+        student_responses_qs = (
+            StudentTaskResponse.objects
+            .filter(enrollment=enrollment)
+            .select_related("assessment")  # TaskAssessmentResult (OneToOne)
+        )
+
+        tasks = (
+            Task.objects
+            .filter(lesson=lesson)
+            .order_by("order")
+            .prefetch_related(
+                Prefetch(
+                    "student_response",
+                    queryset=student_responses_qs,
+                    to_attr="student_responses_for_enrollment",
+                )
+            )
+        )
+
+        lesson_assessment = (
+            LessonAssessmentResult.objects
+            .filter(enrollment=enrollment, lesson=lesson)
+            .first()
+        )
+
+        context.update({
+            "lesson": lesson,
+            "enrollment": enrollment,
+            "tasks": tasks,
+            "lesson_assessment": lesson_assessment,
+        })
 
         return context
 
@@ -939,6 +969,8 @@ class CheckLessonAssessmentView(LoginRequiredMixin, ChatContextMixin, View):
 
         context = super().get_context_data()
 
+        lesson_report_url = reverse_lazy("curriculum:lesson_history", kwargs={"pk": current_lesson.pk})
+
         context.update({
             'enrollment': enrollment,
             'current_lesson': current_lesson,
@@ -947,10 +979,7 @@ class CheckLessonAssessmentView(LoginRequiredMixin, ChatContextMixin, View):
             'course_progress': course_progress,
             'assessment_status': assessment_status,
             'assessment_started_at': enrollment.assessment_started_at,
-            'progress': assessment_status.get('progress', 0),
-            'current_task': assessment_status.get('current', 0),
-            'total_tasks': assessment_status.get('total', 1),
-            'status_message': assessment_status.get('message', 'Оценка выполняется')
+            'lesson_report_url': lesson_report_url,
         })
 
         return render(

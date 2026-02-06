@@ -315,11 +315,9 @@ def _compact_protocol_for_prompt(session: TestSession) -> Dict[str, Any]:
         main_answer = TestAnswer.objects.filter(question=qi).order_by("answered_at").first()
         qa = {
             "question_instance_id": str(qi.id),
-            "level": qi.question_json.get("level"),
-            "type": qi.question_json.get("type"),
-            "question": qi.question_json,
-            "answer_text": main_answer.answer_text if main_answer else None,
-            "score": float(main_answer.score) if main_answer and main_answer.score is not None else None,
+            "level": qi.task.difficulty_cefr,
+            "question": qi.task.content,
+            "answer_text": main_answer.response_text if main_answer else None,
             "ai_feedback": main_answer.ai_feedback if main_answer else None
         }
         compact.append(qa)

@@ -39,11 +39,11 @@ class LLMLogListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
     def get_queryset(self):
         """Фильтрация и сортировка queryset"""
         queryset = super().get_queryset().select_related(
-            'user', 'course', 'lesson', 'task'
+            'user', 'course', 'lesson', 'task', 'test_session'
         ).only(
             'id', 'request_time', 'model_name', 'request_type', 'status',
             'cost_total', 'duration_sec', 'tokens_in', 'tokens_out',
-            'user__username', 'course__title', 'lesson__title', 'course', 'lesson', 'task',
+            'course__title', 'lesson__title', 'course', 'lesson', 'task', 'test_session', 'user'
         )
 
         # Фильтр по типу запроса

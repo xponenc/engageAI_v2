@@ -171,12 +171,7 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
         if not responses:
             raise ValueError("Нет ответов для оценки")
 
-        total_assessment_counter = len(responses)
-        progress_recorder.set_progress(
-            current_assessment,
-            total_assessment_counter,
-            description=f"Обработано {current_assessment}/{total_assessment_counter} заданий"
-        )
+        total_tasks = len(responses)
 
         auto_adapter = AutoAssessorAdapter()
         llm_adapter = LLMAssessmentAdapter()
@@ -184,7 +179,7 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
         task_count = responses.count()
         task_assessments = []
 
-        for resp in responses:
+        for i, resp in enumerate(responses, start=1):
             task = resp.task
             # TODO проверка уже отвеченных задач
             if task.response_format in AutoAssessorAdapter.SUPPORTED_FORMATS:
@@ -208,14 +203,14 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
             task_assessments.append(task_assessment)
             current_assessment += 1
             progress_recorder.set_progress(
-                current_assessment,
-                total_assessment_counter,
-                description=f"Обработано {current_assessment}/{total_assessment_counter} задач"
+                i,
+                total_tasks,
+                description=f"Оценено {i}/{total_tasks} заданий"
             )
 
         progress_recorder.set_progress(
-            0,
             1,
+            2,
             description=f"Оценивается урок"
         )
 
@@ -311,7 +306,7 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
 
         for ta in task_assessments:
             task_evaluation_payload.append({
-                "learning_objectives": ta.task.learning_objectives,
+                "learning_objectives": ta.task.learning_objectives.all(),
                 # ← список identifier'ов LO
                 "skill_evaluation": ta.structured_feedback,
             })
@@ -356,13 +351,13 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
         )
 
         progress_recorder.set_progress(
-            1,
-            1,
+            2,
+            2,
             description=f"Оценивается урок"
         )
 
         logger.info(f"Оценка завершена для enrollment {enrollment_id}")
-        return {"Оценка завершена"}
+        return "Оценка завершена"
 
     except Exception as e:
         logger.error(f"Ошибка оценки {enrollment_id}: {str(e)}", exc_info=True)
@@ -378,7 +373,9 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
             channel="SYSTEM",
             metadata={"error": str(e)}
         )
-        raise self.retry(exc=e, countdown=60)  # retry 1 раз через минуту
+        # raise self.retry(exc=e, countdown=60)  # retry 1 раз через минуту
+        return None
+
 
 
 def _handle_assessment_error(enrollment_id, error_message):

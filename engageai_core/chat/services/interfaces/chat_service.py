@@ -168,27 +168,39 @@ class ChatService(BaseService):
             }
             raise ChatCreationError(str(e), chat_data) from e
 
-
     def get_chat_history(
             self,
             chat: Chat,
-            limit: int = 50,
+            limit: int = 10,
             include_deleted: bool = False,
             exclude_ai_messages: bool = False,
-            since: Optional[datetime] = None
-    ) -> List[Message]:
+            since: Optional[datetime] = None,
+    ) -> list[Message]:
         """
-        Получает историю сообщений с гибкими параметрами фильтрации
+        Получает последние сообщения чата с гибкой фильтрацией.
+
+        Всегда возвращает сообщения в хронологическом порядке (от старых к новым),
+        но выборка оптимизирована под LIMIT.
         """
-        messages = chat.messages.select_related('sender').prefetch_related('media_files').order_by("created_at")
+
+        qs = (
+            chat.messages
+            .select_related("sender")
+            .prefetch_related("media_files")
+        )
 
         if not include_deleted:
-            messages = messages.filter(is_user_deleted=False)
+            qs = qs.filter(is_user_deleted=False)
 
         if exclude_ai_messages:
-            messages = messages.filter(is_ai=False)
+            qs = qs.filter(is_ai=False)
 
         if since:
-            messages = messages.filter(created_at__gte=since)
+            qs = qs.filter(created_at__gte=since)
 
-        return list(messages[:limit])
+        qs = qs.order_by("-created_at")[:limit]
+
+        # Возвращаем в нормальном хронологическом порядке
+        messages = list(reversed(qs))
+
+        return messages

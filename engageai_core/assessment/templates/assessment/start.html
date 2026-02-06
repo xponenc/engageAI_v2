@@ -1,9 +1,9 @@
-{% extends 'base.html' %}
+{% extends 'extended/assistant_layout.html' %}
 {% load static %}
 
 {% block title %}Тестирование уровня CEFR | NeuroTutor{% endblock title %}
 
-{% block content %}
+{% block assistant_content %}
 <section class="test-start">
     <div class="test-start__container container">
         
@@ -191,9 +191,9 @@
         </div>
     </div>
 </section>
-{% endblock content %}
+{% endblock assistant_content %}
 
-{% block script %}
+{% block assistant_script %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Анимация иконки теста
@@ -580,4 +580,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }
 </style>
-{% endblock script %}
+{% endblock assistant_script %}

@@ -66,6 +66,7 @@
                             {% csrf_token %}
                             {{ form.session_id }}
                             {{ form.question_instance_id }}
+                            <p class="text text_mutted"> {{ task.content }}</p>
                             {% if form.answer and task.response_format == 'audio' %}
                                 {# Вручную рендерим только input файла #}
                                 <input type="file"

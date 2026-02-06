@@ -11,7 +11,7 @@ class TaskAssessmentResult(models.Model):
     Хранит score, фидбек и метаданные для каждого задания отдельно.
     """
     enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, related_name='task_assessments')
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, )
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='task_assessments')
     response = models.OneToOneField(StudentTaskResponse, on_delete=models.SET_NULL, null=True, related_name='assessment')
 
     score = models.FloatField(null=True, blank=True, help_text="0.0–1.0")

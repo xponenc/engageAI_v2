@@ -1,271 +1,823 @@
+/* ======================
+   БАЗОВЫЕ СТИЛИ
+   ====================== */
+:root {
+    --color-primary: #6366f1;
+    --color-primary-dark: #4f46e5;
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-danger: #ef4444;
+    --color-info: #3b82f6;
+    
+    --color-bg: #f9fafb;
+    --color-card-bg: #ffffff;
+    --color-text: #1f2937;
+    --color-text-secondary: #6b7280;
+    --color-border: #e5e7eb;
+    
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    
+    --transition: all 0.3s ease;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--color-text);
+    background-color: var(--color-bg);
+}
+
+/* ======================
+   КОНТЕЙНЕР СТРАНИЦЫ
+   ====================== */
 .lesson-history {
-    background: var(--color-bg);
-    color: var(--color-text-primary);
-    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
 }
 
-.lesson-history__section-title {
-    font-size: 18px;
-    margin-bottom: 16px;
-}
-
-.lesson-history__header {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: 20px;
-    margin-bottom: 24px;
-}
-
-.lesson-history__title {
-    font-size: 22px;
-    margin-bottom: 12px;
-}
-
-.lesson-history__progress {
+/* ======================
+   ХЛЕБНЫЕ КРОШКИ
+   ====================== */
+.breadcrumbs {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
 }
 
-.lesson-history__progress-bar {
-    flex: 1;
-    height: 8px;
-    background: var(--color-border);
-    border-radius: 4px;
-    overflow: hidden;
+.breadcrumbs__link {
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: var(--transition);
 }
 
-.lesson-history__progress-fill {
-    height: 100%;
-    background: var(--primary-color);
+.breadcrumbs__link:hover {
+    text-decoration: underline;
 }
 
-.lesson-history__status {
-    margin-top: 12px;
-    font-size: 14px;
+.breadcrumbs__separator {
+    color: var(--color-text-secondary);
 }
 
-.lesson-history__status--completed {
-    color: var(--success-color);
-}
-
-.lesson-history__status--in-progress {
-    color: var(--warning-color);
-}
-.task-list {
-    display: grid;
-    gap: 12px;
-}
-
-.task-list__item {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: 16px;
-}
-
-.task-list__item--completed {
-    border-left: 4px solid var(--success-color);
-}
-
-.task-list__item--pending {
-    opacity: 0.7;
-}
-
-.task-list__header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-}
-
-.task-list__title {
+.breadcrumbs__current {
     font-weight: 500;
+    color: var(--color-text);
 }
 
-.task-list__score {
-    font-weight: 600;
+/* ======================
+   ЗАГОЛОВОК УРОКА
+   ====================== */
+.lesson-history__header {
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid var(--color-border);
 }
 
-.task-list__score--empty {
-    color: var(--color-text-secondary);
+.header__title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    color: var(--color-text);
 }
 
-.task-list__meta {
-    font-size: 13px;
-    color: var(--color-text-secondary);
+.header__meta {
     display: flex;
-    gap: 16px;
-}
-
-.task-list__skills {
-    display: flex;
-    gap: 12px;
-    margin-top: 10px;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
     flex-wrap: wrap;
 }
 
-.task-list__skill {
-    font-size: 13px;
-    background: var(--color-bg);
-    border-radius: 999px;
-    padding: 4px 10px;
-}
-
-.task-list__skill-score {
-    font-weight: 500;
-}
-
-.lesson-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 16px;
-}
-
-.lesson-stats__item {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: 14px;
-}
-
-.lesson-stats__label {
-    font-size: 13px;
+.header__course,
+.header__duration,
+.header__level {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
     color: var(--color-text-secondary);
 }
 
-.lesson-stats__value {
-    font-size: 18px;
+.header__icon {
+    width: 16px;
+    height: 16px;
+    color: var(--color-text-secondary);
+}
+
+.header__skills {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.skill-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.8rem;
+    font-weight: 500;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+}
+
+.skill-badge--grammar { background-color: #dbeafe; color: #1e40af; }
+.skill-badge--vocabulary { background-color: #fef3c7; color: #92400e; }
+.skill-badge--listening { background-color: #dcfce7; color: #15803d; }
+.skill-badge--reading { background-color: #f0abfc; color: #701a75; }
+.skill-badge--writing { background-color: #bfdbfe; color: #1e3a8a; }
+.skill-badge--speaking { background-color: #fed7aa; color: #c2410c; }
+
+/* ======================
+   ОСНОВНОЙ КОНТЕНТ
+   ====================== */
+.lesson-history__content {
+    margin-bottom: 2rem;
+}
+
+.content__section {
+    background-color: var(--color-card-bg);
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-md);
+}
+
+/* ======================
+   ОБЩАЯ ОЦЕНКА УРОКА
+   ====================== */
+.assessment-overview__title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: var(--color-text);
+}
+
+/* Карточка с общим баллом */
+.score-card {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: var(--border-radius-lg);
+    color: white;
+    margin-bottom: 2rem;
+}
+
+.score-card__circle {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.score-card__percentage {
+    position: relative;
+    font-size: 2.5rem;
+    font-weight: 700;
+    z-index: 1;
+}
+
+.score-card__percentage::before {
+    content: '';
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: white;
+    z-index: -1;
+}
+
+.score-card__percentage::after {
+    content: '';
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: conic-gradient(white var(--score, 0)%, transparent var(--score, 0)%);
+    clip-path: circle(45px at center);
+    z-index: 0;
+}
+
+.score-card__details {
+    flex: 1;
+}
+
+.score-card__status {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius-sm);
+    font-weight: 500;
+    margin-bottom: 1rem;
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.status-badge--completed { background-color: rgba(16, 185, 129, 0.3); }
+.status-badge--pending { background-color: rgba(245, 158, 11, 0.3); }
+.status-badge--error { background-color: rgba(239, 68, 68, 0.3); }
+
+.score-card__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.score-card__stat {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 1rem;
+    border-radius: var(--border-radius-md);
+}
+
+.score-card__stat-label {
+    display: block;
+    font-size: 0.875rem;
+    opacity: 0.9;
+    margin-bottom: 0.25rem;
+}
+
+.score-card__stat-value {
+    display: block;
+    font-size: 1.25rem;
     font-weight: 600;
 }
 
-.skill-progress {
-    display: grid;
-    gap: 10px;
+/* Прогресс по навыкам */
+.skills-progress__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: var(--color-text);
 }
 
-.skill-progress__item {
+.skill-bar {
+    margin-bottom: 1.5rem;
+}
+
+.skill-bar__header {
     display: flex;
     justify-content: space-between;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: 12px;
+    align-items: center;
+    margin-bottom: 0.5rem;
 }
 
-.skill-progress__delta--positive {
-    color: var(--success-color);
+.skill-bar__name {
+    font-weight: 500;
+    color: var(--color-text);
 }
 
-.skill-progress__delta--negative {
-    color: var(--danger-color);
-}
-.recommendation-list {
-    display: grid;
-    gap: 12px;
-}
-
-.recommendation-list__item {
-    background: var(--color-surface);
-    border-radius: var(--radius-md);
-    padding: 16px;
-    border-left: 4px solid var(--secondary-color);
-}
-
-.recommendation-list__item--priority-1 {
-    border-left-color: var(--danger-color);
-}
-
-.recommendation-list__item--priority-2 {
-    border-left-color: var(--warning-color);
-}
-
-.recommendation-list__item--priority-3 {
-    border-left-color: var(--success-color);
-}
-
-.recommendation-list__skill {
+.skill-bar__score {
     font-weight: 600;
-    font-size: 14px;
+    color: var(--color-primary);
 }
 
-.recommendation-list__message {
-    margin-top: 6px;
+.skill-bar__progress {
+    height: 8px;
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-sm);
+    overflow: hidden;
+}
+
+.skill-bar__fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    border-radius: var(--border-radius-sm);
+    position: relative;
+    transition: width 0.5s ease;
+}
+
+.skill-bar__confidence {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.75rem;
+    color: white;
+    opacity: 0.9;
+}
+
+.skill-bar__evidence {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.875rem;
+}
+
+.skill-bar__evidence-list {
+    list-style: none;
+}
+
+.skill-bar__evidence-item {
+    margin-bottom: 0.25rem;
     color: var(--color-text-secondary);
 }
 
-@media (max-width: 640px) {
+/* Изменение навыков (дельта) */
+.skill-delta__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--color-text);
+}
 
+.skill-delta__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.skill-delta__item {
+    padding: 1rem;
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-md);
+    text-align: center;
+}
+
+.skill-delta__item--overall {
+    grid-column: span 2;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    color: white;
+}
+
+.skill-delta__skill {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.skill-delta__value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.skill-delta__value--positive {
+    color: var(--color-success);
+}
+
+.skill-delta__value--negative {
+    color: var(--color-danger);
+}
+
+/* ======================
+   РЕЗЮМЕ ОТ AI
+   ====================== */
+.ai-summary__title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--color-text);
+}
+
+.ai-summary__icon {
+    color: var(--color-info);
+}
+
+.ai-summary__box {
+    background-color: var(--color-bg);
+    border-left: 4px solid var(--color-info);
+    padding: 1.5rem;
+    border-radius: var(--border-radius-md);
+    margin-bottom: 1.5rem;
+}
+
+.ai-summary__box--recommendations {
+    border-left-color: var(--color-warning);
+}
+
+.ai-summary__subtitle {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--color-text);
+}
+
+.ai-summary__text {
+    line-height: 1.8;
+    color: var(--color-text);
+}
+
+.ai-summary__recommendations {
+    list-style: none;
+    line-height: 1.8;
+}
+
+.ai-summary__recommendation {
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+}
+
+/* ======================
+   ДЕТАЛИ ЗАДАНИЙ
+   ====================== */
+.tasks-details__title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--color-text);
+}
+
+.tasks-details__subtitle {
+    color: var(--color-text-secondary);
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.tasks-details__list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Карточка задания */
+.task-card {
+    background-color: var(--color-card-bg);
+    border-radius: var(--border-radius-md);
+    padding: 1.5rem;
+    border: 2px solid var(--color-border);
+    transition: var(--transition);
+}
+
+.task-card--completed {
+    border-color: var(--color-success);
+}
+
+.task-card--pending {
+    border-color: var(--color-warning);
+    opacity: 0.6;
+}
+
+.task-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.task-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.task-card__info {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.task-type {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.8rem;
+    font-weight: 500;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+}
+
+.task-type--grammar { background-color: #dbeafe; color: #1e40af; }
+.task-type--vocabulary { background-color: #fef3c7; color: #92400e; }
+.task-type--listening { background-color: #dcfce7; color: #15803d; }
+.task-type--reading { background-color: #f0abfc; color: #701a75; }
+.task-type--writing { background-color: #bfdbfe; color: #1e3a8a; }
+.task-type--speaking { background-color: #fed7aa; color: #c2410c; }
+
+.task-card__format {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+}
+
+.task-card__status {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 1rem;
+}
+
+.status-indicator--correct {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: var(--color-success);
+}
+
+.status-indicator--incorrect {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: var(--color-danger);
+}
+
+.status-indicator--partial {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: var(--color-warning);
+}
+
+.status-indicator--pending {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: var(--color-info);
+}
+
+.status-indicator--locked {
+    background-color: rgba(107, 114, 128, 0.1);
+    color: var(--color-text-secondary);
+}
+
+.task-card__title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--color-text);
+    line-height: 1.5;
+}
+
+/* Ответ студента */
+.task-card__response {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-sm);
+}
+
+.task-card__response-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.task-card__response-label {
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+}
+
+.task-card__submitted-at {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+}
+
+.task-card__response-content {
+    padding: 0.75rem;
+    background-color: white;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--color-border);
+    font-style: italic;
+    color: var(--color-text);
+}
+
+/* Оценка задания */
+.task-card__assessment {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+}
+
+.task-card__score {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.task-card__score-label {
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.task-card__score-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.task-card__feedback {
+    margin-bottom: 0.75rem;
+}
+
+.task-card__feedback-label {
+    display: block;
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.task-card__feedback-text {
+    padding: 0.75rem;
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-sm);
+    color: var(--color-text);
+    line-height: 1.6;
+}
+
+.task-card__structured-feedback {
+    margin-top: 0.75rem;
+}
+
+.task-card__feedback-list {
+    list-style: none;
+    font-size: 0.9rem;
+}
+
+.task-card__feedback-item {
+    margin-bottom: 0.25rem;
+    color: var(--color-text);
+}
+
+.task-card__placeholder {
+    margin-top: 1rem;
+    padding: 1rem;
+    text-align: center;
+    color: var(--color-text-secondary);
+    font-style: italic;
+}
+
+/* ======================
+   УЧЕБНЫЕ ЦЕЛИ
+   ====================== */
+.learning-objectives__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--color-text);
+}
+
+.learning-objectives__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.learning-objective {
+    padding: 1rem;
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-md);
+    border-left: 3px solid var(--color-primary);
+}
+
+.learning-objective__id {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background-color: var(--color-primary);
+    color: white;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.learning-objective__name {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--color-text);
+}
+
+/* ======================
+   КНОПКИ ДЕЙСТВИЙ
+   ====================== */
+.lesson-history__actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 1.5rem 0;
+}
+
+.actions-bar__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius-md);
+    font-weight: 500;
+    text-decoration: none;
+    transition: var(--transition);
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.actions-bar__btn--primary {
+    background-color: var(--color-primary);
+    color: white;
+}
+
+.actions-bar__btn--primary:hover {
+    background-color: var(--color-primary-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.actions-bar__btn--secondary {
+    background-color: var(--color-success);
+    color: white;
+}
+
+.actions-bar__btn--secondary:hover {
+    background-color: #0da271;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.actions-bar__btn--outline {
+    background-color: transparent;
+    color: var(--color-primary);
+    border: 2px solid var(--color-primary);
+}
+
+.actions-bar__btn--outline:hover {
+    background-color: var(--color-primary);
+    color: white;
+}
+
+/* ======================
+   АДАПТИВНОСТЬ
+   ====================== */
+@media (max-width: 768px) {
     .lesson-history {
-        padding: 16px;
+        padding: 1rem;
     }
 
-    .lesson-history__title {
-        font-size: 18px;
+    .header__title {
+        font-size: 1.5rem;
     }
 
-    .lesson-history__progress {
+    .score-card {
         flex-direction: column;
-        align-items: stretch;
-        gap: 8px;
+        text-align: center;
     }
 
-    .lesson-history__progress-text {
-        text-align: right;
-        font-size: 13px;
+    .score-card__circle {
+        margin-bottom: 1rem;
     }
 
-    .task-list__header {
+    .skill-delta__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .skill-delta__item--overall {
+        grid-column: span 1;
+    }
+
+    .task-card__header {
         flex-direction: column;
-        gap: 6px;
+        align-items: flex-start;
+        gap: 0.5rem;
     }
 
-    .task-list__meta {
+    .lesson-history__actions {
         flex-direction: column;
-        gap: 4px;
     }
 
-    .task-list__skills {
-        gap: 6px;
-    }
-
-    .skill-progress__item {
-        flex-direction: column;
-        gap: 6px;
+    .actions-bar__btn {
+        width: 100%;
     }
 }
 
-@media (min-width: 640px) {
-
-    .lesson-history {
-        padding: 24px;
+@media (max-width: 480px) {
+    .score-card__circle {
+        width: 100px;
+        height: 100px;
     }
 
-    .lesson-history__title {
-        font-size: 22px;
+    .score-card__percentage {
+        font-size: 2rem;
     }
 
-    .task-list__skills {
-        gap: 10px;
-    }
-}
-
-@media (min-width: 1024px) {
-
-    .lesson-history {
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-
-    .lesson-history__statistics,
-    .lesson-history__skills {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 24px;
-        align-items: start;
-    }
-
-    .lesson-history__section-title {
-        grid-column: 1 / -1;
+    .task-card {
+        padding: 1rem;
     }
 }

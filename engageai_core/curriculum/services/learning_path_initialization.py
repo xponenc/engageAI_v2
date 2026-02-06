@@ -34,6 +34,7 @@ class LearningPathInitializationService:
                 course=course,
                 required_cefr=start_cefr,
                 is_active=True,
+                is_remedial=False,
             )
             .distinct()
             .order_by("order")
@@ -45,14 +46,16 @@ class LearningPathInitializationService:
             )
 
         first_lesson = lessons.first()
+        print(first_lesson)
 
         # 3. Строим nodes по ВСЕМ урокам курса
         nodes = []
         current_node_index = None
 
         all_lessons = course.lessons.filter(is_active=True).order_by("order")
+        print(lessons)
 
-        for idx, lesson in enumerate(all_lessons):
+        for idx, lesson in enumerate(lessons):
             if lesson.order < first_lesson.order:
                 status = "skipped"
             elif lesson.id == first_lesson.id:

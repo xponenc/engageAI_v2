@@ -17,6 +17,9 @@
     </td>
     <td><code>{{ log.model_name }}</code><strong>${{ log.cost_total|floatformat:6 }}</strong>{{ log.duration_sec|floatformat:2 }} сек</td>
     <td>
+        {% if log.test_session %}
+            <p>Тестирование уровня: <span class="text text_fat">Сессия id:{{ log.test_session.id }}</span></p>
+        {% endif %}
         {% if log.course %}
             <p>Курс: <span class="text text_fat">{{ log.course.title }} id:{{ log.course.id }}</span></p>
         {% endif %}
@@ -24,7 +27,7 @@
             <p>Урок: <span class="text text_fat">{{ log.lesson.title }} id:{{ log.lesson.id }}</span></p>
         {% endif %}
         {% if log.task %}
-            <p>Задание: <span class="text text_fat">№ {{ log.task.order }}</span></p>
+            <p>Задание: <span class="text text_fat">№ {{ log.task.order }} {{ log.task.get_task_type_display }}</span></p>
         {% endif %}
         {% if not log.course and log.lesson and not log.task %}
             <span class="text_muted">-</span>

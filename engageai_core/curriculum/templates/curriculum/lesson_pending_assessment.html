@@ -43,7 +43,7 @@
             var progressUrl = "{% url 'celery_progress:task_status' task_id %}";
             
             // Формируем целевой URL для редиректа после успеха
-            var historyUrl = "";
+            var historyUrl = "{{ lesson_report_url }}";
 
             CeleryProgressBar.initProgressBar(progressUrl, {
                 pollInterval: 1000,

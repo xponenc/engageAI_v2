@@ -14,6 +14,9 @@ from django.views.generic import ListView, DetailView, CreateView
 from django.http import JsonResponse
 from django.db.models import Prefetch, Exists, OuterRef, Subquery, Q, Sum, Count
 
+from chat.models import ChatPlatform, ChatScope, MessageSource
+from chat.services.interfaces.chat_service import ChatService
+from chat.services.interfaces.message_service import MessageService
 from chat.views import ChatContextMixin
 from curriculum.models.content.course import Course
 from curriculum.models.content.lesson import Lesson
@@ -189,16 +192,52 @@ class EnrollCourseView(LoginRequiredMixin, View):
     """
 
     def post(self, request, course_id):
+
         student = request.user.student
         course = get_object_or_404(Course, id=course_id, is_active=True)
 
         # 1. Проверка дубликата зачисления
         if Enrollment.objects.filter(student=student, course=course, is_active=True).exists():
             msg = f"Вы уже зачислены на курс «{course.title}»"
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'error': msg, 'already_enrolled': True}, status=400)
+            if (request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+                    or request.headers.get("Accept") == "application/json"):
+                response_data = {
+                    'error': msg,
+                    'already_enrolled': True
+                }
+                return JsonResponse(response_data)
             messages.warning(request, msg)
             return redirect('curriculum:course_detail', pk=course_id)
+
+        if not student.english_level:
+            msg = f"Для более эффективного обучения необходимо пройти тестирование уровня языка"
+            chat_service = ChatService()
+            message_service = MessageService()
+            chat = chat_service.get_or_create_chat(
+                user=request.user,
+                platform=ChatPlatform.WEB,
+                assistant_slug="main_orchestrator",
+                scope=ChatScope.PRIVATE,
+            )
+            ai_message = message_service.create_ai_message(
+                chat=chat,
+                content=msg,
+                # reply_to=user_message,
+                source_type=MessageSource.WEB
+            )
+            print(ai_message)
+            if (request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+                    or request.headers.get("Accept") == "application/json"):
+                response_data = {
+                    'message': msg,
+                    'redirect_url': reverse_lazy('assessment:start_test')
+                }
+                return JsonResponse(response_data)
+            messages.warning(request, msg)
+
+            return redirect('assessment:start_test')
+
+
         try:
             with transaction.atomic():
                 # 2. Создание Enrollment

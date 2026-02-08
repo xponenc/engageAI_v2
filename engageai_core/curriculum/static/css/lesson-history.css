@@ -524,6 +524,9 @@ body {
 .task-card--completed {
     border-color: var(--color-success);
 }
+.task-card--incorrect {
+    border-color: var(--color-error);
+}
 
 .task-card--pending {
     border-color: var(--color-warning);
@@ -1014,7 +1017,7 @@ body {
 }
 
 .advice-box__item {
-    padding: 0.75rem;
+    padding: 0.75rem 0.75rem 0.75rem 1.5rem;
     background-color: rgba(255, 255, 255, 0.8);
     border-radius: var(--border-radius-sm);
     border-left: 3px solid var(--color-primary);
@@ -1027,7 +1030,7 @@ body {
 .advice-box__item::before {
     content: '💡';
     position: absolute;
-    left: -12px;
+    left: 0;
     top: 50%;
     transform: translateY(-50%);
     font-size: 1rem;
@@ -1138,6 +1141,94 @@ body {
     margin: 0;
     font-size: 0.95rem;
     color: var(--color-text);
+}
+
+/* ======================
+   ДЕТАЛЬНЫЙ АНАЛИЗ (АККОРДЕОН)
+   ====================== */
+.detailed-analysis {
+    margin-top: 1.5rem;
+}
+
+.detailed-analysis__header {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--color-border);
+}
+
+.detailed-analysis__label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+/* Аккордеон */
+.accordion-item {
+    margin-bottom: 0.5rem;
+    border-radius: var(--border-radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border);
+}
+
+/* Заголовок аккордеона */
+.accordion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 1rem;
+    background-color: var(--color-card-bg);
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--color-text);
+    transition: background-color 0.2s;
+}
+
+.accordion-header:hover {
+    background-color: var(--color-bg);
+}
+
+.accordion-header__title {
+    flex: 1;
+}
+
+.accordion-header__chevron {
+    width: 20px;
+    height: 20px;
+    color: var(--color-text-secondary);
+    transition: transform 0.3s ease;
+    flex-shrink: 0;
+}
+
+/* Контент аккордеона */
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    padding: 0 1rem;
+}
+
+.accordion-content__inner {
+    padding-bottom: 1rem;
+}
+
+/* Активное состояние */
+.accordion-item.is-open .accordion-header {
+    background-color: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.accordion-item.is-open .accordion-header__chevron {
+    transform: rotate(180deg);
+}
+
+.accordion-item.is-open .accordion-content {
+    max-height: 1000px;
+    padding: 0 1rem 1rem;
 }
 
 /* ======================

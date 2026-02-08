@@ -1,3 +1,12 @@
+:root {
+    --color-primary: #6366f1;
+    --color-primary-dark: #4f46e5;
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-danger: #ef4444;
+    --color-info: #3b82f6;
+}
+
 /* ==========================
    Learning Session Page
 ========================== */
@@ -52,23 +61,112 @@
 /* --------------------------
    Lesson Theory
 -------------------------- */
-.lesson-theory {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: 20px;
+.lesson-theory-tabs {
+    margin: 24px 0;
 }
 
-.lesson-theory__title {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 12px;
+.lesson-theory-tabs__nav {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    border-bottom: 2px solid var(--color-surface-alt);
+    margin-bottom: 20px;
 }
 
-.lesson-theory__content {
+.lesson-theory-tabs__tab {
+    padding: 10px 16px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.lesson-theory-tabs__tab:nth-child(2) {
+    margin-right: auto;
+}
+
+.lesson-theory-tabs__tab:hover {
+    color: var(--color-accent);
+}
+
+.lesson-theory-tabs__tab--active {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+}
+
+
+
+.lesson-theory-tabs__content {
+    min-height: 100px;
+}
+
+.lesson-theory-tabs__panel {
+    display: none;
+}
+
+.lesson-theory-tabs__panel--active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* ======================
+   УЧЕБНЫЕ ЦЕЛИ
+   ====================== */
+.learning-objectives {
+    background-color: var(--color-card-bg);
+    border-radius: var(--border-radius-xl);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-md);
+}
+
+.learning-objectives__title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
     color: var(--color-text);
-    line-height: 1.6;
 }
+
+.learning-objectives__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.learning-objective {
+    padding: 1rem;
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-md);
+    border-left: 3px solid var(--color-primary);
+}
+
+.learning-objective__id {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background-color: var(--color-primary);
+    color: white;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.learning-objective__name {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--color-text);
+}
+
 
 /* --------------------------
    Lesson Tasks

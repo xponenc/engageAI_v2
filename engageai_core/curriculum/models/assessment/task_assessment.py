@@ -29,3 +29,24 @@ class TaskAssessmentResult(models.Model):
 
     def __str__(self):
         return f"Task {self.task.id} для enrollment {self.enrollment.id} — score {self.score}"
+
+    @classmethod
+    def calc_task_score(cls, result: 'AssessmentResult'):
+        """Выставление общей оценки за задание по AssessmentResult"""
+        skill_scores = []
+        for skill, data in result.skill_evaluation.items():
+            if not isinstance(data, dict):
+                continue
+            score = data.get("score")
+            if score is None:
+                continue
+            if isinstance(score, str):
+                score = float(score.replace(",", "."))
+            skill_scores.append(score)
+
+        if skill_scores:
+            task_score = sum(skill_scores) / len(skill_scores)
+        else:
+            # fallback: бинарный score по is_correct, если есть
+            task_score = float(result.is_correct) if result.is_correct is not None else 0
+        return task_score

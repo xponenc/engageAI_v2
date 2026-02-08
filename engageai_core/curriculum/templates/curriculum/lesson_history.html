@@ -6,6 +6,7 @@
 
 {% block assistant_css %}
 <link href="{% static 'css/learning-session.css' %}" rel="stylesheet">
+<link href="{% static 'css/course-history.css' %}" rel="stylesheet">
 <link href="{% static 'css/lesson-history.css' %}" rel="stylesheet">
 {% endblock %}
 
@@ -49,14 +50,15 @@
 
     <!-- Основной контент -->
     <main class="lesson-history__content content">
+        {% if lesson_assessment %}
         <!-- Карточка общей оценки -->
         <section class="content__section assessment-overview">
-            <h2 class="assessment-overview__title">Общая оценка урока</h2>
+            <h2 class="assessment-overview__title">Общая оценка урока {% widthratio lesson_assessment.overall_score 1 100|default:0 %}%</h2>
             
             <div class="assessment-overview__score-card score-card">
                 <div class="score-card__circle">
-                    <div class="score-card__percentage" style="--score: {{ lesson_assessment.overall_score|default:0 }}">
-                        {{ lesson_assessment.overall_score|default:0|floatformat:0 }}%
+                    <div class="score-card__percentage" style="--score: {% widthratio lesson_assessment.overall_score 1 100|default:0 %}%">
+                        <span>{% widthratio lesson_assessment.overall_score 1 100|default:0 %}%</span>
                     </div>
                 </div>
                 <div class="score-card__details">
@@ -79,76 +81,170 @@
                         <div class="score-card__stat">
                             <span class="score-card__stat-label">Время занятия</span>
                             <span class="score-card__stat-value">
-                                {% if lesson_assessment.completed_at and lesson_assessment.started_at %}
-                                    {{ lesson_assessment.completed_at|timesince:lesson_assessment.started_at }}
-                                {% endif %}
+                                {{ lesson_duration }}
                             </span>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <!-- Прогресс по навыкам -->
-            <div class="assessment-overview__skills skills-progress">
-                <h3 class="skills-progress__title">Прогресс по навыкам</h3>
-                
-                {% for skill_name, skill_data in lesson_assessment.structured_feedback.items %}
-                <div class="skills-progress__skill skill-bar">
-                    <div class="skill-bar__header">
-                        <span class="skill-bar__name">{{ skill_name|capfirst }}</span>
-                        <span class="skill-bar__score">{{ skill_data.score|floatformat:0 }}%</span>
+        </section>
+        
+        {% endif %}
+        <!-- Секция с прогрессом навыков -->
+        {% if skill_comparisons %}
+        <div class="skills-comparison _mb">
+            <h4 class="skills-comparison__title">Прогресс по навыкам</h4>
+            <div class="skills-comparison__grid">
+                {% for skill in skill_comparisons %}
+                <div class="skill-comparison-item">
+                    <div class="skill-comparison-item__header">
+                        <span class="skill-comparison-item__name">{{ skill.name }}</span>
+                        <span class="skill-comparison-item__delta 
+                            {% if skill.delta_positive %}skill-comparison-item__delta--positive
+                            {% else %}skill-comparison-item__delta--negative{% endif %}">
+                            {{ skill.delta_formatted }}
+                        </span>
                     </div>
-                    <div class="skill-bar__progress">
-                        <div class="skill-bar__fill" style="width: {{ skill_data.score|floatformat:0 }}%">
-                            {% if skill_data.confidence %}
-                                <span class="skill-bar__confidence">
-                                    (±{{ skill_data.confidence|floatformat:0 }}%)
-                                </span>
-                            {% endif %}
+                    <div class="skill-comparison-item__bars">
+                        <div class="skill-bar">
+                            <span class="skill-bar__label">Начало</span>
+                            <div class="skill-bar__progress">
+                                <div class="skill-bar__fill skill-bar__fill--initial" 
+                                    style="width: {% widthratio skill.initial 1 100 %}%">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="skill-bar">
+                            <span class="skill-bar__label">Сейчас</span>
+                            <div class="skill-bar__progress">
+                                <div class="skill-bar__fill skill-bar__fill--current" 
+                                    style="width: {% widthratio skill.current 1 100 %}%">
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    {% if skill_data.evidence %}
-                        <div class="skill-bar__evidence">
-                            <ul class="skill-bar__evidence-list">
-                                {% for evidence in skill_data.evidence %}
-                                    <li class="skill-bar__evidence-item">• {{ evidence }}</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
-
-            <!-- Изменение навыков (дельта) -->
-            {% if skill_delta %}
-            <div class="assessment-overview__delta skill-delta">
-                <h3 class="skill-delta__title">Изменение навыков после урока</h3>
-                <div class="skill-delta__grid">
-                    {% for skill_name, delta_value in skill_delta.deltas.items %}
-                        {% if skill_name != 'overall' %}
-                            <div class="skill-delta__item">
-                                <span class="skill-delta__skill">{{ skill_name|capfirst }}</span>
-                                <span class="skill-delta__value 
-                                    {% if delta_value > 0 %}skill-delta__value--positive
-                                    {% elif delta_value < 0 %}skill-delta__value--negative{% endif %}">
-                                    {% if delta_value > 0 %}+{% endif %}{{ delta_value|floatformat:2 }}
-                                </span>
-                            </div>
-                        {% endif %}
-                    {% endfor %}
-                    <div class="skill-delta__item skill-delta__item--overall">
-                        <span class="skill-delta__skill">Общий прогресс</span>
-                        <span class="skill-delta__value 
-                            {% if skill_delta.deltas.overall > 0 %}skill-delta__value--positive
-                            {% elif skill_delta.deltas.overall < 0 %}skill-delta__value--negative{% endif %}">
-                            {% if skill_delta.deltas.overall > 0 %}+{% endif %}{{ skill_delta.deltas.overall|floatformat:2 }}
-                        </span>
-                    </div>
+        </div>
+        {% endif %}
+        <!-- Радар-чарт навыков -->
+        {% if skill_snapshot %}
+        <section class="content__section skills-radar _mb">
+            <h2 class="skills-radar__title">Ваш уровень навыков</h2>
+            
+            <div class="skills-radar__chart">
+                <canvas id="skillsRadarChart" height="300"></canvas>
+            </div>
+            
+            {% if previous_skill_snapshot %}
+            <div class="skills-radar__legend">
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: rgba(99, 102, 241, 0.8);"></span>
+                    <span>После урока</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: rgba(245, 158, 11, 0.8);"></span>
+                    <span>До урока</span>
                 </div>
             </div>
             {% endif %}
         </section>
+        {% endif %}
+        <!-- Изменение навыков (дельта) -->
+        {% if skill_delta %}
+        <div class="assessment-overview__delta skill-delta _mb">
+            <h3 class="skill-delta__title">Изменение навыков после урока</h3>
+            <div class="skill-delta__grid">
+                {% for skill_name, delta_value in skill_delta.deltas.items %}
+                    {% if skill_name != 'overall' %}
+                        <div class="skill-delta__item">
+                            <span class="skill-delta__skill">{{ skill_name|capfirst }}</span>
+                            <span class="skill-delta__value 
+                                {% if delta_value > 0 %}skill-delta__value--positive
+                                {% elif delta_value < 0 %}skill-delta__value--negative{% endif %}">
+                                {% if delta_value > 0 %}+{% endif %}{{ delta_value|floatformat:2 }}
+                            </span>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+                <div class="skill-delta__item skill-delta__item--overall">
+                    <span class="skill-delta__skill">Общий прогресс</span>
+                    <span class="skill-delta__value 
+                        {% if skill_delta.deltas.overall > 0 %}skill-delta__value--positive
+                        {% elif skill_delta.deltas.overall < 0 %}skill-delta__value--negative{% endif %}">
+                        {% if skill_delta.deltas.overall > 0 %}+{% endif %}{{ skill_delta.deltas.overall|floatformat:2 }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Учебные цели -->
+        {% if lesson.learning_objectives.all %}
+        <section class="content__section learning-objectives">
+            <h2 class="learning-objectives__title">Учебные цели урока</h2>
+            <div class="learning-objectives__list">
+                {% for objective in lesson.learning_objectives.all %}
+                    <div class="learning-objective">
+                        <span class="learning-objective__id">{{ objective.identifier }}</span>
+                        <p class="learning-objective__name">{{ objective.name }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if lesson.content or lesson.content_ru %}
+            <section class="lesson-theory-tabs">
+                <!-- TAB NAVIGATION -->
+                <div class="lesson-theory-tabs__nav">
+                    {% if lesson.content %}
+                        <button 
+                            type="button" 
+                            class="lesson-theory-tabs__tab lesson-theory-tabs__tab--active" 
+                            data-tab="en">
+                            Lesson Theory
+                        </button>
+                    {% endif %}
+                    
+                    {% if lesson.content_ru %}
+                        <button 
+                            type="button" 
+                            class="lesson-theory-tabs__tab" 
+                            data-tab="ru">
+                            Теория урока
+                        </button>
+                    {% endif %}
+
+                    <button
+                        class="btn btn_reset btn_round btn_round-small chat-action-trigger lesson-theory-tabs__question"
+                        data-context-type="Lesson"
+                        data-context-id="{{ lesson.id }}"
+                        data-context-prefix="Поясни мне этот урок"
+                        title="Вопрос по уроку"
+                        aria-label="Вопрос по уроку"
+                    >
+                        <span class="btn__icon">?</span>
+                    </button>
+                </div>
+
+                <!-- TAB CONTENT -->
+                <div class="lesson-theory-tabs__content">
+                    {% if lesson.content %}
+                        <div id="tab-en" class="lesson-theory-tabs__panel lesson-theory-tabs__panel--active word-helper">
+                            {{ lesson.content|safe }}
+                        </div>
+                    {% endif %}
+                    
+                    {% if lesson.content_ru %}
+                        <div id="tab-ru" class="lesson-theory-tabs__panel word-helper">
+                            {{ lesson.content_ru|safe }}
+                        </div>
+                    {% endif %}
+                </div>
+            </section>
+        {% endif %}
 
         <!-- Резюме от AI -->
         {% if lesson_assessment.llm_summary or lesson_assessment.llm_recommendations %}
@@ -170,73 +266,112 @@
             {% if lesson_assessment.llm_recommendations %}
             <div class="ai-summary__box ai-summary__box--recommendations">
                 <h3 class="ai-summary__subtitle">Рекомендации</h3>
-                <ul class="ai-summary__recommendations">
+                <div class="ai-summary__recommendations">
                     {{ lesson_assessment.llm_recommendations }}
-                    {% comment %} {% for rec in lesson_assessment.llm_recommendations %}
-                        <li class="ai-summary__recommendation">• {{ rec }}</li>
-                    {% endfor %} {% endcomment %}
-                </ul>
+                </div>
             </div>
             {% endif %}
         </section>
         {% endif %}
 
-        <!-- Детали заданий -->
-        <section class="content__section tasks-details">
-            <h2 class="tasks-details__title">Детали заданий</h2>
-            <p class="tasks-details__subtitle">
-                Выполнено: {{ completed_tasks_count }}/{{ total_tasks_count }} заданий
-            </p>
+        {% if tasks %}
+            <!-- Детали заданий -->
+            <section class="content__section tasks-details">
+                <h2 class="tasks-details__title">Детали заданий</h2>
+                <p class="tasks-details__subtitle">
+                    Выполнено: {{ completed_tasks_count }}/{{ total_tasks_count }} заданий
+                </p>
 
-            <div class="tasks-details__list">
-                {% for task in tasks %}
-                <div class="task-card 
-                    {% if task.student_responses_for_enrollment %}task-card--completed
-                    {% else %}task-card--pending{% endif %}">
-                    <div class="task-card__header">
-                        <div class="task-card__info">
-                            <span class="task-card__type task-type task-type--{{ task.task_type }}">
-                                {{ task.get_task_type_display }}
-                            </span>
-                            <span class="task-card__format">
-                                {{ task.get_response_format_display }}
-                            </span>
-                        </div>
-                        <div class="task-card__status">
-                            {% if task.student_responses_for_enrollment %}
-                                {% with response=task.student_responses_for_enrollment.0 assessment=response.assessment %}
-                                    {% if assessment %}
-                                        {% if assessment.is_correct != None %}
-                                            {% if assessment.is_correct %}
-                                                <span class="status-indicator status-indicator--correct">✓</span>
+                <div class="tasks-details__list">
+                    {% for task in tasks %}
+                    <div class="task-card{% if task.student_responses_for_enrollment %} task-card--completed{% else %} task-card--pending{% endif %}">
+                        <!-- Заголовок задания -->
+                        <div class="task-card__header">
+                            <div class="task-card__info">
+                                <span class="task-card__type task-type task-type--{{ task.task_type }}">
+                                    {{ task.get_task_type_display }}
+                                </span>
+                                <span class="task-card__format">
+                                    {{ task.get_response_format_display }}
+                                </span>
+                            </div>
+                            <div class="task-card__status">
+                                {% if task.student_responses_for_enrollment %}
+                                    {% with response=task.student_responses_for_enrollment.0 assessment=task.student_responses_for_enrollment.0.assessment %}
+                                        {% if assessment %}
+                                            {% if assessment.is_correct != None %}
+                                                {% if assessment.is_correct %}
+                                                    <span class="status-indicator status-indicator--correct" title="Правильно">✓</span>
+                                                {% else %}
+                                                    <span class="status-indicator status-indicator--incorrect" title="Неправильно">✗</span>
+                                                {% endif %}
                                             {% else %}
-                                                <span class="status-indicator status-indicator--incorrect">✗</span>
+                                                <span class="status-indicator status-indicator--partial" title="Частично">~</span>
                                             {% endif %}
                                         {% else %}
-                                            <span class="status-indicator status-indicator--partial">~</span>
+                                            <span class="status-indicator status-indicator--pending" title="Ожидает оценки">?</span>
                                         {% endif %}
-                                    {% else %}
-                                        <span class="status-indicator status-indicator--pending">?</span>
-                                    {% endif %}
-                                {% endwith %}
-                            {% else %}
-                                <span class="status-indicator status-indicator--locked">🔒</span>
+                                    {% endwith %}
+                                {% else %}
+                                    <span class="status-indicator status-indicator--locked" title="Не выполнено">🔒</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Контент задания -->
+                        <div class="task-card__content">
+                            <h3 class="task-card__title">{{ task.content.prompt }}</h3>
+                            
+                            <!-- Варианты ответов (если есть) -->
+                            {% if task.content.options %}
+                            <div class="task-card__options options-list">
+                                <div class="options-list__header">
+                                    <span class="options-list__label">Варианты ответов:</span>
+                                </div>
+                                <ul class="options-list__items">
+                                    {% for option in task.content.options %}
+                                    <li class="options-list__item 
+                                        {% if forloop.counter0 in task.content.correct_indices or forloop.counter0 == task.content.correct_idx %}options-list__item--correct{% endif %}">
+                                        <span class="options-list__marker">
+                                            {{ forloop.counter }}.
+                                        </span>
+                                        <span class="options-list__text">{{ option }}</span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+
+                            <!-- Пояснение (если есть) -->
+                            {% if task.content.explanation %}
+                            <div class="task-card__explanation explanation-box">
+                                <div class="explanation-box__header">
+                                    <svg class="explanation-box__icon" width="20" height="20" viewBox="0 0 24 24">
+                                        <path fill="currentColor" d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+                                    </svg>
+                                    <span class="explanation-box__title">Пояснение</span>
+                                </div>
+                                <div class="explanation-box__content">
+                                    {{ task.content.explanation }}
+                                </div>
+                            </div>
                             {% endif %}
                         </div>
-                    </div>
 
-                    <h3 class="task-card__title">{{ task.content.prompt|truncatechars:80 }}</h3>
-
-                    {% if task.student_responses_for_enrollment %}
-                        {% with response=task.student_responses_for_enrollment.0 assessment=response.assessment %}
-                            <div class="task-card__response">
-                                <div class="task-card__response-header">
-                                    <span class="task-card__response-label">Ваш ответ:</span>
-                                    <span class="task-card__submitted-at">
+                        <!-- Ответ студента (если есть) -->
+                        {% if task.student_responses_for_enrollment %}
+                            {% with response=task.student_responses_for_enrollment.0 assessment=task.student_responses_for_enrollment.0.assessment %}
+                            <div class="task-card__response student-response">
+                                <div class="student-response__header">
+                                    <span class="student-response__label">Ваш ответ:</span>
+                                    <span class="student-response__submitted">
+                                        <svg class="student-response__icon" width="16" height="16" viewBox="0 0 24 24">
+                                            <path fill="currentColor" d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13.5v6l5 2.5-1 2-6-3V7h2z"/>
+                                        </svg>
                                         {{ response.submitted_at|date:"d.m.Y H:i" }}
                                     </span>
                                 </div>
-                                <div class="task-card__response-content">
+                                <div class="student-response__content">
                                     {% if response.response_text %}
                                         <p>{{ response.response_text }}</p>
                                     {% elif response.transcript %}
@@ -245,75 +380,250 @@
                                 </div>
                             </div>
 
+                            <!-- Оценка задания (если есть) -->
                             {% if assessment %}
-                                <div class="task-card__assessment">
-                                    <div class="task-card__score">
-                                        <span class="task-card__score-label">Оценка:</span>
-                                        <span class="task-card__score-value">
-                                            {{ assessment.score|floatformat:0 }}%
-                                        </span>
+                            <div class="task-card__assessment assessment-result">
+                                <!-- Основная оценка -->
+                                <div class="assessment-result__score score-badge">
+                                    <span class="score-badge__label">Оценка:</span>
+                                    <span class="score-badge__value" style="--score: {% widthratio assessment.score 1 100 %}">
+                                        {% widthratio assessment.score 1 100 %}%
+                                    </span>
+                                </div>
+
+                                <!-- Комментарий -->
+                                {% if assessment.feedback %}
+                                <div class="assessment-result__feedback feedback-box">
+                                    <div class="feedback-box__header">
+                                        <span class="feedback-box__label">Комментарий:</span>
                                     </div>
+                                    <div class="feedback-box__content">
+                                        {{ assessment.feedback }}
+                                    </div>
+                                </div>
+                                {% endif %}
 
-                                    {% if assessment.feedback %}
-                                        <div class="task-card__feedback">
-                                            <span class="task-card__feedback-label">Комментарий:</span>
-                                            <p class="task-card__feedback-text">{{ assessment.feedback }}</p>
-                                        </div>
-                                    {% endif %}
-
-                                    {% if assessment.structured_feedback %}
-                                        <div class="task-card__structured-feedback">
-                                            <span class="task-card__feedback-label">Детальный анализ:</span>
-                                            <ul class="task-card__feedback-list">
-                                                {% for key, value in assessment.structured_feedback.items %}
-                                                    <li class="task-card__feedback-item">
-                                                        <strong>{{ key }}:</strong> {{ value }}
-                                                    </li>
+                                {% if assessment.structured_feedback.summary %}
+                                    {% with advice=assessment.structured_feedback.summary.advice %}
+                                        {% if advice %}
+                                        <div class="task-card__advice advice-box">
+                                            <div class="advice-box__header">
+                                                <svg class="advice-box__icon" width="20" height="20" viewBox="0 0 24 24">
+                                                    <path fill="currentColor" d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13.5v6l5 2.5-1 2-6-3V7h2z"/>
+                                                </svg>
+                                                <span class="advice-box__title">Рекомендации:</span>
+                                            </div>
+                                            <ul class="advice-box__list">
+                                                {% for item in advice %}
+                                                <li class="advice-box__item">{{ item }}</li>
                                                 {% endfor %}
                                             </ul>
                                         </div>
-                                    {% endif %}
-                                </div>
-                            {% endif %}
-                        {% endwith %}
-                    {% else %}
-                        <div class="task-card__placeholder">
-                            <p>Задание не выполнено</p>
-                        </div>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            </div>
-        </section>
+                                        {% endif %}
+                                    {% endwith %}
+                                {% endif %}
 
-        <!-- Учебные цели -->
-        {% if lesson.learning_objectives.all %}
-        <section class="content__section learning-objectives">
-            <h2 class="learning-objectives__title">Учебные цели урока</h2>
-            <div class="learning-objectives__list">
-                {% for objective in lesson.learning_objectives.all %}
-                    <div class="learning-objective">
-                        <span class="learning-objective__id">{{ objective.identifier }}</span>
-                        <p class="learning-objective__name">{{ objective.name }}</p>
+                                <!-- Детальный анализ -->
+                                {% if assessment.structured_feedback %}
+                                <div class="assessment-result__detailed detailed-analysis">
+                                    <div class="detailed-analysis__header">
+                                        <span class="detailed-analysis__label">Детальный анализ (СЛУЖЕБНАЯ ИНФОРМАЦИЯ):</span>
+                                    </div>
+                                    <div class="detailed-analysis__content">
+                                        {% for key, value in assessment.structured_feedback.items %}
+                                            <div class="detailed-analysis__skill skill-analysis">
+                                                <div class="skill-analysis__header">
+                                                    <span class="skill-analysis__name">{{ key }}</span>
+                                                </div>
+                                                {% include 'widgets/_json_recursive.html' with data=value level=0 %}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            <div class="task-card__placeholder task-placeholder">
+                                <svg class="task-placeholder__icon" width="48" height="48" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-8 14H7v-2h4v2zm0-4H7v-2h4v2zm0-4H7V7h4v2zm6 8h-4v-2h4v2zm0-4h-4v-2h4v2z"/>
+                                </svg>
+                                <p class="task-placeholder__text">Задание не выполнено</p>
+                            </div>
+                        {% endif %}
                     </div>
-                {% endfor %}
-            </div>
-        </section>
+                    {% endfor %}
+                </div>
+            </section>
         {% endif %}
+
+        
     </main>
 
     <!-- Кнопки действий -->
     <footer class="lesson-history__actions actions-bar">
-        <a href="#" class="actions-bar__btn actions-bar__btn--primary">
+        <a href="{% url 'curriculum:learning_session' enrollment.pk %}" class="actions-bar__btn actions-bar__btn--primary">
             Продолжить обучение
         </a>
         <a href="#" class="actions-bar__btn actions-bar__btn--secondary">
             Повторить урок
         </a>
-        <a href="#" class="actions-bar__btn actions-bar__btn--outline">
+        <a href="{% url 'curriculum:course_history' enrollment.course.pk %}" class="actions-bar__btn actions-bar__btn--outline">
             К курсу
         </a>
     </footer>
 </div>
 {% endblock %}
 
+
+
+{% block assistant_script %}
+
+{% comment %} <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> {% endcomment %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Chart.js plugins (опционально) -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+<script>
+
+ // ======================
+    // ДОПОЛНИТЕЛЬНЫЙ ЧАРТ: РАДАР ПО НАВЫКАМ 
+    // ======================
+    {% if skill_snapshot %}
+        const radarCtx = document.getElementById('skillsRadarChart')?.getContext('2d');
+        if (radarCtx) {
+            // Защита: значения всегда в диапазоне 0.0–1.0
+            const normalize = (value) => Math.max(0, Math.min(1, parseFloat(value) || 0));
+
+            const skillLabels = {{ skill_labels|safe }};
+            const skillsData = {{ skill_snapshot.skills|safe }};
+            const initialSnapshot = {% if initial_skill_snapshot %}{{ initial_skill_snapshot.skills|safe }}{% else %}null{% endif %};
+            console.log('skillLabels:', skillLabels);
+            console.log('skillsData:', skillsData)
+            console.log('initialSnapshot:', initialSnapshot)
+            const getSkillValue = (source, label) =>
+                source?.[label.toLowerCase()] ?? 0;
+
+            const currentData = skillLabels.map(label => {
+                const value = getSkillValue(skillsData, label);
+                const normalized = normalize(value);
+                return normalized;
+            });
+            
+            const initialData = initialSnapshot
+                ? skillLabels.map(label => {
+                    const value = getSkillValue(initialSnapshot, label);
+                    const normalized = normalize(value);
+                    return normalized;
+                })
+                : null;
+
+            console.log('currentData:', currentData);
+            console.log('initialData:', initialData);
+
+            const datasets = [{
+                label: 'Текущий уровень',
+                data: currentData,
+                fill: false,
+                backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                borderColor: 'rgba(99, 102, 241, 1)',
+                borderWidth: 2,
+                pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+                pointBorderColor: '#fff',
+                pointRadius: 5,
+                tension: 0.3
+            }];
+            
+            if (initialData) {
+                datasets.push({
+                    label: 'Начальный уровень',
+                    data: initialData,
+                    fill: false,
+                    borderColor: 'rgba(245, 158, 11, 1)',
+                    borderWidth: 3,
+                    borderDash: [5, 5],
+                    pointBackgroundColor: 'rgba(245, 158, 11, 1)',
+                    pointRadius: 4,
+                    tension: 0.3,
+                    order: 1,
+                });
+            }
+            
+            // Получаем цвет из CSS-переменной
+            const textColor = getComputedStyle(document.documentElement)
+                .getPropertyValue('--color-text')
+                .trim();
+            
+            const radarChart = new Chart(radarCtx, {
+                type: 'radar',
+                data: {
+                    labels: skillLabels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(31, 41, 55, 0.9)',
+                            titleFont: {
+                                size: 12,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 11
+                            },
+                            padding: 10,
+                            callbacks: {
+                                label: function(context) {
+                                    const datasetLabel = context.dataset.label || '';
+                                    const skillValue = context.parsed.r.toFixed(1);
+                                    return `${datasetLabel}: ${skillValue}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: true,
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            },
+                            pointLabels: {
+                                font: {
+                                    size: 11,
+                                    weight: '500'
+                                },
+                                color: textColor
+                            },
+                            ticks: {
+                                display: true,
+                                stepSize: 25,
+                                suggestedMin: 0,
+                                suggestedMax: 100,
+                                color: textColor,
+                                backdropColor: 'transparent',
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1200,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+    {% endif %}
+    </script>
+{% endblock %}

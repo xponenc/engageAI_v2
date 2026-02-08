@@ -1,3 +1,4 @@
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
 from users.models import Student
@@ -48,12 +49,12 @@ class SkillSnapshot(models.Model):
         default="POST_LESSON",
         verbose_name=_("Контекст снимка")
     )
-    grammar = models.FloatField(default=0.0)
-    vocabulary = models.FloatField(default=0.0)
-    listening = models.FloatField(default=0.0)
-    reading = models.FloatField(default=0.0)
-    writing = models.FloatField(default=0.0)
-    speaking = models.FloatField(default=0.0)
+    grammar = models.FloatField(default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(1.0)])
+    vocabulary = models.FloatField(default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(1.0)])
+    listening = models.FloatField(default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(1.0)])
+    reading = models.FloatField(default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(1.0)])
+    writing = models.FloatField(default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(1.0)])
+    speaking = models.FloatField(default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(1.0)])
 
     skills = models.JSONField(
         verbose_name=_("Навыки"),

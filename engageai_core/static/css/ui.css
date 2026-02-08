@@ -12,6 +12,18 @@
 }
 
 /* Core BTN */
+
+/* Reset — keep */
+.btn_reset {
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    outline: none;
+}
+
+
 .btn {
     display: inline-flex;
     align-items: center;
@@ -38,15 +50,35 @@
         transform .12s ease;
 }
 
-/* Reset — keep */
-.btn_reset {
-    margin: 0;
-    padding: 0;
-    cursor: pointer;
-    border: none;
-    background: transparent;
-    outline: none;
+.btn_round {
+    flex: 0 0 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    width: 44px;
+    min-width: unset;
+    min-height: unset;
+    height: 44px;
+    border-radius: 50%;
+    color: var(--color-accent);
+    border: 1px solid var(--color-accent);
+    opacity: 0.7;
+    transition: opacity ease-in-out 0.3s;
 }
+
+.btn_round:hover, .btn_round:focus {
+    opacity: 1;
+}
+
+.btn_round-small {
+    flex: 0 0 32px;
+    padding: 2px;
+    width: 32px;
+    height: 32px;
+}
+
+
 
 /* -------------------------------------
    Primary Button (Accent)

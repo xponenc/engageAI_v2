@@ -7,8 +7,10 @@ from django.utils.translation import gettext_lazy as _
 from curriculum.models.content.course import Course
 from curriculum.models.content.lesson import Lesson
 from curriculum.models.learning_process.learning_path import LearningPath
+from curriculum.models.student.skill_snapshot import SkillSnapshot
 
 from curriculum.services.path_generation_service import PathGenerationService
+from curriculum.validators import SkillDomain
 from users.models import Student
 
 
@@ -84,3 +86,61 @@ class Enrollment(models.Model):
     def __str__(self):
         status = "active" if self.is_active else "completed"
         return f"{self.student} → {self.course} ({status})"
+
+
+@receiver(post_save, sender=Enrollment)
+def create_baseline_skill_snapshot(sender, instance, created, **kwargs):
+    """
+    Создает базовый снимок навыков при зачислении студента на курс.
+
+    Срабатывает только при создании нового зачисления.
+    """
+    if not created:
+        return
+
+    # Проверяем, существует ли уже снимок с контекстом PLACEMENT для этого зачисления
+    existing = SkillSnapshot.objects.filter(
+        enrollment=instance,
+        snapshot_context="PLACEMENT"
+    ).first()
+
+    if existing:
+        return  # Снимок уже существует
+
+    student = instance.student
+
+    # 1. Получаем последний снимок студента (если есть)
+    latest_snapshot = student.skill_snapshots.order_by("-snapshot_at").first()
+
+    if latest_snapshot:
+        # Используем данные из последнего снимка
+        baseline_skills = latest_snapshot.skills.copy()
+    else:
+        # Создаем базовый снимок на основе уровня студента
+        baseline_skills = {skill: 0.5 for skill in list(SkillDomain.values)}
+
+    # 2. Создаем снимок с установкой ВСЕХ полей
+    snapshot = SkillSnapshot.objects.create(
+        student=student,
+        enrollment=instance,
+        associated_lesson=None,
+        snapshot_context="PLACEMENT",
+        # Устанавливаем индивидуальные поля
+        grammar=baseline_skills.get("grammar", 0.5),
+        vocabulary=baseline_skills.get("vocabulary", 0.5),
+        listening=baseline_skills.get("listening", 0.5),
+        reading=baseline_skills.get("reading", 0.5),
+        writing=baseline_skills.get("writing", 0.5),
+        speaking=baseline_skills.get("speaking", 0.5),
+        # Устанавливаем JSON поле
+        skills=baseline_skills,
+        metadata={
+            "source": "enrollment_baseline",
+            "trigger": "new_course_enrollment",
+            "student_level": student.english_level,
+            "enrollment_id": instance.id,
+            "from_snapshot": latest_snapshot.id if latest_snapshot else None,
+        }
+    )
+
+    return snapshot

@@ -45,21 +45,19 @@
                     {{ progress.progress_percent|floatformat:0 }}%
                 </div>
             </article>
-            {% if lesson.description %}
-            <div class="learning-header__description">
-                <h3>Цель урока</h3>  
-                {{ lesson.description }}
-                <ul>
+            {% if lesson.learning_objectives.all %}
+            <section class="content__section learning-objectives">
+                <h2 class="learning-objectives__title">Учебные цели урока</h2>
+                <p>{{ lesson.description|default:"" }}</p>
+                <div class="learning-objectives__list">
                     {% for objective in lesson.learning_objectives.all %}
-                        <li>
-                            Skill: {{ objective.skill_domain }} - {{ objective.name }}
-                            <p>{{ objective.description }}</p>
-                        </li>
-                    
+                        <div class="learning-objective">
+                            <span class="learning-objective__id">{{ objective.identifier }}</span>
+                            <p class="learning-objective__name">{{ objective.name }}</p>
+                        </div>
                     {% endfor %}
-
-                </ul>
-            </div>
+                </div>
+            </section>
             {% endif %}
         </header>
 
@@ -94,37 +92,58 @@
                 <input type="hidden" id="enrollment-id" value="{{ enrollment.id }}">
                 <input type="hidden" id="assessment-job-id" value="{{ enrollment.assessment_job_id }}">
             {% else %}
-                <button
-                    class="btn btn_secondary chat-action-trigger"
-                    data-context-type="Lesson"
-                    data-context-id="{{ lesson.id }}"
-                    data-context-prefix="Поясни мне этот урок"
-                >
-                    ❓ Вопрос по уроку
-                </button>
-                
-                {% if lesson.content %}
-                    <section class="lesson-theory">
-                        <h3 class="lesson-theory__title">Lesson Theory</h3>
-                        <div class="lesson-theory__content word-helper">
-                            {{ lesson.content|safe }}
-                            
-                        </div>
-                    </section>
+               
 
+                {% if lesson.content or lesson.content_ru %}
+                <section class="lesson-theory-tabs">
+                    <!-- TAB NAVIGATION -->
+                    <div class="lesson-theory-tabs__nav">
+                        {% if lesson.content %}
+                            <button 
+                                type="button" 
+                                class="lesson-theory-tabs__tab lesson-theory-tabs__tab--active" 
+                                data-tab="en">
+                                Lesson Theory
+                            </button>
+                        {% endif %}
+                        
+                        {% if lesson.content_ru %}
+                            <button 
+                                type="button" 
+                                class="lesson-theory-tabs__tab" 
+                                data-tab="ru">
+                                Теория урока
+                            </button>
+                        {% endif %}
+
+                        <button
+                            class="btn btn_reset btn_round btn_round-small chat-action-trigger lesson-theory-tabs__question"
+                            data-context-type="Lesson"
+                            data-context-id="{{ lesson.id }}"
+                            data-context-prefix="Поясни мне этот урок"
+                            title="Вопрос по уроку"
+                            aria-label="Вопрос по уроку"
+                        >
+                            <span class="btn__icon">?</span>
+                        </button>
+                    </div>
+
+                    <!-- TAB CONTENT -->
+                    <div class="lesson-theory-tabs__content">
+                        {% if lesson.content %}
+                            <div id="tab-en" class="lesson-theory-tabs__panel lesson-theory-tabs__panel--active word-helper">
+                                {{ lesson.content|safe }}
+                            </div>
+                        {% endif %}
+                        
+                        {% if lesson.content_ru %}
+                            <div id="tab-ru" class="lesson-theory-tabs__panel word-helper">
+                                {{ lesson.content_ru|safe }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </section>
                 {% endif %}
-
-                {% if lesson.content_ru %}
-                    <section class="lesson-theory">
-                        <h3 class="lesson-theory__title">Теория урока</h3>
-                        <div class="lesson-theory__content word-helper">
-                            {{ lesson.content_ru|safe }}
-                            
-                        </div>
-                    </section>
-
-                {% endif %}
-
                 <section class="lesson-tasks">
                     <h3 class="lesson-tasks__title">
                         Задания урока
@@ -138,6 +157,7 @@
                             action="{% url 'curriculum:learning_session' enrollment.id %}"
                             enctype="multipart/form-data">
                         {% csrf_token %}
+                        {{ lesson_form.lesson_id }}
 
 
                         {% if lesson_form.errors %}
@@ -169,14 +189,21 @@
                                             <span class="lesson-task__status">✓ выполнено</span>
                                         {% endif %}
                                         <button
-                                            class="btn btn_reset btn_outline chat-action-trigger"
+                                            class="btn btn_reset btn_round btn_round-small chat-action-trigger"
                                             data-context-type="Task"
                                             data-context-id="{{ task.id }}"
                                             data-context-prefix="Вопрос по заданию"
+                                            title="Вопрос по заданию"
+                                            aria-label="Вопрос по заданию"
+
                                         type="button">
-                                            ❓ Вопрос по заданию
+                                            <span class="btn__icon">?</span>
                                         </button>
                                     </header>
+
+                                    <p class="lesson-task__format">
+                                        {{ task.get_response_format_display }}
+                                    </p>
 
                                     <div class="lesson-task__prompt">
                                         {{ task.content.prompt|safe }}
@@ -388,6 +415,25 @@
 const audioRecorders = {};
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Переключение вкладок теории
+    const tabButtons = document.querySelectorAll('.lesson-theory-tabs__tab');
+    const tabPanels = document.querySelectorAll('.lesson-theory-tabs__panel');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetTab = this.dataset.tab;
+            
+            // Remove active class from all buttons and panels
+            tabButtons.forEach(btn => btn.classList.remove('lesson-theory-tabs__tab--active'));
+            tabPanels.forEach(panel => panel.classList.remove('lesson-theory-tabs__panel--active'));
+            
+            // Add active class to clicked button and corresponding panel
+            this.classList.add('lesson-theory-tabs__tab--active');
+            document.getElementById(`tab-${targetTab}`).classList.add('lesson-theory-tabs__panel--active');
+        });
+    });
+
+
     // Находим все кнопки записи
     document.querySelectorAll('[data-task-record]').forEach(button => {
         const taskId = button.dataset.taskRecord;

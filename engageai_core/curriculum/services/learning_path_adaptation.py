@@ -55,9 +55,9 @@ class LearningPathAdaptationService:
     # ========================================================
 
     def adapt_after_lesson(
-        self,
-        learning_path: LearningPath,
-        outcome: LessonOutcomeContext
+            self,
+            learning_path: LearningPath,
+            outcome: LessonOutcomeContext
     ) -> LearningPathAdjustmentType:
 
         current_node = learning_path.current_node
@@ -65,12 +65,15 @@ class LearningPathAdaptationService:
             return LearningPathAdjustmentType.HOLD
 
         analysis = self._analyze_objectives(outcome)
-        self._update_current_node_status(learning_path, analysis)
+        # self._update_current_node_status(learning_path, analysis)
 
         # 5.1 Happy path
         if not analysis.problematic and not analysis.weak:
             self._advance_to_next_available_node(learning_path)
             return LearningPathAdjustmentType.ADVANCE
+
+        self._advance_to_next_available_node(learning_path)
+        return LearningPathAdjustmentType.ADVANCE  # TODO Заглушка до реализации остальных случаев
 
         # 5.2 Провал → remedial
         if self._should_insert_remedial(analysis):
@@ -127,27 +130,33 @@ class LearningPathAdaptationService:
     # Node mutation
     # ========================================================
 
-    def _update_current_node_status(self, learning_path, analysis):
-        node = learning_path.current_node
-        if not node:
-            return
-
-        if analysis.problematic:
-            node["status"] = "in_progress"
-        else:
-            node["status"] = "completed"
-            node["completed_at"] = timezone.now().isoformat()
-
-        learning_path.save(update_fields=["nodes", "updated_at"])
+    # def _update_current_node_status(self, learning_path, analysis):
+    #     node = learning_path.current_node
+    #     if not node:
+    #         return
+    #
+    #     if analysis.problematic:
+    #         node["status"] = "in_progress"
+    #     else:
+    #         node["status"] = "completed"
+    #         node["completed_at"] = timezone.now().isoformat()
+    #
+    #     learning_path.save(update_fields=["nodes", "updated_at"])
 
     def _advance_to_next_available_node(self, learning_path):
+        """Успешный переход к следующему уроку по плану"""
         nodes = learning_path.nodes
+        current_node_index = learning_path.current_node_index
+        learning_path.nodes[current_node_index]["status"] = "completed"
+        learning_path.nodes[current_node_index]["completed_at"] = timezone.now().isoformat()
         idx = learning_path.current_node_index + 1
+        learning_path.save(update_fields=["nodes", ])
 
         while idx < len(nodes):
-            if nodes[idx]["status"] not in ("completed", "skipped"):
+            if nodes[idx]["status"] not in ("completed", "skipped"):  # TODO а remedial?
                 learning_path.current_node_index = idx
-                learning_path.save(update_fields=["current_node_index"])
+                learning_path.nodes[idx]["status"] = "in_progress"
+                learning_path.save(update_fields=["current_node_index", "nodes"])
                 return
             idx += 1
 
@@ -168,9 +177,9 @@ class LearningPathAdaptationService:
             })
 
         learning_path.nodes = (
-            nodes[:current_idx + 1] +
-            remedial_nodes +
-            nodes[current_idx + 1:]
+                nodes[:current_idx + 1] +
+                remedial_nodes +
+                nodes[current_idx + 1:]
         )
         learning_path.save(update_fields=["nodes", "updated_at"])
 
@@ -241,9 +250,9 @@ class LearningPathAdaptationService:
 
     def _should_advance_level(self, analysis):
         return (
-            bool(analysis.mastered)
-            and not analysis.weak
-            and not analysis.problematic
+                bool(analysis.mastered)
+                and not analysis.weak
+                and not analysis.problematic
         )
 
     def _determine_lower_cefr_level(self, objectives):

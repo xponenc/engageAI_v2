@@ -25,8 +25,8 @@ class LessonEventService:
         )
 
         # Автоматический расчёт duration и обновление LearningPath
-        if event_type == LessonEventType.COMPLETE:
-            LessonEventService._handle_lesson_complete(enrollment, lesson, metadata)
+        # if event_type == LessonEventType.COMPLETE:
+        #     LessonEventService._handle_lesson_complete(enrollment, lesson, metadata)
 
         return event
 
@@ -40,12 +40,8 @@ class LessonEventService:
         """
         if hasattr(enrollment, "learning_path"):
             learning_path = enrollment.learning_path
-            learning_path.advance_to_next_node()  # Переход к следующему узлу
-
-            from .decision_service import DecisionService
 
             SkillUpdateService.calculate_and_save_delta(enrollment, lesson)
-            DecisionService.evaluate_and_adapt_path(enrollment, lesson)
 
             # Геймификация: базовые баллы за завершение
             # from curriculum.services.gamification_service import GamificationService

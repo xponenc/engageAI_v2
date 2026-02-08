@@ -1,7 +1,8 @@
 {% extends 'extended/assistant_layout.html' %}
 {% load static %}
+{% load skill_filters %}
 
-{% block title %}История курса: {{ course.title }}{% endblock %}
+{% block title %}{{ course.title }} — Мой прогресс{% endblock %}
 
 
 {% block assistant_css %}
@@ -10,249 +11,900 @@
 
 
 {% block assistant_content %}
-<section class="course-history">
-    <!-- MAIN -->
-    <main class="course-history__main">
+<div class="course-history">
+    <!-- Хлебные крошки -->
+    <nav class="course-history__breadcrumbs breadcrumbs">
+        <a href="#" class="breadcrumbs__link">Главная</a>
+        <span class="breadcrumbs__separator">/</span>
+        <span class="breadcrumbs__current">{{ course.title }}</span>
+    </nav>
 
-        <!-- HEADER -->
-        <header class="course-history-header">
-            <div class="course-history-header__top">
-                <div>
-                    <h1 class="course-history-header__title">
-                        История курса: {{ course.title }}
-                    </h1>
-                    <p class="course-history-header__description">
-                        {{ course.description }}
-                    </p>
-                </div>
-
-                <div class="course-history-header__level">
-                    {{ course.target_cefr_from }} → {{ course.target_cefr_to }}
-                </div>
+    <!-- Заголовок курса -->
+    <header class="course-history__header header">
+        <div class="header__top">
+            <h1 class="header__title">{{ course.title }}</h1>
+            <div class="header__path-type path-type-badge path-type-badge--{{ learning_path.path_type|lower }}">
+                {% if learning_path.path_type == 'LINEAR' %}
+                    📏 Линейный путь
+                {% elif learning_path.path_type == 'ADAPTIVE' %}
+                    🧠 Адаптивный путь
+                {% elif learning_path.path_type == 'PERSONALIZED' %}
+                    ✨ Персонализированный путь
+                {% endif %}
             </div>
+        </div>
 
-            <!-- PROGRESS -->
-            <div class="course-progress">
-                <div class="course-progress__header">
-                    <h3 class="course-progress__title">Ваш прогресс</h3>
-                    <span class="course-progress__percent">{{ overall_progress }}%</span>
-                </div>
+        <p class="header__description">{{ course.description }}</p>
 
-                <div class="course-progress__bar">
-                    <span class="course-progress__fill"
-                            style="width: {{ overall_progress }}%"></span>
-                </div>
+        <div class="header__tags">
+            {% for tag in course.professional_tags.all %}
+                <span class="header__tag tag-badge">{{ tag.name }}</span>
+            {% endfor %}
+        </div>
 
-                <div class="course-progress__actions">
-                    <a href="{% url 'curriculum:learning_session' enrollment.id %}"
-                        class="btn btn--primary">
-                        Продолжить обучение
-                    </a>
-                    <a href="{% url 'curriculum:course_detail' course.id %}"
-                        class="btn btn--ghost">
-                        Детали курса
-                    </a>
-                </div>
+        {% if learning_path.metadata.generated_by %}
+            <div class="header__generated-by">
+                <svg class="header__icon" width="16" height="16" viewBox="0 0 24 24">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" fill="none"/>
+                </svg>
+                Сгенерировано: {{ learning_path.metadata.generated_by }}
             </div>
-        </header>
+        {% endif %}
+    </header>
 
-        <!-- STATS -->
-        <section class="course-stats">
-            <h2 class="section-title">Статистика обучения</h2>
-
-            <div class="course-stats__grid">
-                <article class="stat-card">
-                    <div class="stat-card__value">{{ total_time_spent }} мин</div>
-                    <div class="stat-card__label">Всего времени</div>
-                    <small>≈ {{ average_time_per_lesson }} мин/урок</small>
-                </article>
-
-                <article class="stat-card">
-                    <div class="stat-card__value">{{ completed_lessons_count }}</div>
-                    <div class="stat-card__label">Завершено уроков</div>
-                    <small>из {{ total_lessons_count }}</small>
-                </article>
-
-                <article class="stat-card">
-                    <div class="stat-card__value">
-                        {{ enrollment.student.cefr_level|default:"—" }}
+    <!-- Прогресс курса -->
+    <section class="course-history__progress progress-overview">
+        <div class="progress-overview__header">
+            <h2 class="progress-overview__title">Прогресс обучения</h2>
+            <div class="progress-overview__stats">
+                <div class="progress-overview__stat">
+                    <span class="progress-overview__stat-value">{{ progress.completed_lessons }}</span>
+                    <span class="progress-overview__stat-label">Пройдено</span>
+                </div>
+                <div class="progress-overview__stat">
+                    <span class="progress-overview__stat-value">{{ progress.total_lessons }}</span>
+                    <span class="progress-overview__stat-label">Всего</span>
+                </div>
+                {% if progress.current_lesson_number %}
+                    <div class="progress-overview__stat">
+                        <span class="progress-overview__stat-value">{{ progress.current_lesson_number }}</span>
+                        <span class="progress-overview__stat-label">Текущий</span>
                     </div>
-                    <div class="stat-card__label">Текущий уровень</div>
-                </article>
+                {% endif %}
             </div>
-        </section>
+        </div>
 
-        <!-- CHART -->
-        <section class="course-chart">
-            <h2 class="section-title">Динамика прогресса</h2>
-            <div class="course-chart__container">
-                <canvas id="progressChart" height="250"></canvas>
+        {% comment %} <!-- Круговой прогресс (Doughnut) -->
+        <div class="progress-overview__circle">
+            <div class="progress-chart">
+                <canvas id="progressDoughnutChart" width="200" height="200"></canvas>
+                <div class="progress-chart__center">
+                    <div class="progress-chart__percentage" id="doughnutPercentage">
+                        {{ progress.percentage|default:0 }}%
+                    </div>
+                    <div class="progress-chart__label">Завершено</div>
+                </div>
             </div>
-        </section>
+        </div>
 
-        <!-- LESSONS -->
-        <section class="lessons">
-            <h2 class="section-title">Пройденные уроки</h2>
+        <!-- Линейный прогресс (Bar) -->
+        <div class="progress-overview__bar">
+            <div class="progress-bar-chart">
+                <canvas id="progressBarChart" height="40"></canvas>
+            </div>
+        </div>
 
-            {% if all_lessons %}
-            <div class="lessons__list">
-                {% for lesson_data in all_lessons %}
-                <article class="lesson-card
-                    {% if lesson_data.is_current %} lesson-card--current{% endif %}
-                    {% if lesson_data.is_completed %} lesson-card--completed{% endif %}">
+        <!-- Радар-чарт по навыкам -->
+        {% if skill_snapshot %}
+        <div class="progress-overview__skills-radar">
+            <div class="skills-radar">
+                <div class="skills-radar__header">
+                    <h3 class="skills-radar__title">Ваш текущий уровень навыков</h3>
+                    {% if skill_snapshot.timestamp %}
+                    <span class="skills-radar__updated">
+                        Обновлено: {{ skill_snapshot.timestamp|date:"d.m.Y H:i" }}
+                    </span>
+                    {% endif %}
+                </div>
+                
+                <div class="skills-radar__chart">
+                    <canvas id="skillsRadarChart" height="300"></canvas>
+                </div>
+                
+                <div class="skills-radar__legend">
+                    <div class="legend-item">
+                        <span class="legend-color" style="background-color: rgba(99, 102, 241, 0.8);"></span>
+                        <span>Текущий уровень</span>
+                    </div>
+                    {% if initial_snapshot %}
+                    <div class="legend-item">
+                        <span class="legend-color" style="background-color: rgba(245, 158, 11, 0.8);"></span>
+                        <span>Начальный уровень</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %} {% endcomment %}
 
-                    <header class="lesson-card__header">
-                        <span class="lesson-card__number">
-                            {{ lesson_data.order }}
-                        </span>
-                        <h3 class="lesson-card__title">
-                            {{ lesson_data.lesson.title }}
-                        </h3>
-                        <span class="lesson-card__percent">
-                            {{ lesson_data.completion_percent|floatformat:0 }}%
-                        </span>
-                    </header>
-
-                    <p class="lesson-card__description">
-                        {{ lesson_data.lesson.description|truncatechars:180 }}
-                    </p>
-
-                    <div class="lesson-card__progress">
-                        <div class="progress-bar">
-                            <span class="progress-bar__fill"
-                                    style="width: {{ lesson_data.completion_percent|floatformat:0 }}%"></span>
+        <!-- Объединенная группа чартов -->
+        <div class="progress-charts-group">
+            <!-- Левая колонка: Круговой прогресс -->
+            <div class="progress-charts-group__column progress-charts-group__column--main">
+                <!-- Круговой прогресс (Doughnut) -->
+                <div class="progress-chart-card">
+                    <div class="progress-chart-card__header">
+                        <h3 class="progress-chart-card__title">Прогресс курса</h3>
+                        <div class="progress-chart-card__stats">
+                            <span class="progress-chart-card__stat">
+                                <span class="progress-chart-card__stat-value">{{ progress.completed_lessons }}</span>
+                                <span class="progress-chart-card__stat-label">/</span>
+                                <span class="progress-chart-card__stat-total">{{ progress.total_lessons }}</span>
+                            </span>
+                            <span class="progress-chart-card__stat-label">уроков</span>
                         </div>
                     </div>
+                    <div class="progress-chart-card__body">
+                        <div class="progress-chart">
+                            <canvas id="progressDoughnutChart" width="200" height="200"></canvas>
+                            <div class="progress-chart__center">
+                                <div class="progress-chart__percentage" id="doughnutPercentage">
+                                    {{ progress.percentage|default:0 }}%
+                                </div>
+                                <div class="progress-chart__label">Завершено</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                    <div class="lesson-card__actions">
-                        {% if lesson_data.is_completed %} 
-                        <a href="{% url 'curriculum:lesson_history' enrollment.id lesson_data.lesson.id %}"
-                            class="btn btn--ghost">
-                            История
-                        </a>
-                        {% endif %}
+                <!-- Линейный прогресс (Bar) -->
+                <div class="progress-chart-card">
+                    <div class="progress-chart-card__header">
+                        <h3 class="progress-chart-card__title">Прогресс по типам</h3>
+                    </div>
+                    <div class="progress-chart-card__body">
+                        <div class="progress-bar-chart">
+                            <canvas id="progressBarChart" height="60"></canvas>
+                        </div>
+                        <div class="progress-bar-chart__legend">
+                            <div class="legend-row">
+                                <span class="legend-color legend-color--completed"></span>
+                                <span class="legend-label">Завершено</span>
+                            </div>
+                            <div class="legend-row">
+                                <span class="legend-color legend-color--remaining"></span>
+                                <span class="legend-label">Осталось</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                        {% if lesson_data.is_current %}
-                        <a href="{% url 'curriculum:learning_session' enrollment.id %}"
-                            class="btn btn--primary">
-                            Продолжить
-                        </a>
+            <!-- Правая колонка: Радар навыков -->
+            {% if skill_snapshot %}
+            <div class="progress-charts-group__column progress-charts-group__column--skills">
+                <div class="progress-chart-card progress-chart-card--highlight">
+                    <div class="progress-chart-card__header">
+                        <h3 class="progress-chart-card__title">Уровень навыков</h3>
+                        {% if skill_snapshot.timestamp %}
+                        <span class="progress-chart-card__updated">
+                            Обновлено: {{ skill_snapshot.timestamp|date:"d.m.Y" }}
+                        </span>
                         {% endif %}
                     </div>
-                </article>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="lessons-empty">
-                <h3>Нет пройденных уроков</h3>
-                <a href="{% url 'curriculum:learning_session' enrollment.id %}"
-                    class="btn btn--primary">
-                    Начать обучение
-                </a>
+                    <div class="progress-chart-card__body">
+                        <div class="skills-radar-chart">
+                            <canvas id="skillsRadarChart" height="320"></canvas>
+                        </div>
+                    </div>
+                    <div class="progress-chart-card__footer">
+                        <div class="skills-radar__legend">
+                            <div class="legend-item">
+                                <span class="legend-color" style="background-color: rgba(99, 102, 241, 0.8);"></span>
+                                <span>Текущий уровень</span>
+                            </div>
+                            {% if initial_snapshot %}
+                            <div class="legend-item">
+                                <span class="legend-color" style="background-color: rgba(245, 158, 11, 0.8);"></span>
+                                <span>Начальный</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
             </div>
             {% endif %}
-        </section>
-    </main>
-</section>
+        </div>
 
+
+        {% if skill_comparisons %}
+        <div class="skills-comparison">
+            <h4 class="skills-comparison__title">Прогресс по навыкам</h4>
+            <div class="skills-comparison__grid">
+                {% for skill in skill_comparisons %}
+                <div class="skill-comparison-item">
+                    <div class="skill-comparison-item__header">
+                        <span class="skill-comparison-item__name">{{ skill.name }}</span>
+                        <span class="skill-comparison-item__delta 
+                            {% if skill.delta_positive %}skill-comparison-item__delta--positive
+                            {% else %}skill-comparison-item__delta--negative{% endif %}">
+                            {{ skill.delta_formatted }}
+                        </span>
+                    </div>
+                    <div class="skill-comparison-item__bars">
+                        <div class="skill-bar">
+                            <span class="skill-bar__label">Начало</span>
+                            <div class="skill-bar__progress">
+                                <div class="skill-bar__fill skill-bar__fill--initial" 
+                                    style="width: {% widthratio skill.initial 1 100 %}%">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="skill-bar">
+                            <span class="skill-bar__label">Сейчас</span>
+                            <div class="skill-bar__progress">
+                                <div class="skill-bar__fill skill-bar__fill--current" 
+                                    style="width: {% widthratio skill.current 1 100 %}%">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Статистика по типам -->
+        <div class="progress-overview__types">
+            <div class="progress-types">
+                <div class="progress-types__item">
+                    <span class="progress-types__icon">📚</span>
+                    <div class="progress-types__info">
+                        <span class="progress-types__count">{{ core_stats.completed }}/{{ core_stats.total }}</span>
+                        <span class="progress-types__label">Основные уроки</span>
+                    </div>
+                </div>
+                {% if remedial_stats.total > 0 %}
+                <div class="progress-types__item">
+                    <span class="progress-types__icon">🔄</span>
+                    <div class="progress-types__info">
+                        <span class="progress-types__count">{{ remedial_stats.completed }}/{{ remedial_stats.total }}</span>
+                        <span class="progress-types__label">Повторы</span>
+                    </div>
+                </div>
+                {% endif %}
+                {% if diagnostic_stats.total > 0 %}
+                <div class="progress-types__item">
+                    <span class="progress-types__icon">🔍</span>
+                    <div class="progress-types__info">
+                        <span class="progress-types__count">{{ diagnostic_stats.completed }}/{{ diagnostic_stats.total }}</span>
+                        <span class="progress-types__label">Диагностика</span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Быстрые действия -->
+        {% if current_node %}
+        <div class="progress-overview__actions">
+            <a href="{% url 'curriculum:learning_session' enrollment.pk %}" 
+                class="btn btn--primary btn--large">
+                {% if current_node.status == 'in_progress' %}
+                    Продолжить урок
+                {% else %}
+                    Начать урок
+                {% endif %}
+                →
+            </a>
+            {% if next_node and next_node.status == 'recommended' %}
+            <a href="#" class="btn btn--secondary">
+                Рекомендуется: {{ next_node.title|truncatechars:30 }}
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Список уроков -->
+    <section class="course-history__lessons lessons-list">
+        <div class="lessons-list__header">
+            <h2 class="lessons-list__title">Учебный план</h2>
+            <div class="lessons-list__controls">
+                <button class="lessons-list__filter active" data-filter="all">
+                    Все ({{ nodes|length }})
+                </button>
+                <button class="lessons-list__filter" data-filter="core">
+                    Основные ({{ core_stats.total }})
+                </button>
+                {% if remedial_stats.total > 0 %}
+                <button class="lessons-list__filter" data-filter="remedial">
+                    Повторы ({{ remedial_stats.total }})
+                </button>
+                {% endif %}
+                {% if diagnostic_stats.total > 0 %}
+                <button class="lessons-list__filter" data-filter="diagnostic">
+                    Диагностика ({{ diagnostic_stats.total }})
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="lessons-list__grid">
+            {% for node in nodes %}
+            <div class="lesson-card lesson-card--{{ node.status }} lesson-card--{{ node.type }}"
+                    data-type="{{ node.type }}"
+                    data-status="{{ node.status }}">
+                
+                <!-- Статус и тип -->
+                <div class="lesson-card__header">
+                    <div class="lesson-card__status status-badge status-badge--{{ node.status }}">
+                        {% if node.status == 'completed' %}
+                            ✅ Завершено
+                        {% elif node.status == 'in_progress' %}
+                            🔄 В процессе
+                        {% elif node.status == 'locked' %}
+                            🔒 Заблокировано
+                        {% elif node.status == 'skipped' %}
+                            ⏭️ Пропущено
+                        {% elif node.status == 'recommended' %}
+                            💡 Рекомендуется
+                        {% endif %}
+                    </div>
+                    <div class="lesson-card__type type-badge type-badge--{{ node.type }}">
+                        {% if node.type == 'core' %}
+                            📚 Основной
+                        {% elif node.type == 'remedial' %}
+                            🔄 Повтор
+                        {% elif node.type == 'diagnostic' %}
+                            🔍 Диагностика
+                        {% elif node.type == 'practice' %}
+                            💪 Практика
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Название и описание -->
+                <div class="lesson-card__content">
+                    <h3 class="lesson-card__title">
+                        {% if node.type == 'core' %}
+                            Урок {{ forloop.counter }}
+                        {% else %}
+                            {{ node.type|capfirst }}
+                        {% endif %}
+                        : {{ node.title }}
+                    </h3>
+                    
+                    {% if node.lesson_id %}
+                        {% with lesson=node.lesson %}
+                            <p class="lesson-card__description">
+                                {{ lesson.description|truncatechars:120 }}
+                            </p>
+                            
+                            <!-- Мета-информация урока -->
+                            <div class="lesson-card__meta">
+                                <span class="lesson-card__meta-item">
+                                    <svg class="lesson-card__meta-icon" width="16" height="16" viewBox="0 0 24 24">
+                                        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13.5v6l5 2.5-1 2-6-3V7h2z" fill="currentColor"/>
+                                    </svg>
+                                    {{ lesson.duration_minutes }} мин
+                                </span>
+                                <span class="lesson-card__meta-item">
+                                    <svg class="lesson-card__meta-icon" width="16" height="16" viewBox="0 0 24 24">
+                                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" fill="none"/>
+                                    </svg>
+                                    CEFR {{ lesson.required_cefr }}
+                                </span>
+                                <div class="lesson-card__skills">
+                                    {% for skill in lesson.skill_focus %}
+                                        <span class="lesson-card__skill skill-tag skill-tag--{{ skill }}">
+                                            {{ skill }}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endwith %}
+                    {% else %}
+                        <p class="lesson-card__description">
+                            {{ node.metadata.description|default:"Дополнительный материал для закрепления знаний" }}
+                        </p>
+                    {% endif %}
+                </div>
+
+                <!-- Результаты для завершенных уроков -->
+                {% if node.status == 'completed' and node.lesson_id %}
+                    {% with assessment=node.assessment_result %}
+                        <div class="lesson-card__results">
+                            <div class="lesson-card__score">
+                                <span class="lesson-card__score-label">Оценка:</span>
+                                <span class="lesson-card__score-value">
+                                    {% widthratio assessment.overall_score 1 100 %}%
+                                </span>
+                            </div>
+                            
+                            {% if assessment.completed_at %}
+                                <div class="lesson-card__date">
+                                    <svg class="lesson-card__date-icon" width="16" height="16" viewBox="0 0 24 24">
+                                        <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z" fill="currentColor"/>
+                                    </svg>
+                                    {{ assessment.completed_at|date:"d.m.Y" }}
+                                </div>
+                            {% endif %}
+
+                            <!-- Прогресс по навыкам -->
+                            {% comment %} {% if assessment.structured_feedback %}
+                                <div class="lesson-card__skills-progress">
+                                    {% for skill_name, skill_data in assessment.structured_feedback.items %}
+                                        {% if forloop.counter0 < 3 %}
+                                            <div class="skill-progress-bar">
+                                                <div class="skill-progress-bar__label">
+                                                    {{ skill_name|capfirst }}
+                                                </div>
+                                                <div class="skill-progress-bar__progress">
+                                                    <div class="skill-progress-bar__fill" 
+                                                            style="width: {{ skill_data.score|floatformat:0 }}%">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% endif %} {% endcomment %}
+
+                            <a href="{% url 'curriculum:lesson_history' node.lesson_id %}" 
+                                class="lesson-card__details-link">
+                                Подробнее →
+                            </a>
+                        </div>
+                    {% endwith %}
+                {% endif %}
+
+                <!-- Кнопки действий -->
+                <div class="lesson-card__actions">
+                    {% if node.status == 'in_progress' and node.lesson_id %}
+                        <a href="{% url 'curriculum:learning_session' enrollment.id %}" 
+                            class="btn btn--primary btn--small">
+                            Продолжить
+                        </a>
+                    {% elif node.status == 'locked' %}
+                        <button class="btn btn--disabled btn--small" disabled>
+                            Недоступно
+                        </button>
+                        <span class="lesson-card__locked-hint">
+                            {% if node.prerequisites %}
+                                Требуется завершить: {{ node.prerequisites|length }} уроков
+                            {% else %}
+                                Следующий урок
+                            {% endif %}
+                        </span>
+                    {% elif node.status == 'completed' and node.lesson_id %}
+                        <a href="{% url 'curriculum:lesson_history' node.lesson_id %}" 
+                            class="btn btn--outline btn--small">
+                            Результаты
+                        </a>
+                    {% elif node.status == 'recommended' and node.lesson_id %}
+                        <a href="{% url 'curriculum:learning_session' enrollment.id %}" 
+                            class="btn btn--secondary btn--small">
+                            Начать
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Учебные цели курса -->
+    {% if course.learning_objectives.all %}
+    <section class="course-history__objectives learning-objectives">
+        <h2 class="learning-objectives__title">Учебные цели курса</h2>
+        <div class="learning-objectives__grid">
+            {% for objective in course.learning_objectives.all %}
+                <div class="learning-objective">
+                    <span class="learning-objective__id">{{ objective.identifier }}</span>
+                    <p class="learning-objective__name">{{ objective.name }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Кнопки действий -->
+    <footer class="course-history__actions actions-bar">
+        <a href="{% url 'curriculum:learning_session' enrollment.pk %}" class="actions-bar__btn actions-bar__btn--primary">
+            Вернуться к обучению
+        </a>
+        <a href="#" class="actions-bar__btn actions-bar__btn--outline">
+            Статистика курса
+        </a>
+    </footer>
+</div>
 {% endblock %}
 
 
 {% block assistant_script %}
 
+{% comment %} <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> {% endcomment %}
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Chart.js plugins (опционально) -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 <script>
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Инициализация графика прогресса
-    const ctx = document.getElementById('progressChart');
-    if (ctx) {
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [{% for lesson_data in all_lessons %}'Урок {{ lesson_data.order }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
-                datasets: [{
-                    label: 'Прогресс по урокам (%)',
-                    data: [{% for lesson_data in all_lessons %}{{ lesson_data.completion_percent }}{% if not forloop.last %}, {% endif %}{% endfor %}],
-                    borderColor: '#4CAF50',
-                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                    tension: 0.3,
-                    fill: true
-                }, {
-                    label: 'Средний балл',
-                    data: [{% for lesson_data in all_lessons %}{{ lesson_data.average_score|floatformat:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}],
-                    borderColor: '#2196F3',
-                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                    tension: 0.3,
-                    fill: false,
-                    yAxisID: 'y1'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        title: {
-                            display: true,
-                            text: 'Прогресс (%)'
-                        }
-                    },
-                    y1: {
-                        position: 'right',
-                        beginAtZero: true,
-                        max: 100,
-                        grid: {
-                            drawOnChartArea: false
-                        },
-                        title: {
-                            display: true,
-                            text: 'Средний балл (%)'
-                        }
-                    }
+    const filterButtons = document.querySelectorAll('.lessons-list__filter');
+    const lessonCards = document.querySelectorAll('.lesson-card');
+
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Убираем активный класс у всех кнопок
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            
+            // Добавляем активный класс текущей кнопке
+            this.classList.add('active');
+            
+            const filter = this.dataset.filter;
+            
+            // Фильтруем карточки
+            lessonCards.forEach(card => {
+                if (filter === 'all') {
+                    card.style.display = 'block';
+                } else {
+                    const cardType = card.dataset.type;
+                    card.style.display = (cardType === filter) ? 'block' : 'none';
+                }
+            });
+        });
+    });
+
+    // Плавная прокрутка к текущему уроку
+    const currentLessonCard = document.querySelector('.lesson-card--in_progress');
+    if (currentLessonCard) {
+        setTimeout(() => {
+            currentLessonCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            currentLessonCard.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.5)';
+            setTimeout(() => {
+                currentLessonCard.style.boxShadow = '';
+            }, 2000);
+        }, 500);
+    }
+
+    // ======================
+    // КРУГОВАЯ ДИАГРАММА (Doughnut)
+    // ======================
+    // Получаем значение CSS-переменной
+    const textColor = getComputedStyle(document.documentElement)
+    .getPropertyValue('--color-text')
+    .trim();
+
+
+    const doughnutCtx = document.getElementById('progressDoughnutChart').getContext('2d');
+    
+    const progressPercentage = {{ progress.percentage|default:0 }};
+    const remainingPercentage = 100 - progressPercentage;
+    
+    const doughnutChart = new Chart(doughnutCtx, {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [progressPercentage, remainingPercentage],
+                backgroundColor: [
+                    'rgba(99, 102, 241, 1)',      // Завершено (основной цвет)
+                    'rgba(229, 231, 235, 0.3)'     // Осталось (светлый серый)
+                ],
+                borderWidth: 0,
+                cutout: '75%',  // Толщина кольца
+                borderRadius: 4,
+                spacing: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false  // Скрываем стандартную легенду
                 },
-                plugins: {
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
+                tooltip: {
+                    enabled: false  // Отключаем тултипы
+                }
+            },
+            animation: {
+                animateRotate: true,
+                animateScale: true,
+                duration: 1000,
+                easing: 'easeOutQuart',
+                // Обновление центрального процента при анимации
+                onComplete: function(animation) {
+                    const percentageEl = document.getElementById('doughnutPercentage');
+                    if (percentageEl) {
+                        percentageEl.textContent = progressPercentage + '%';
                     }
                 }
+            },
+            cutout: '75%'
+        }
+    });
+
+    // ======================
+    // ЛИНЕЙНАЯ ДИАГРАММА (Bar)
+    // ======================
+    const barCtx = document.getElementById('progressBarChart').getContext('2d');
+    
+    // Статистика по типам для линейного чарта
+    const coreCompleted = {{ core_stats.completed|default:0 }};
+    const coreTotal = {{ core_stats.total|default:1 }};
+    const remedialCompleted = {{ remedial_stats.completed|default:0 }};
+    const remedialTotal = {{ remedial_stats.total|default:0 }};
+    const diagnosticCompleted = {{ diagnostic_stats.completed|default:0 }};
+    const diagnosticTotal = {{ diagnostic_stats.total|default:0 }};
+    
+    const progressBarChart = new Chart(barCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Основные', 'Повторы', 'Диагностика'],
+            datasets: [
+                {
+                    label: 'Завершено',
+                    data: [coreCompleted, remedialCompleted, diagnosticCompleted],
+                    backgroundColor: [
+                        'rgba(99, 102, 241, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
+                        'rgba(59, 130, 246, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(99, 102, 241, 1)',
+                        'rgba(245, 158, 11, 1)',
+                        'rgba(59, 130, 246, 1)'
+                    ],
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    borderSkipped: false
+                },
+                {
+                    label: 'Осталось',
+                    data: [
+                        coreTotal - coreCompleted,
+                        remedialTotal - remedialCompleted,
+                        diagnosticTotal - diagnosticCompleted
+                    ],
+                    backgroundColor: 'rgba(229, 231, 235, 0.3)',
+                    borderColor: 'rgba(229, 231, 235, 0.5)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    borderSkipped: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',  // Горизонтальные бары
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(31, 41, 55, 0.9)',
+                    titleFont: {
+                        size: 12,
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 11
+                    },
+                    padding: 10,
+                    displayColors: true,
+                    callbacks: {
+                        label: function(context) {
+                            const datasetLabel = context.dataset.label || '';
+                            const value = context.parsed.x || 0;
+                            return `${datasetLabel}: ${value}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    beginAtZero: true,
+                    max: Math.max(coreTotal, remedialTotal, diagnosticTotal) || 10,
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        display: false
+                    }
+                },
+                y: {
+                    stacked: true,
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            weight: '500'
+                        },
+                        color: textColor
+                    }
+                }
+            },
+            animation: {
+                duration: 1000,
+                easing: 'easeOutQuart'
+            },
+            barPercentage: 0.7,
+            categoryPercentage: 0.9
+        }
+    });
+
+    // ======================
+    // ДОПОЛНИТЕЛЬНЫЙ ЧАРТ: РАДАР ПО НАВЫКАМ 
+    // ======================
+    {% if skill_snapshot %}
+        const radarCtx = document.getElementById('skillsRadarChart')?.getContext('2d');
+        if (radarCtx) {
+            // Защита: значения всегда в диапазоне 0.0–1.0
+            const normalize = (value) => Math.max(0, Math.min(1, parseFloat(value) || 0));
+
+            const skillLabels = {{ skill_labels|safe }};
+            const skillsData = {{ skill_snapshot.skills|safe }};
+            const initialSnapshot = {% if initial_skill_snapshot %}{{ initial_skill_snapshot.skills|safe }}{% else %}null{% endif %};
+            console.log('skillLabels:', skillLabels);
+            console.log('skillsData:', skillsData)
+            console.log('initialSnapshot:', initialSnapshot)
+            const getSkillValue = (source, label) =>
+                source?.[label.toLowerCase()] ?? 0;
+
+            const currentData = skillLabels.map(label => {
+                const value = getSkillValue(skillsData, label);
+                const normalized = normalize(value);
+                return normalized;
+            });
+            
+            const initialData = initialSnapshot
+                ? skillLabels.map(label => {
+                    const value = getSkillValue(initialSnapshot, label);
+                    const normalized = normalize(value);
+                    return normalized;
+                })
+                : null;
+
+            console.log('currentData:', currentData);
+            console.log('initialData:', initialData);
+
+            const datasets = [{
+                label: 'Текущий уровень',
+                data: currentData,
+                fill: false,
+                backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                borderColor: 'rgba(99, 102, 241, 1)',
+                borderWidth: 2,
+                pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+                pointBorderColor: '#fff',
+                pointRadius: 5,
+                tension: 0.3
+            }];
+            
+            if (initialData) {
+                datasets.push({
+                    label: 'Начальный уровень',
+                    data: initialData,
+                    fill: false,
+                    borderColor: 'rgba(245, 158, 11, 1)',
+                    borderWidth: 3,
+                    borderDash: [5, 5],
+                    pointBackgroundColor: 'rgba(245, 158, 11, 1)',
+                    pointRadius: 4,
+                    tension: 0.3,
+                    order: 1,
+                });
             }
+            
+            // Получаем цвет из CSS-переменной
+            const textColor = getComputedStyle(document.documentElement)
+                .getPropertyValue('--color-text')
+                .trim();
+            
+            const radarChart = new Chart(radarCtx, {
+                type: 'radar',
+                data: {
+                    labels: skillLabels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(31, 41, 55, 0.9)',
+                            titleFont: {
+                                size: 12,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 11
+                            },
+                            padding: 10,
+                            callbacks: {
+                                label: function(context) {
+                                    const datasetLabel = context.dataset.label || '';
+                                    const skillValue = context.parsed.r.toFixed(1);
+                                    return `${datasetLabel}: ${skillValue}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: true,
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            },
+                            pointLabels: {
+                                font: {
+                                    size: 11,
+                                    weight: '500'
+                                },
+                                color: textColor
+                            },
+                            ticks: {
+                                display: true,
+                                stepSize: 25,
+                                suggestedMin: 0,
+                                suggestedMax: 100,
+                                color: textColor,
+                                backdropColor: 'transparent',
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1200,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+    {% endif %}
+
+    // ======================
+    // АНИМАЦИЯ ПРИ ПРОКРУТКЕ (опционально)
+    // ======================
+    function animateChartsOnScroll() {
+        const chartsSection = document.querySelector('.progress-overview');
+        if (!chartsSection) return;
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    // Чарты уже инициализированы, просто запускаем анимацию
+                    setTimeout(() => {
+                        doughnutChart.update('active');
+                        progressBarChart.update('active');
+                    }, 100);
+                    
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, {
+            threshold: 0.1
         });
+
+        observer.observe(chartsSection);
     }
-    
-    // Анимация прогресс-баров
-    document.querySelectorAll('.progress-bar').forEach(bar => {
-        const width = bar.style.width;
-        bar.style.width = '0';
-        setTimeout(() => {
-            bar.style.width = width;
-        }, 300);
-    });
-    
-    // Обработчик для кнопок "История" уроков
-    document.querySelectorAll('.btn-outline-primary').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            const lessonId = this.dataset.lessonId;
-            const url = `{% url 'curriculum:lesson_history' enrollment.id 0 %}`.replace('0', lessonId);
-            window.location.href = url;
-        });
-    });
-    
-    // Эффекты при наведении на карточки уроков
-    document.querySelectorAll('.lesson-card').forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-            this.style.transform = 'translateY(-2px)';
-        });
-        
-        card.addEventListener('mouseleave', function() {
-            this.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
-            this.style.transform = 'translateY(0)';
-        });
-    });
+
+    animateChartsOnScroll();
 });
 </script>
 {% endblock %}

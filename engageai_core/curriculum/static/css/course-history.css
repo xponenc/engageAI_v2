@@ -1,190 +1,1508 @@
+/* ======================
+   БАЗОВЫЕ СТИЛИ
+   ====================== */
+:root {
+    --color-primary: #6366f1;
+    --color-primary-dark: #4f46e5;
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-danger: #ef4444;
+    --color-info: #3b82f6;
+    
+    --color-bg: #f9fafb;
+    --color-card-bg: #ffffff;
+    --color-text: #1f2937;
+    --color-text-secondary: #6b7280;
+    --color-border: #e5e7eb;
+    
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    --border-radius-xl: 16px;
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    
+    --transition: all 0.3s ease;
+}
+
+
+/* ======================
+   КОНТЕЙНЕР СТРАНИЦЫ
+   ====================== */
 .course-history {
-    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
 }
 
-.course-history__layout {
-    display: grid;
-    grid-template-columns: 1fr 320px;
-    gap: 24px;
-}
-
-/* HEADER */
-
-.course-history-header__top {
-    display: flex;
-    justify-content: space-between;
-    gap: 24px;
-}
-
-.course-history-header__title {
-    font-size: 28px;
-    margin-bottom: 8px;
-}
-
-.course-history-header__description {
-    color: #64748b;
-}
-
-.course-history-header__level {
+/* ======================
+   ХЛЕБНЫЕ КРОШКИ
+   ====================== */
+.breadcrumbs {
     display: flex;
     align-items: center;
-    justify-content: center;
-    background: #2563eb;
-    color: #fff;
-    padding: 6px 14px;
-    border-radius: 999px;
-    font-weight: 800;
-    width: fit-content;
-    white-space: nowrap;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
 }
 
-/* PROGRESS */
-
-.course-progress {
-    margin-top: 24px;
-    padding: 16px;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
+.breadcrumbs__link {
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: var(--transition);
 }
 
-.course-progress__header {
+.breadcrumbs__link:hover {
+    text-decoration: underline;
+}
+
+.breadcrumbs__separator {
+    color: var(--color-text-secondary);
+}
+
+.breadcrumbs__current {
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+/* ======================
+   ЗАГОЛОВОК КУРСА
+   ====================== */
+.course-history__header {
+    margin-bottom: 2.5rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    border-radius: var(--border-radius-xl);
+    color: white;
+    box-shadow: var(--shadow-lg);
+}
+
+.header__top {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 8px;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
-.course-progress__bar {
-    height: 8px;
-    background: #e5e7eb;
-    border-radius: 4px;
-    overflow: hidden;
+.header__title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0;
 }
 
-.course-progress__fill {
-    height: 100%;
-    display: block;
-    background: linear-gradient(90deg, #22c55e, #16a34a);
+.path-type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius-md);
+    font-weight: 600;
+    font-size: 0.9rem;
 }
 
-.course-progress__actions {
-    margin-top: 16px;
+.path-type-badge--linear {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.path-type-badge--adaptive {
+    background-color: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.path-type-badge--personalized {
+    background-color: rgba(255, 215, 0, 0.3);
+    color: white;
+}
+
+.header__description {
+    font-size: 1.125rem;
+    line-height: 1.8;
+    margin-bottom: 1.5rem;
+    opacity: 0.95;
+}
+
+.header__tags {
     display: flex;
-    gap: 8px;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
 }
 
-/* STATS */
-
-.course-stats__grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
+.tag-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.875rem;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.875rem;
+    font-weight: 500;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.stat-card {
-    padding: 16px;
-    border-radius: 12px;
-    background: #f8fafc;
+.header__generated-by {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    opacity: 0.8;
+}
+
+.header__icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* ======================
+   ПРОГРЕСС КУРСА
+   ====================== */
+.progress-overview {
+    background-color: var(--color-card-bg);
+    border-radius: var(--border-radius-xl);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-md);
+}
+
+.progress-overview__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.progress-overview__title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-text);
+    margin: 0;
+}
+
+.progress-overview__stats {
+    display: flex;
+    gap: 2rem;
+}
+
+.progress-overview__stat {
     text-align: center;
 }
 
-.stat-card__value {
-    font-size: 24px;
+.progress-overview__stat-value {
+    display: block;
+    font-size: 2rem;
     font-weight: 700;
+    color: var(--color-primary);
 }
 
-/* LESSONS */
+.progress-overview__stat-label {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin-top: 0.25rem;
+}
 
-.lessons__list {
+/* Круговой прогресс */
+.progress-overview__circle {
+    display: flex;
+    justify-content: center;
+    margin: 2rem 0;
+}
+
+.progress-circle {
+    position: relative;
+    width: 200px;
+    height: 200px;
+}
+
+.progress-circle__percentage {
+    position: absolute;
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-}
-
-.lesson-card {
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 16px;
-    background: #fff;
-}
-
-.lesson-card--current {
-    border-left: 4px solid #2563eb;
-}
-
-.lesson-card--completed {
-    border-left: 4px solid #16a34a;
-}
-
-.lesson-card__header {
-    display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: center;
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--color-primary);
 }
 
-.lesson-card__number {
-    width: 32px;
-    height: 32px;
+.progress-circle__percentage::before {
+    content: '';
+    position: absolute;
+    width: 180px;
+    height: 180px;
     border-radius: 50%;
-    background: #2563eb;
-    color: #fff;
-    display: grid;
-    place-items: center;
+    background: var(--color-bg);
+    z-index: 1;
 }
 
-.lesson-card__percent {
-    margin-left: auto;
-    font-weight: 600;
+.progress-circle__percentage::after {
+    content: '';
+    position: absolute;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: conic-gradient(
+        var(--color-primary) calc(var(--progress, 0) * 1%),
+        var(--color-border) calc(var(--progress, 0) * 1%)
+    );
+    z-index: 0;
+}
+
+.progress-circle__label {
+    position: absolute;
+    bottom: 35%;
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+/* Линейный прогресс */
+.progress-overview__bar {
+    margin: 2rem 0;
 }
 
 .progress-bar {
-    height: 6px;
-    background: #e5e7eb;
-    border-radius: 4px;
+    height: 12px;
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-sm);
     overflow: hidden;
 }
 
 .progress-bar__fill {
     height: 100%;
-    display: block;
-    background: #2563eb;
+    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    border-radius: var(--border-radius-sm);
+    position: relative;
+    transition: width 0.5s ease;
 }
 
-.lesson-card__actions {
-    margin-top: 12px;
+.progress-bar__text {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: white;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+/* Статистика по типам */
+.progress-overview__types {
+    margin: 2rem 0;
+}
+
+.progress-types {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.progress-types__item {
     display: flex;
-    gap: 8px;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-md);
+    border-left: 4px solid var(--color-primary);
 }
 
-/* BUTTONS */
-
-.btn {
-    padding: 8px 14px;
-    border-radius: 8px;
-    text-decoration: none;
-    font-size: 14px;
+.progress-types__icon {
+    font-size: 2rem;
 }
 
-.btn--primary {
-    background: #2563eb;
-    color: #fff;
+.progress-types__info {
+    flex: 1;
 }
 
-.btn--ghost {
-    border: 1px solid #2563eb;
-    color: #2563eb;
+.progress-types__count {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-primary);
 }
 
-/* SIDEBAR */
-
-.sidebar-card {
-    padding: 16px;
-    background: #fff;
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
+.progress-types__label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
 }
 
-.sidebar-links {
+/* Быстрые действия */
+.progress-overview__actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+}
+
+/* ======================
+   ЧАРТЫ PROGRESS (Chart.js)
+   ====================== */
+
+/* Контейнер для круговой диаграммы */
+.progress-chart {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    margin: 0 auto;
+}
+
+/* Центральный текст */
+.progress-chart__center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 10;
+}
+
+.progress-chart__percentage {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    line-height: 1;
+}
+
+.progress-chart__label {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    margin-top: 0.25rem;
+}
+
+/* Стили для линейного чарта */
+.progress-bar-chart {
+    position: relative;
+    height: 80px;
+    width: 100%;
+}
+
+/* ======================
+   РАДАР-ЧАРТ ПО НАВЫКАМ
+   ====================== */
+.progress-overview__skills-radar {
+    margin: 2.5rem 0;
+}
+
+.skills-radar {
+    background-color: var(--color-card-bg);
+    border-radius: var(--border-radius-xl);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-border);
+}
+
+.skills-radar__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.skills-radar__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0;
+}
+
+.skills-radar__updated {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+}
+
+.skills-radar__chart {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+.skills-radar__legend {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+/* ======================
+   ГРУППА ЧАРТОВ (Объединенная)
+   ====================== */
+.progress-charts-group {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+.progress-charts-group__column {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 1.5em
+}
+
+/* Десктоп: 2 колонки */
+@media (min-width: 1024px) {
+    .progress-charts-group {
+        grid-template-columns: 1fr 380px; /* Основная + узкая для радара */
+        grid-template-rows: auto;
+        grid-template-areas:
+            "main skills"
+            "bar bar";
+    }
+
+    .progress-charts-group__column--main {
+        grid-area: main;
+    }
+
+    .progress-charts-group__column--skills {
+        grid-area: skills;
+    }
+
+    .progress-charts-group__column--main + .progress-charts-group__column--main {
+        grid-area: bar;
+    }
+}
+
+/* Планшет: колонка */
+@media (max-width: 1023px) {
+    .progress-charts-group {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ======================
+   КАРТОЧКА ЧАРТА
+   ====================== */
+.progress-chart-card {
+    padding: 1.5rem;
+    height: 100%;
+    background-color: var(--color-card-bg);
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-border);
+    transition: var(--transition);
+}
+
+.progress-chart-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.progress-chart-card--highlight {
+    border-top: 4px solid var(--color-primary);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.03) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+/* Заголовок карточки */
+.progress-chart-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.progress-chart-card__title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0;
+}
+
+.progress-chart-card__stats {
+    display: flex;
+    align-items: baseline;
+    gap: 0.25rem;
+}
+
+.progress-chart-card__stat {
+    display: flex;
+    align-items: baseline;
+    gap: 0.125rem;
+}
+
+.progress-chart-card__stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    line-height: 1;
+}
+
+.progress-chart-card__stat-total {
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+}
+
+.progress-chart-card__stat-label {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+}
+
+.progress-chart-card__updated {
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+    background-color: var(--color-bg);
+    padding: 0.25rem 0.625rem;
+    border-radius: var(--border-radius-sm);
+}
+
+/* Тело карточки */
+.progress-chart-card__body {
+    position: relative;
+}
+
+/* Футер карточки */
+.progress-chart-card__footer {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+}
+
+/* ======================
+   КРУГОВОЙ ЧАРТ
+   ====================== */
+.progress-chart {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.progress-chart canvas {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.progress-chart__center {
+    position: absolute;
+    text-align: center;
+    z-index: 10;
+}
+
+.progress-chart__percentage {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    line-height: 1;
+}
+
+.progress-chart__label {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin-top: 0.25rem;
+}
+
+/* ======================
+   ЛИНЕЙНЫЙ ЧАРТ
+   ====================== */
+.progress-bar-chart {
+    position: relative;
+    height: 70px;
+    width: 100%;
+    margin-bottom: 1rem;
+}
+
+.progress-bar-chart__legend {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.legend-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+}
+
+.legend-color {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
+}
+
+.legend-color--completed {
+    background-color: rgba(99, 102, 241, 0.8);
+}
+
+.legend-color--remaining {
+    background-color: rgba(229, 231, 235, 0.3);
+}
+
+/* ======================
+   РАДАР ЧАРТ
+   ====================== */
+.skills-radar-chart {
+    position: relative;
+    height: 320px;
+    width: 100%;
+}
+
+.skills-radar__legend {
+    display: flex;
+    justify-content: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+}
+
+/* ======================
+   АДАПТИВНОСТЬ
+   ====================== */
+
+/* Мобильные устройства */
+@media (max-width: 768px) {
+    .progress-chart-card {
+        padding: 1rem;
+    }
+
+    .progress-chart-card__title {
+        font-size: 1rem;
+    }
+
+    .progress-chart-card__stat-value {
+        font-size: 1.5rem;
+    }
+
+    .progress-chart {
+        height: 160px;
+    }
+
+    .progress-chart__percentage {
+        font-size: 1.75rem;
+    }
+
+    .progress-chart__label {
+        font-size: 0.75rem;
+    }
+
+    .progress-bar-chart {
+        height: 50px;
+    }
+
+    .skills-radar-chart {
+        height: 260px;
+    }
+
+    .legend-item,
+    .legend-row {
+        font-size: 0.75rem;
+    }
+
+    .progress-chart-card__updated {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.5rem;
+    }
+}
+
+/* Очень маленькие экраны */
+@media (max-width: 480px) {
+    .progress-chart {
+        height: 140px;
+    }
+
+    .progress-chart__percentage {
+        font-size: 1.5rem;
+    }
+
+    .progress-bar-chart {
+        height: 45px;
+    }
+
+    .skills-radar-chart {
+        height: 220px;
+    }
+
+    .progress-charts-group {
+        gap: 1rem;
+    }
+}
+
+
+/* Стили легенды */
+.chart-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
+    display: inline-block;
+}
+
+/* ======================
+   СПИСОК УРОКОВ
+   ====================== */
+.lessons-list {
+    margin-bottom: 2rem;
+}
+
+.lessons-list__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.lessons-list__title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-text);
+    margin: 0;
+}
+
+.lessons-list__controls {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.lessons-list__filter {
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--color-border);
+    background-color: var(--color-card-bg);
+    border-radius: var(--border-radius-md);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.lessons-list__filter:hover {
+    border-color: var(--color-primary);
+    background-color: var(--color-bg);
+}
+
+.lessons-list__filter.active {
+    border-color: var(--color-primary);
+    background-color: var(--color-primary);
+    color: white;
+}
+
+/* Сетка уроков */
+.lessons-list__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+}
+
+/* Карточка урока */
+.lesson-card {
+    background-color: var(--color-card-bg);
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    border: 2px solid var(--color-border);
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.lesson-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
+}
+
+/* Статусы */
+.lesson-card--completed {
+    border-color: var(--color-success);
+}
+
+.lesson-card--in_progress {
+    border-color: var(--color-warning);
+    background-color: rgba(245, 158, 11, 0.05);
+}
+
+.lesson-card--locked {
+    border-color: var(--color-text-secondary);
+    opacity: 0.6;
+}
+
+.lesson-card--skipped {
+    border-color: var(--color-info);
+    opacity: 0.8;
+}
+
+.lesson-card--recommended {
+    border-color: var(--color-primary);
+    background-color: rgba(99, 102, 241, 0.05);
+}
+
+/* Заголовок карточки */
+.lesson-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.875rem;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status-badge--completed {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: var(--color-success);
+}
+
+.status-badge--in_progress {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: var(--color-warning);
+}
+
+.status-badge--locked {
+    background-color: rgba(107, 114, 128, 0.1);
+    color: var(--color-text-secondary);
+}
+
+.status-badge--skipped {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: var(--color-info);
+}
+
+.status-badge--recommended {
+    background-color: rgba(99, 102, 241, 0.1);
+    color: var(--color-primary);
+}
+
+.type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.875rem;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.type-badge--core {
+    background-color: rgba(99, 102, 241, 0.1);
+    color: var(--color-primary);
+}
+
+.type-badge--remedial {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: var(--color-warning);
+}
+
+.type-badge--diagnostic {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: var(--color-info);
+}
+
+.type-badge--practice {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: var(--color-success);
+}
+
+/* Контент карточки */
+.lesson-card__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--color-text);
+    line-height: 1.4;
+}
+
+.lesson-card__description {
+    font-size: 0.95rem;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
+.lesson-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border);
+}
+
+.lesson-card__meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+}
+
+.lesson-card__meta-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--color-text-secondary);
+}
+
+.lesson-card__skills {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+.skill-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.skill-tag--grammar { background-color: #dbeafe; color: #1e40af; }
+.skill-tag--vocabulary { background-color: #fef3c7; color: #92400e; }
+.skill-tag--listening { background-color: #dcfce7; color: #15803d; }
+.skill-tag--reading { background-color: #f0abfc; color: #701a75; }
+.skill-tag--writing { background-color: #bfdbfe; color: #1e3a8a; }
+.skill-tag--speaking { background-color: #fed7aa; color: #c2410c; }
+
+/* Результаты для завершенных уроков */
+.lesson-card__results {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--color-border);
+}
+
+.lesson-card__score {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.lesson-card__score-label {
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.lesson-card__score-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-success);
+}
+
+.lesson-card__date {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 1rem;
+}
+
+.lesson-card__date-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--color-text-secondary);
+}
+
+/* Прогресс по навыкам */
+.lesson-card__skills-progress {
+    margin-bottom: 1rem;
+}
+
+.skill-progress-bar {
+    margin-bottom: 0.75rem;
+}
+
+.skill-progress-bar__label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.skill-progress-bar__progress {
+    height: 6px;
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-sm);
+    overflow: hidden;
+}
+
+.skill-progress-bar__fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    border-radius: var(--border-radius-sm);
+    transition: width 0.5s ease;
+}
+
+.lesson-card__details-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    color: var(--color-primary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: var(--transition);
+}
+
+.lesson-card__details-link:hover {
+    color: var(--color-primary-dark);
+    text-decoration: underline;
+}
+
+/* ======================
+   СРАВНЕНИЕ НАВЫКОВ
+   ====================== */
+.skills-comparison {
+    background-color: var(--color-card-bg);
+    border-radius: var(--border-radius-xl);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-border);
+    margin-top: 1.5rem;
+}
+
+.skills-comparison__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 1.5rem;
+}
+
+.skills-comparison__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+}
+
+/* Элемент сравнения навыка */
+.skill-comparison-item {
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-lg);
+    padding: 1.25rem;
+    border: 1px solid var(--color-border);
+    transition: var(--transition);
+}
+
+.skill-comparison-item:hover {
+    border-color: var(--color-primary);
+    background-color: rgba(99, 102, 241, 0.03);
+    transform: translateY(-2px);
+}
+
+.skill-comparison-item__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.skill-comparison-item__name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.skill-comparison-item__delta {
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.25rem 0.625rem;
+    border-radius: var(--border-radius-sm);
+}
+
+.skill-comparison-item__delta--positive {
+    background-color: rgba(16, 185, 129, 0.15);
+    color: var(--color-success);
+}
+
+.skill-comparison-item__delta--negative {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: var(--color-danger);
+}
+
+/* Бары прогресса */
+.skill-comparison-item__bars {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.skill-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.skill-bar__label {
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.skill-bar__progress {
+    height: 10px;
+    background-color: var(--color-border);
+    border-radius: var(--border-radius-sm);
+    overflow: hidden;
+}
+
+.skill-bar__fill {
+    height: 100%;
+    border-radius: var(--border-radius-sm);
+    transition: width 0.5s ease;
+}
+
+.skill-bar__fill--initial {
+    background-color: rgba(245, 158, 11, 0.6);
+}
+
+.skill-bar__fill--current {
+    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .skills-comparison__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .skill-comparison-item {
+        padding: 1rem;
+    }
+
+    .skill-comparison-item__name {
+        font-size: 0.95rem;
+    }
+
+    .skill-bar__progress {
+        height: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .skill-comparison-item__header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .skill-comparison-item__delta {
+        align-self: flex-end;
+    }
+}
+
+/* Кнопки действий */
+.lesson-card__actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    align-items: center;
+}
+
+.lesson-card__locked-hint {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+}
+
+/* ======================
+   КНОПКИ
+   ====================== */
+/* .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius-md);
+    font-weight: 500;
+    text-decoration: none;
+    transition: var(--transition);
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+} */
+
+.btn--primary {
+    background-color: var(--color-primary);
+    color: white;
+}
+
+.btn--primary:hover {
+    background-color: var(--color-primary-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn--secondary {
+    background-color: var(--color-warning);
+    color: white;
+}
+
+.btn--secondary:hover {
+    background-color: #d97706;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn--outline {
+    background-color: transparent;
+    color: var(--color-primary);
+    border: 2px solid var(--color-primary);
+}
+
+.btn--outline:hover {
+    background-color: var(--color-primary);
+    color: white;
+}
+
+.btn--disabled {
+    background-color: var(--color-border);
+    color: var(--color-text-secondary);
+    cursor: not-allowed;
+}
+
+.btn--small {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.btn--large {
+    padding: 1rem 2rem;
+    font-size: 1.125rem;
+}
+
+/* ======================
+   УЧЕБНЫЕ ЦЕЛИ
+   ====================== */
+.learning-objectives {
+    background-color: var(--color-card-bg);
+    border-radius: var(--border-radius-xl);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-md);
+}
+
+.learning-objectives__title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: var(--color-text);
+}
+
+.learning-objectives__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.learning-objective {
+    padding: 1rem;
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-md);
+    border-left: 3px solid var(--color-primary);
+}
+
+.learning-objective__id {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background-color: var(--color-primary);
+    color: white;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.learning-objective__name {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--color-text);
+}
+
+/* ======================
+   КНОПКИ ДЕЙСТВИЙ
+   ====================== */
+.course-history__actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 1.5rem 0;
+}
+
+.actions-bar__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius-md);
+    font-weight: 500;
+    text-decoration: none;
+    transition: var(--transition);
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.actions-bar__btn--primary {
+    background-color: var(--color-primary);
+    color: white;
+}
+
+.actions-bar__btn--primary:hover {
+    background-color: var(--color-primary-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.actions-bar__btn--outline {
+    background-color: transparent;
+    color: var(--color-primary);
+    border: 2px solid var(--color-primary);
+}
+
+.actions-bar__btn--outline:hover {
+    background-color: var(--color-primary);
+    color: white;
+}
+
+/* ======================
+   АДАПТИВНОСТЬ
+   ====================== */
+@media (max-width: 1024px) {
+    .course-history {
+        padding: 1.5rem;
+    }
+
+    .header__title {
+        font-size: 2rem;
+    }
+
+    .progress-circle {
+        width: 160px;
+        height: 160px;
+    }
+
+    .progress-circle__percentage {
+        font-size: 2.5rem;
+    }
+
+    .lessons-list__grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .header__title {
+        font-size: 1.75rem;
+    }
+
+    .progress-overview__stats {
+        gap: 1rem;
+    }
+
+    .progress-overview__stat-value {
+        font-size: 1.5rem;
+    }
+
+    .progress-circle {
+        width: 140px;
+        height: 140px;
+    }
+
+    .progress-circle__percentage {
+        font-size: 2rem;
+    }
+
+    .progress-circle__label {
+        font-size: 0.875rem;
+    }
+
+    .lessons-list__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .lesson-card {
+        padding: 1.25rem;
+    }
+
+    .course-history__actions {
+        flex-direction: column;
+    }
+
+    .actions-bar__btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .course-history {
+        padding: 1rem;
+    }
+
+    .header__title {
+        font-size: 1.5rem;
+    }
+
+    .header__description {
+        font-size: 1rem;
+    }
+
+    .progress-overview__title {
+        font-size: 1.5rem;
+    }
+
+    .progress-circle {
+        width: 120px;
+        height: 120px;
+    }
+
+    .progress-circle__percentage {
+        font-size: 1.75rem;
+    }
+
+    .lesson-card__title {
+        font-size: 1.125rem;
+    }
 }

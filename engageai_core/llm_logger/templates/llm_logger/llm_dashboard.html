@@ -20,31 +20,34 @@
 
     <nav class="navbar navbar--local">
         <ul class="navbar__list">
-            <li class="navbar__item">
-                <a href="{% url 'llm_logger:analytics'  %}" class="navbar__link  is-active">
+                <li class="navbar__item">
+                <a href="{% url 'llm_logger:analytics'  %}" class="navbar__link is-active">
                     <i class="fas fa-user navbar__link-icon"></i>
                     <span class="navbar__link-text">Общая</span>
                 </a>
             </li>
             <li class="navbar__item">
-                <a href="{% url 'llm_logger:analytics-user' %}?user_id=2"
-                class="navbar__link">
+                <a href="{% url 'llm_logger:analytics-user' %}?user_id=2" class="navbar__link">
                     <i class="fas fa-user navbar__link-icon"></i>
                     <span class="navbar__link-text">Пользователь</span>
                 </a>
             </li>
             <li class="navbar__item">
-                <a href="{% url 'llm_logger:analytics-cost' %}"
-                class="navbar__link">
+                <a href="{% url 'llm_logger:analytics-cost' %}" class="navbar__link">
                     <i class="fas fa-coins navbar__link-icon"></i>
                     <span class="navbar__link-text">Стоимость</span>
                 </a>
             </li>
             <li class="navbar__item">
-                <a href="{% url 'llm_logger:log_list' %}?user_id=2"
-                class="navbar__link">
+                <a href="{% url 'llm_logger:log_list' %}" class="navbar__link">
                     <i class="fas fa-user navbar__link-icon"></i>
                     <span class="navbar__link-text">Список логов</span>
+                </a>
+            </li>
+            <li class="navbar__item">
+                <a href="{% url 'curriculum:lesson_event_log_list' %}" class="navbar__link">
+                    <i class="fas fa-user navbar__link-icon"></i>
+                    <span class="navbar__link-text">Учебные события</span>
                 </a>
             </li>
         </ul>

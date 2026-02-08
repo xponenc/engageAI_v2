@@ -163,14 +163,6 @@ class LearningPath(models.Model):
             return self.nodes[self.current_node_index]
         return None
 
-    @property
-    def next_node(self):
-        """Следующий узел (для preview в боте и дашборде)"""
-        next_index = self.current_node_index + 1
-        if next_index < len(self.nodes):
-            return self.nodes[next_index]
-        return None
-
     def advance_to_next_node(self):
         """Переход к следующему узлу после завершения урока"""
         if self.current_node_index + 1 < len(self.nodes):

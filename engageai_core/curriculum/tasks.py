@@ -10,22 +10,24 @@ from celery import shared_task, chain, group
 from celery.exceptions import SoftTimeLimitExceeded
 import logging
 
+from django.db import IntegrityError
 from django.utils import timezone
 
 from ai.llm_service.factory import llm_factory
 from curriculum.models.assessment.lesson_assesment import LessonAssessmentResult, AssessmentStatus
 from curriculum.models.assessment.task_assessment import TaskAssessmentResult
 from curriculum.models.content.lesson import Lesson
-from curriculum.models.content.task import Task
 from curriculum.models.learning_process.lesson_event_log import LessonEventType
 from curriculum.models.student.enrollment import Enrollment
+from curriculum.models.student.skill_snapshot import SkillSnapshot
 from curriculum.models.student.student_response import StudentTaskResponse
 from curriculum.services.auto_assessment_adapter import AutoAssessorAdapter
-from curriculum.services.decision_service import DecisionService
 from curriculum.services.learning_objective_evaluation import LearningObjectiveEvaluationService
-from curriculum.services.learning_path_adaptation import LearningPathAdaptationService, LessonOutcomeContext
+from curriculum.services.learning_path_adaptation import LearningPathAdaptationService, LessonOutcomeContext, \
+    LearningPathAdjustmentType
 from curriculum.services.lesson_event_service import LessonEventService
 from curriculum.services.llm_assessment_adapter import LLMAssessmentAdapter
+from curriculum.services.skill_update_service import SkillUpdateService
 from llm_logger.models import LLMRequestType
 
 logger = logging.getLogger(__name__)
@@ -151,11 +153,20 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
     progress_recorder = ProgressRecorder(self)
     current_assessment = 0
 
-    enrollment = Enrollment.objects.select_related('student', 'course').get(id=enrollment_id)
+    enrollment = Enrollment.objects.select_related('student', 'course', 'learning_path').get(id=enrollment_id)
+
+    # Обновление статуса узла в LearningPath
+    current_node = enrollment.learning_path.current_node
+
+    learning_path = enrollment.learning_path
+    current_index = learning_path.current_node_index
+    learning_path.nodes[current_index]["submitted_at"] = timezone.now().isoformat()
+    learning_path.save(update_fields=["nodes"])
 
     lesson = Lesson.objects.get(id=assessed_lesson_id)
+
     try:
-        logger.info(f"Оценка урока {lesson.title} ({assessed_lesson_id}) для enrollment {enrollment_id}")
+        logger.debug(f"Оценка урока {lesson.title} ({assessed_lesson_id}) для enrollment {enrollment_id}")
 
         # Все ответы по этому уроку
         responses = StudentTaskResponse.objects.filter(
@@ -166,7 +177,6 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
         ).prefetch_related(
             'assessment'
         )
-        print(f"{responses=}")
 
         if not responses:
             raise ValueError("Нет ответов для оценки")
@@ -181,26 +191,49 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
 
         for i, resp in enumerate(responses, start=1):
             task = resp.task
-            # TODO проверка уже отвеченных задач
-            if task.response_format in AutoAssessorAdapter.SUPPORTED_FORMATS:
-                result = auto_adapter.assess_task(task, resp)
-            else:
-                result = llm_adapter.assess_task(task, resp)
-            print(task)
-            print(resp)
-            print(result)
-            # Сохраняем результат оценки задания
-            task_assessment = TaskAssessmentResult.objects.create(
-                enrollment=enrollment,
-                task=task,
-                response=resp,
-                score=result.skill_evaluation.get(task.task_type, {}).get("score"),
-                feedback=result.summary.get("text", ""),
-                structured_feedback=result.skill_evaluation,
-                # is_correct=result.skill_evaluation.get(task.task_type, {}).get("score", 0) >= 0.8
-                is_correct=result.is_correct
-            )
-            task_assessments.append(task_assessment)
+            if not hasattr(resp, "assessment"):
+                # Пропуск уже оцененных задач уже отвеченных задач
+                # для варианта одна задача - один ответ
+
+                if task.response_format in AutoAssessorAdapter.SUPPORTED_FORMATS:
+                    result = auto_adapter.assess_task(task, resp)
+                else:
+                    result = llm_adapter.assess_task(task, resp)
+
+                score = TaskAssessmentResult.calc_task_score(result=result)
+                task_assessment = TaskAssessmentResult.objects.create(
+                    enrollment=enrollment,
+                    task=task,
+                    response=resp,
+                    is_correct=result.is_correct,
+                    score=score,
+                    feedback=result.summary.get("text", ""),
+                    structured_feedback={
+                        "skill_evaluation": result.skill_evaluation,
+                        "summary": result.summary,
+                        "error_tags": result.error_tags,
+                        "metadata": result.metadata,
+                    },
+                )
+
+                task_assessments.append(task_assessment)
+
+                # Логируем оценку задания
+                LessonEventService.create_event(
+                    student=enrollment.student,
+                    enrollment=enrollment,
+                    lesson=lesson,
+                    event_type=LessonEventType.TASK_ASSESSMENT_COMPLETE,
+                    channel="WEB",
+                    metadata={
+                        "node_id": current_node["node_id"],
+                        "path_type": enrollment.learning_path.path_type,
+                        "task_id": task.id,
+                        "task_assessment_id": task_assessment.id,
+                        "reason": current_node.get("reason", ""),
+                        "type": current_node.get("type", "core")
+                    }
+                )
             current_assessment += 1
             progress_recorder.set_progress(
                 i,
@@ -213,16 +246,53 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
             2,
             description=f"Оценивается урок"
         )
-
-        lesson_result = LessonAssessmentResult.objects.create(
+        # перезагрузка с оценками
+        responses = StudentTaskResponse.objects.filter(
             enrollment=enrollment,
-            lesson=lesson,
-            status=AssessmentStatus.PROCESSING,
+            task__lesson=lesson
+        ).select_related(
+            'task', 'task__lesson__course', 'student__user',
+        ).prefetch_related(
+            'assessment'
         )
+
+        try:
+            lesson_result = LessonAssessmentResult.objects.create(
+                enrollment=enrollment,
+                lesson=lesson,
+                status=AssessmentStatus.PROCESSING,
+            )
+        except IntegrityError as e:
+            LessonEventService.create_event(
+                student=enrollment.student,
+                enrollment=enrollment,
+                lesson=lesson,
+                event_type=LessonEventType.ASSESSMENT_ERROR,
+                channel="WEB",
+                metadata={
+                    "error": str(e),
+                    "node_id": current_node["node_id"],
+                }
+            )
+            return "Урок уже проходил оценку"
+
         user_message = f"Дайте экспертную оценку по уроку.\nУровень CEFR ученика {enrollment.student.english_level}\n"
         for response in responses:
             task = response.task
-            assessment = response.assessment
+            assessment = getattr(response, "assessment")
+            skill_evaluation = assessment.structured_feedback.get("skill_evaluation", {})
+
+            filtered_skills = {
+                skill: data
+                for skill, data in skill_evaluation.items()
+                if data.get("score") is not None
+            }
+
+            assessment_skills = json.dumps(
+                filtered_skills,
+                indent=2,
+                ensure_ascii=False
+            )
             user_message += f"""
 Задание:
  - № {task.order}
@@ -232,27 +302,25 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
  - Ответ ученика:
 {response.response_text or responses.transcript}
 
- - Оценка:
-    Правильность: {assessment.is_correct}
-    Отзыв {assessment.feedback} 
-    Оценка skills: {json.dumps(assessment.structured_feedback, indent=2, ensure_ascii=False)}
+ - Оценка ответа:
+    is correct: {assessment.is_correct}
+    Отзыв: {assessment.feedback} 
+    Оценка skills: {assessment_skills}
+    Оценка за урок(агрегированная): {assessment.score}
              """
 
         # Итоговое резюме LLM по уроку
         system_prompt = f"""
 Вы — эксперт по оценке английского языка по шкале CEFR. Оцените ответ студента результат студента о прохождении урока
- и усвоении знаний по результатам тестовых заданий. В ответе укажите краткое резюме по результатам урока (2–3 предложения), 
- 2–3 конкретные рекомендации по улучшению и рекомендацию по учебному плану: повторить урок/следующий урок.
+ и усвоении знаний по результатам тестовых заданий. В ответе укажите краткое мотивирующие резюме по результатам урока
+  (2–3 предложения) и 2–3 конкретные рекомендации по улучшению.
  
  Ответ дайте в формате JSON:
  {{
- "resume": "краткое резюме по результатам урока",
- "recommendations": "рекомендации по улучшению",
- "learning_plan": "рекомендация по учебному плану",
+ "resume": str,
+ "recommendations": str,
  }}
         """
-        print(system_prompt)
-        print(user_message)
 
         context = {
             "course_id": enrollment.course.pk,
@@ -276,9 +344,22 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
         if not isinstance(summary_response, dict):
             raise ValueError(f"Invalid LLM response format: expected {dict}, got {type(summary_response).__name__}")
 
+        # Агрегация skills по результатам урока
+        lesson_skill_feedback = LessonAssessmentResult.aggregate_skill_feedback(task_assessments)
+
+        # Агрегированная оценка урока
+        overall_score = LessonAssessmentResult.calculate_overall_score(task_assessments, strategy="hybrid")
+
+        lesson_result.overall_score = overall_score
+        lesson_result.structured_feedback = {
+            "llm_result": summary_response,
+            "overall": overall_score,
+            "skills": lesson_skill_feedback,
+        }
+
         lesson_result.llm_summary = summary_response.get("resume", "")
         lesson_result.llm_recommendations = (summary_response.get("recommendations", ""))
-        lesson_result.status = AssessmentStatus.COMPLETED.value,
+        lesson_result.status = AssessmentStatus.COMPLETED
         lesson_result.completed_at = timezone.now()
         lesson_result.save()
 
@@ -297,37 +378,183 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
             }
         )
 
-        task_assessments = TaskAssessmentResult.objects.filter(
+        # ======================
+        # 5. Создаем снимок навыков
+        # ======================
+        pre_snapshot = SkillSnapshot.objects.filter(
             enrollment=enrollment,
-            task__lesson=lesson
-        ).select_related("task")
+            snapshot_context__in=["POST_LESSON", "PLACEMENT"],
+        ).order_by("-snapshot_at").first()
+
+        # Рассчитываем новые значения навыков
+        new_skill_values = SkillUpdateService.calculate_skill_deltas(
+            pre_snapshot=pre_snapshot,
+            lesson_feedback=lesson_skill_feedback
+        )
+
+        # Создаем новый снимок
+        skill_snapshot = SkillSnapshot.objects.create(
+            student=enrollment.student,
+            enrollment=enrollment,
+            associated_lesson=lesson,
+            snapshot_context="POST_LESSON",
+            grammar=new_skill_values["grammar"],
+            vocabulary=new_skill_values["vocabulary"],
+            listening=new_skill_values["listening"],
+            reading=new_skill_values["reading"],
+            writing=new_skill_values["writing"],
+            speaking=new_skill_values["speaking"],
+            skills=new_skill_values,  # Для удобства в JSON
+            metadata={
+                "source": "lesson_assessment",
+                "lesson_id": lesson.id,
+                "lesson_score": overall_score,
+                "tasks_completed": len(task_assessments),
+                "skill_feedback": lesson_skill_feedback
+            }
+        )
+
+        # Логируем завершение оценки урока
+        LessonEventService.create_event(
+            student=enrollment.student,
+            enrollment=enrollment,
+            lesson=lesson,
+            event_type=LessonEventType.ASSESSMENT_COMPLETE,
+            channel="WEB",
+            metadata={
+                "node_id": current_node["node_id"],
+                "path_type": enrollment.learning_path.path_type,
+                "reason": current_node.get("reason", ""),
+                "type": current_node.get("type", "core"),
+                "lesson_score": lesson_result.overall_score,
+            }
+        )
+
+        # ======================
+        # 6. Создаем дельту навыков (опционально)
+        # ======================
+        # if pre_snapshot:
+        #     deltas = {
+        #         skill: new_skill_values[skill] - getattr(pre_snapshot, skill, 0.0)
+        #         for skill in list(SkillDomain.values())
+        #     }
+        #     deltas["overall"] = sum(deltas.values()) / len(deltas)
+        #
+        #     SkillDelta.objects.create(
+        #         student=enrollment.student,
+        #         enrollment=enrollment,
+        #         lesson=lesson,
+        #         pre_snapshot=pre_snapshot,
+        #         post_snapshot=skill_snapshot,
+        #         deltas=deltas,
+        #         metadata={"source": "auto"}
+        #     )
+
+        # Адаптация учебного плана
+        #
+        # task_assessments = TaskAssessmentResult.objects.filter(  # TODO Не лишний ли запрос?
+        #     enrollment=enrollment,
+        #     task__lesson=lesson
+        # ).select_related("task")
+        #
+        # task_evaluation_payload = []
+        #
+        # for ta in task_assessments:
+        #     task_evaluation_payload.append({
+        #         "learning_objectives": ta.task.learning_objectives.all(),
+        #         # ← список identifier'ов LO
+        #         "skill_evaluation": ta.structured_feedback,
+        #     })
+        #
+        # lo_evaluations = LearningObjectiveEvaluationService.evaluate(
+        #     task_evaluation_payload
+        # )
+        #
+        # outcome = LessonOutcomeContext(
+        #     lesson_id=lesson.id,
+        #     objective_scores={
+        #         lo_id: eval.avg_score
+        #         for lo_id, eval in lo_evaluations.items()
+        #     },
+        #     objective_attempts={
+        #         lo_id: eval.attempts
+        #         for lo_id, eval in lo_evaluations.items()
+        #     },
+        #     completed_at=lesson_result.completed_at,
+        # )
+        # print("OUTCOME")
+        # print(outcome.__dict__)
+        #
+        # adjustment = LearningPathAdaptationService().adapt_after_lesson(
+        #     learning_path=enrollment.learning_path,
+        #     outcome=outcome
+        # )
+
+        # task_assessments = TaskAssessmentResult.objects.filter(
+        #     enrollment=enrollment,
+        #     task__lesson=lesson
+        # ).select_related("task").prefetch_related("task__learning_objectives")
 
         task_evaluation_payload = []
 
-        for ta in task_assessments:
+        for response in responses:
+            task = response.task
+            task_assessment = getattr(response, "assessment")
+            print("Task", task)
+            # Правильно: получаем СПИСОК идентификаторов
+            lo_identifiers = list(
+                task.learning_objectives.all().values_list('identifier', flat=True)
+            )
+            print("lo_identifiers", lo_identifiers)
+
+            # Отладка: логируем данные для диагностики
+            logger.debug(
+                f"Task {task.id} LOs: {lo_identifiers}, "
+                f"skill_eval: {list(task_assessment.structured_feedback.get("skill_evaluation", {}).keys())}"
+            )
+
             task_evaluation_payload.append({
-                "learning_objectives": ta.task.learning_objectives.all(),
-                # ← список identifier'ов LO
-                "skill_evaluation": ta.structured_feedback,
+                "learning_objectives": lo_identifiers,  # ← Список строк!
+                "skill_evaluation": task_assessment.structured_feedback.get("skill_evaluation"),
             })
 
-        lo_evaluations = LearningObjectiveEvaluationService.evaluate(
-            task_evaluation_payload
-        )
+        # Проверка: есть ли данные для оценки?
+        if not task_evaluation_payload:
+            logger.warning(
+                f"No task evaluation payload for lesson {lesson.id}. "
+                f"Check if tasks have learning objectives assigned."
+            )
+            # Можно пропустить адаптацию или использовать fallback-логику
+            lo_evaluations = {}
+        else:
+            lo_evaluations = LearningObjectiveEvaluationService.evaluate(
+                task_evaluation_payload
+            )
+            logger.info(f"LO evaluations: {lo_evaluations}")
 
+        # ======================
+        # 6. Создание контекста результата урока
+        # ======================
         outcome = LessonOutcomeContext(
             lesson_id=lesson.id,
             objective_scores={
                 lo_id: eval.avg_score
                 for lo_id, eval in lo_evaluations.items()
+                if eval.avg_score is not None  # Защита от None
             },
             objective_attempts={
                 lo_id: eval.attempts
                 for lo_id, eval in lo_evaluations.items()
+                if eval.attempts is not None
             },
             completed_at=lesson_result.completed_at,
         )
 
+        logger.info(f"Outcome created: {outcome.__dict__}")
+
+        # ======================
+        # 7. Адаптация учебного пути
+        # ======================
         adjustment = LearningPathAdaptationService().adapt_after_lesson(
             learning_path=enrollment.learning_path,
             outcome=outcome
@@ -350,6 +577,27 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
             }
         )
 
+        if adjustment == LearningPathAdjustmentType.ADVANCE:  # TODO логирование остальных вариантов
+            # Логирование события завершения
+            LessonEventService.create_event(
+                student=enrollment.student,
+                enrollment=enrollment,
+                lesson=lesson,
+                event_type=LessonEventType.COMPLETE,
+                channel="WEB",
+                metadata={
+                    "node_id": current_node["node_id"],
+                    "tasks_completed": len(responses),
+                    "pending_assessment": True,
+                    "submitted_at": timezone.now().isoformat(),
+                    "lesson_score": lesson_result.overall_score,
+                    "learning_path_adjustment": adjustment.value,
+                }
+            )
+
+        enrollment.lesson_status = 'ACTIVE'
+        enrollment.save(update_fields=['lesson_status'])
+
         progress_recorder.set_progress(
             2,
             2,
@@ -371,11 +619,16 @@ def assess_lesson_tasks(self, enrollment_id, assessed_lesson_id):
             lesson=lesson,
             event_type=LessonEventType.ASSESSMENT_ERROR,
             channel="SYSTEM",
-            metadata={"error": str(e)}
+            metadata={
+                "error": str(e),
+                "node_id": current_node["node_id"],
+                "path_type": enrollment.learning_path.path_type,
+                "reason": current_node.get("reason", ""),
+                "type": current_node.get("type", "core"),
+            }
         )
         # raise self.retry(exc=e, countdown=60)  # retry 1 раз через минуту
         return None
-
 
 
 def _handle_assessment_error(enrollment_id, error_message):

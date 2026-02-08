@@ -225,7 +225,6 @@ class EnrollCourseView(LoginRequiredMixin, View):
                 # reply_to=user_message,
                 source_type=MessageSource.WEB
             )
-            print(ai_message)
             if (request.headers.get('X-Requested-With') == 'XMLHttpRequest'
                     or request.headers.get("Accept") == "application/json"):
                 response_data = {
@@ -240,38 +239,22 @@ class EnrollCourseView(LoginRequiredMixin, View):
 
         try:
             with transaction.atomic():
-                # 2. Создание Enrollment
+                # Создание Enrollment, SkillSnapshot создастся автоматически
                 enrollment = Enrollment.objects.create(
                     student=student,
                     course=course,
                     is_active=True,
                 )
 
-                # 3. Baseline SkillSnapshot (PLACEMENT)
-                latest_snapshot = student.skill_snapshots.order_by("-snapshot_at").first()
-                baseline_skills = latest_snapshot.skills if latest_snapshot else {
-                    "grammar": 0.5, "vocabulary": 0.5, "listening": 0.5,
-                    "reading": 0.5, "writing": 0.5, "speaking": 0.5
-                }
-
-                SkillSnapshot.objects.create(
-                    student=student,
-                    enrollment=enrollment,
-                    associated_lesson=None,
-                    snapshot_context="PLACEMENT",
-                    skills=baseline_skills,
-                    metadata={
-                        "source": "enrollment_baseline",
-                        "trigger": "new_course_enrollment"
-                    }
-                )
-
-                # 4. Генерация персонализированного пути
+                # Генерация учебного пути
                 learning_path = LearningPathInitializationService.initialize_for_enrollment(
                     enrollment=enrollment
                 )
+                print(learning_path)
+                print(learning_path.nodes)
+                print(learning_path.current_node)
 
-                # 5. Логирование события зачисления
+                # Логирование события зачисления
                 LessonEventService.create_event(
                     student=student,
                     enrollment=enrollment,

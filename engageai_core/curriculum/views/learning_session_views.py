@@ -1,7 +1,6 @@
 import json
 import logging
 import math
-from pprint import pprint
 
 from celery.result import AsyncResult
 from django.contrib import messages
@@ -23,14 +22,16 @@ from curriculum.models.student.enrollment import Enrollment, LessonStatus
 from ..forms import LessonTasksForm
 
 from curriculum.tasks import assess_lesson_tasks, launch_full_assessment
-from ..models import LessonAssessmentResult, TaskAssessmentResult
+from ..models import LessonAssessmentResult, TaskAssessmentResult, Course
 from ..models.content.lesson import Lesson
 from ..models.learning_process.lesson_event_log import LessonEventType
+from ..models.student.skill_snapshot import SkillSnapshot
 from ..models.student.student_response import StudentTaskResponse
 from ..services.learning_path_adaptation import LearningPathAdaptationService
 from ..services.learning_path_progress import LearningPathProgressService
 from ..services.lesson_assessment_service import LessonAssessmentService
 from ..services.lesson_event_service import LessonEventService
+from ..validators import SkillDomain
 
 logger = logging.getLogger(__name__)
 
@@ -47,26 +48,35 @@ class LearningSessionView(LoginRequiredMixin, ChatContextMixin, TemplateView):
         pk = kwargs.get("pk")
         enrollment = self._get_enrollment(pk)
         lesson, current_node = self._get_current_lesson_and_node(enrollment)
+        lesson_tasks = lesson.active_tasks
 
-        lesson_tasks = Task.objects.filter(
-                        lesson=lesson,
-                        is_active=True
-                    )
-
-        # Логируем начало урока (если ещё не было в эту сессию)
-        LessonEventService.create_event(
-            student=enrollment.student,
+        lesson_assessment = LessonAssessmentResult.objects.filter(
             enrollment=enrollment,
             lesson=lesson,
-            event_type=LessonEventType.START,
-            channel="WEB",
-            metadata={
-                "node_id": current_node["node_id"],
-                "path_type": enrollment.learning_path.path_type,
-                "reason": current_node.get("reason", ""),
-                "type": current_node.get("type", "core")
-            }
-        )
+        ).exists()
+        if lesson_assessment:
+            print(lesson_assessment)
+            return redirect("curriculum:lesson_history", lesson.id)
+
+        if current_node.get("status") != "in_progress":
+            learning_path = enrollment.learning_path
+            current_node_index = enrollment.learning_path.current_node_index
+            learning_path.nodes[current_node_index]["status"] = "in_progress"
+            learning_path.save(update_fields=['nodes', ])
+            # Логируем начало урока (если ещё не было в эту сессию)
+            LessonEventService.create_event(
+                student=enrollment.student,
+                enrollment=enrollment,
+                lesson=lesson,
+                event_type=LessonEventType.START,
+                channel="WEB",
+                metadata={
+                    "node_id": current_node["node_id"],
+                    "path_type": enrollment.learning_path.path_type,
+                    "reason": current_node.get("reason", ""),
+                    "type": current_node.get("type", "core")
+                }
+            )
 
         # Форма заданий урока
         lesson_form = LessonTasksForm(lesson=lesson)
@@ -76,22 +86,18 @@ class LearningSessionView(LoginRequiredMixin, ChatContextMixin, TemplateView):
             lesson=lesson,
             lesson_tasks=lesson_tasks,
             current_node=current_node,
-            next_node=enrollment.learning_path.next_node,
             path_type=enrollment.learning_path.path_type,
             progress=self._get_progress_data(enrollment.learning_path, current_node),
             lesson_form=lesson_form,
             is_preview=current_node.get("type") == "preview",
             recommended_reason=current_node.get("reason", ""),
         )
-        print(context)
         return self.render_to_response(context)
 
     def post(self, request, pk):
         enrollment = self._get_enrollment(pk)
 
         lesson, current_node = self._get_current_lesson_and_node(enrollment)
-        print(f"{lesson=}")
-        print(f"{current_node=}")
 
         form = LessonTasksForm(request.POST, request.FILES, lesson=lesson)
 
@@ -101,17 +107,36 @@ class LearningSessionView(LoginRequiredMixin, ChatContextMixin, TemplateView):
             messages.error(request, "Пожалуйста, заполните все обязательные поля")
             return redirect(request.path)
 
+        form_lesson_id = form.cleaned_data.get("lesson_id")
+        if lesson.pk != form_lesson_id:
+            logger.error(f"Оцениваемый урок id:{form_lesson_id} не совпадает с current_node: {current_node}, {lesson=} ")
+            raise Http404("Ошибка в учебном плане, обратитесь к администратору")
+
+        # Логируем начало оценки урока
+        LessonEventService.create_event(
+            student=enrollment.student,
+            enrollment=enrollment,
+            lesson=lesson,
+            event_type=LessonEventType.ASSESSMENT_START,
+            channel="WEB",
+            metadata={
+                "node_id": current_node["node_id"],
+                "path_type": enrollment.learning_path.path_type,
+                "reason": current_node.get("reason", ""),
+                "type": current_node.get("type", "core")
+            }
+        )
+
         # Сохранение ответов студента (через существующий сервис)
         responses = self._collect_responses(request, lesson.active_tasks)
-        print(responses)
         self._save_student_responses(enrollment, responses)
 
-        # 3. Запуск оценки (асинхронно через Celery)
+        # Запуск оценки (асинхронно через Celery)
         enrollment.lesson_status = LessonStatus.PENDING_ASSESSMENT
         enrollment.save(update_fields=["lesson_status", ])
 
         assessment_service = LessonAssessmentService()
-        job_id = assessment_service.start_assessment(enrollment, lesson)
+        job_id = assessment_service.start_assessment(enrollment, lesson.pk)
 
         if job_id:
             # Уже сохранено в сервисе
@@ -120,30 +145,22 @@ class LearningSessionView(LoginRequiredMixin, ChatContextMixin, TemplateView):
             # Ошибка запуска — обработать
             return self._handle_error(request, 'Не удалось запустить оценку', 500)
 
-        # 4. Обновление статуса узла в LearningPath
-        path = enrollment.learning_path
-        current_index = path.current_node_index
-        path.nodes[current_index]["status"] = "completed_pending_assessment"
-        path.nodes[current_index]["submitted_at"] = timezone.now().isoformat()  # момент submit
-        path.nodes[current_index]["completed_at"] = None  # пока не завершена оценка
-        path.save()
+        # # Логирование события завершения
+        # LessonEventService.create_event(
+        #     student=enrollment.student,
+        #     enrollment=enrollment,
+        #     lesson=lesson,
+        #     event_type=LessonEventType.COMPLETE,
+        #     channel="WEB",
+        #     metadata={
+        #         "node_id": current_node["node_id"],
+        #         "tasks_completed": len(responses),
+        #         "pending_assessment": True,
+        #         "submitted_at": timezone.now().isoformat()
+        #     }
+        # )
 
-        # 5. Логирование события завершения
-        LessonEventService.create_event(
-            student=enrollment.student,
-            enrollment=enrollment,
-            lesson=lesson,
-            event_type=LessonEventType.COMPLETE,
-            channel="WEB",
-            metadata={
-                "node_id": current_node["node_id"],
-                "tasks_completed": len(responses),
-                "pending_assessment": True,
-                "submitted_at": timezone.now().isoformat()
-            }
-        )
-
-        # 7. Ответ пользователю
+        # Ответ пользователю
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
         if is_ajax:
@@ -170,6 +187,7 @@ class LearningSessionView(LoginRequiredMixin, ChatContextMixin, TemplateView):
             raise Http404("Учебный путь не инициализирован")
 
         current_node = enrollment.learning_path.current_node
+
         if not current_node:
             raise Http404("Нет текущего узла в пути")
 
@@ -182,7 +200,8 @@ class LearningSessionView(LoginRequiredMixin, ChatContextMixin, TemplateView):
                     'tasks',
                     queryset=Task.objects.filter(is_active=True).order_by('order'),
                     to_attr='active_tasks'
-                )
+                ),
+                "learning_objectives"
             ).get()
         except Lesson.DoesNotExist:
             raise Http404(f"Урок {current_node['lesson_id']} не найден")
@@ -267,15 +286,11 @@ class LearningSessionView(LoginRequiredMixin, ChatContextMixin, TemplateView):
             )
         }
 
-        print(f"{existing_responses=}")
-        print(f"{responses=}")
-
         for task_id, response_data in responses.items():
             response_text = response_data.get("text", "")
             audio_file = response_data.get("audio_file")
 
             existing_response = existing_responses.get(task_id)
-            print(f"{enrollment.lesson_status=}")
             if existing_response:
                 # Обновляем только если разрешено по статусу урока
                 if enrollment.lesson_status in ["ACTIVE", "ERROR"]:
@@ -311,13 +326,6 @@ class LearningSessionView(LoginRequiredMixin, ChatContextMixin, TemplateView):
                     audio_file=audio_file,
                 )
 
-    # def _calculate_path_progress(self, learning_path):
-    #     if not learning_path.nodes:
-    #         return 0
-    #     completed = sum(1 for n in learning_path.nodes if n["status"] == "completed")
-    #     print(learning_path.nodes)
-    #     return round((completed / len(learning_path.nodes)) * 100, 1)
-
     def _get_progress_data(self, learning_path, current_node):
         """
         Возвращает словарь с данными для отображения прогресса:
@@ -336,9 +344,6 @@ class LearningSessionView(LoginRequiredMixin, ChatContextMixin, TemplateView):
         lesson_nodes = [
             node for node in learning_path.nodes
         ]
-
-        pprint(learning_path.nodes)
-        pprint(learning_path.current_node_index)
 
         # 1. Общий прогресс по всем нодам (включая preview)
         completed_count = sum(1 for n in learning_path.nodes if n["status"] == "completed")
@@ -361,7 +366,7 @@ class LearningSessionView(LoginRequiredMixin, ChatContextMixin, TemplateView):
         return {
             "progress_percent": progress_percent,
             "total_lessons": total_nodes,
-            "current_lesson":  current_order
+            "current_lesson": current_order
         }
 
     def _handle_error(self, request, error_msg, status_code=400):
@@ -390,38 +395,11 @@ class LearningSessionView(LoginRequiredMixin, ChatContextMixin, TemplateView):
         messages.success(request, success_msg)
         return redirect(redirect_url)
 
-class LessonHistoryViewOld(LoginRequiredMixin, ChatContextMixin, DetailView):
-    """
-    Представление для просмотра истории выполнения заданий в уроке.
-    Показывает детальную статистику и позволяет анализировать прогресс.
-
-    """
-    model = Lesson
-    template_name = 'curriculum/lesson_history.html'
-    queryset = Lesson.objects.select_related("course")
-
-
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        lesson = self.object
-
-        enrollment = Enrollment.objects.filter(course=lesson.course, student__user=self.request.user).first()
-
-        if enrollment:
-            student_response = Prefetch("student_response", queryset=StudentTaskResponse.objects.select_related(""))
-            tasks = Task.objects.prefetch_related("student_response").filter(lesson=lesson)
-            lesson = Lesson.objects.select_related("course")#еще подгрузить LessonAssessmentResult
-
-        context.update({
-            'lesson': lesson,
-        })
-
-        return context
 
 class LessonHistoryView(LoginRequiredMixin, ChatContextMixin, DetailView):
     model = Lesson
     template_name = 'curriculum/lesson_history.html'
+    queryset = Lesson.objects.prefetch_related("learning_objectives")
 
     def get_queryset(self):
         return Lesson.objects.select_related("course")
@@ -430,9 +408,10 @@ class LessonHistoryView(LoginRequiredMixin, ChatContextMixin, DetailView):
         context = super().get_context_data(**kwargs)
         lesson = self.object
 
+        # 1. Получаем зачисление с предзагрузкой связанных данных
         enrollment = (
             Enrollment.objects
-            .select_related("student", "course")
+            .select_related("student", "course", "learning_path")
             .filter(
                 course=lesson.course,
                 student__user=self.request.user,
@@ -445,479 +424,379 @@ class LessonHistoryView(LoginRequiredMixin, ChatContextMixin, DetailView):
             context["enrollment"] = None
             return context
 
-        # ответы студента на задания урока
-        student_responses_qs = (
-            StudentTaskResponse.objects
-            .filter(enrollment=enrollment)
-            .select_related("assessment")  # TaskAssessmentResult (OneToOne)
-        )
+        # 2. Получаем LearningPath для времени занятия
+        learning_path = getattr(enrollment, 'learning_path', None)
 
-        tasks = (
-            Task.objects
-            .filter(lesson=lesson)
-            .order_by("order")
-            .prefetch_related(
-                Prefetch(
-                    "student_response",
-                    queryset=student_responses_qs,
-                    to_attr="student_responses_for_enrollment",
+        # 3. Находим текущий узел для получения времени
+        current_node = None
+        print(learning_path.nodes)
+        if learning_path and learning_path.nodes:
+            for node in learning_path.nodes:
+                if node.get('lesson_id') == lesson.id and node.get('status') == 'completed':
+                    current_node = node
+                    break
+        if current_node:
+            # 4. Получаем ответы студента с оценками одним запросом
+            student_responses = (
+                StudentTaskResponse.objects
+                .filter(enrollment=enrollment, task__lesson=lesson)
+                .select_related("assessment", "task")
+                .order_by("task__order")
+            )
+
+            # 5. Подсчитываем статистику заданий
+            total_tasks_count = Task.objects.filter(lesson=lesson, is_active=True).count()
+
+            # Задания считаются выполненными, если есть оценка (is_correct не None)
+            completed_tasks_count = sum(
+                1 for resp in student_responses
+                if resp.assessment and resp.assessment.is_correct is not None
+            )
+
+            # 6. Получаем все задания урока с предзагрузкой ответов
+            tasks = (
+                Task.objects
+                .filter(lesson=lesson, is_active=True)
+                .order_by("order")
+                .prefetch_related(
+                    Prefetch(
+                        "student_response",
+                        queryset=StudentTaskResponse.objects.filter(
+                            enrollment=enrollment
+                        ).select_related("assessment"),
+                        to_attr="student_responses_for_enrollment",
+                    )
                 )
             )
-        )
 
-        lesson_assessment = (
-            LessonAssessmentResult.objects
-            .filter(enrollment=enrollment, lesson=lesson)
-            .first()
-        )
+            # 7. Получаем оценку урока
+            lesson_assessment = (
+                LessonAssessmentResult.objects
+                .filter(enrollment=enrollment, lesson=lesson)
+                .first()
+            )
+
+            # 8. Рассчитываем время занятия
+            duration = None
+            if current_node and current_node.get('completed_at'):
+                from datetime import datetime
+                completed_at = datetime.fromisoformat(current_node['completed_at'].replace('Z', '+00:00'))
+                created_at = datetime.fromisoformat(current_node['created_at'].replace('Z', '+00:00'))
+                duration = completed_at - created_at
+
+            # ============================================
+            # 9. ПОЛУЧАЕМ СНИМКИ НАВЫКОВ
+            # ============================================
+
+            skill_labels = [skill.capitalize() for skill in SkillDomain.values]
+            # Текущий снимок навыков после урока (с привязкой к уроку)
+            current_snapshot = (
+                SkillSnapshot.objects
+                .filter(
+                    enrollment=enrollment,
+                    associated_lesson=lesson,
+                    snapshot_context="POST_LESSON"
+                )
+                .order_by('-snapshot_at')
+                .first()
+            )
+
+            # Предыдущий снимок (до этого урока) для сравнения прогресса
+            previous_snapshot = None
+            initial_skill_snapshot = {}
+            if current_snapshot:
+                previous_snapshot = (
+                    SkillSnapshot.objects
+                    .filter(
+                        enrollment=enrollment,
+                        snapshot_at__lt=current_snapshot.snapshot_at
+                    )
+                    .order_by('-snapshot_at')
+                    .first()
+                )
+
+                initial_skill_snapshot = {
+                    "skills": {
+                        skill: getattr(previous_snapshot, skill)
+                        for skill in SkillDomain.values
+                    },
+                    'timestamp': previous_snapshot.snapshot_at.isoformat(),
+                    'context': previous_snapshot.snapshot_context
+                }
+
+            # Формируем данные для чарта — всегда используем последний снимок
+            if current_snapshot:
+                skill_snapshot = {
+                    "skills": {
+                        skill: getattr(current_snapshot, skill)
+                        for skill in SkillDomain.values
+                    },
+                    'timestamp': current_snapshot.snapshot_at.isoformat(),
+                    'context': current_snapshot.snapshot_context
+                }
+            else:
+                # Теоретически недостижимо при корректной работе сигналов
+                # Но оставляем защиту на случай ошибок
+                skill_snapshot = {
+                    'skills': {skill: 0.5 for skill in list(SkillDomain.values)},
+                    'timestamp': None,
+                    'context': 'fallback'
+                }
+
+            # Сравнение прогресса от первого пред уроком к снимку завершения урока
+            skill_comparisons = []
+            if current_snapshot and previous_snapshot and current_snapshot.id != previous_snapshot.id:
+
+                for skill_name in list(SkillDomain.values):
+                    current = getattr(current_snapshot, skill_name, 0.0)
+                    initial = getattr(previous_snapshot, skill_name, 0.0)
+
+                    # Защита от некорректных значений (должны быть в диапазоне 0.0–1.0)
+                    current = max(0.0, min(1.0, current))
+                    initial = max(0.0, min(1.0, initial))
+
+                    delta = current - initial
+                    skill_comparisons.append({
+                        'name': skill_name.capitalize(),
+                        'current': current,
+                        'initial': initial,
+                        'delta': delta,
+                        'delta_positive': delta > 0,
+                        'delta_formatted': f"{delta:+.2f}"
+                    })
+                    context.update({
+                        "lesson": lesson,
+                        "enrollment": enrollment,
+                        "tasks": tasks,
+                        "lesson_assessment": lesson_assessment,
+                        "completed_tasks_count": completed_tasks_count,
+                        "total_tasks_count": total_tasks_count,
+                        "lesson_duration": duration,
+                        "current_node": current_node,
+                        # Снимки навыков
+                        "skill_snapshot": skill_snapshot,
+                        "initial_skill_snapshot": initial_skill_snapshot,
+                        "skill_comparisons": skill_comparisons,
+                        "skill_labels": skill_labels,
+                    })
 
         context.update({
             "lesson": lesson,
             "enrollment": enrollment,
-            "tasks": tasks,
-            "lesson_assessment": lesson_assessment,
         })
 
         return context
 
 
 class CourseHistoryView(LoginRequiredMixin, ChatContextMixin, DetailView):
-    """
-    Представление для просмотра истории пройденных уроков в курсе.
-    URL: /curriculum/session/<enrollment_id>/history/
-    """
-    model = Enrollment
-    template_name = 'curriculum/course_history_v1.html'
-    context_object_name = 'enrollment'
-    pk_url_kwarg = 'enrollment_id'
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        factory = CurriculumServiceFactory()
-        self.learning_service = factory.create_learning_service()
-        self.enrollment_service = self.learning_service.enrollment_service
+    model = Course
+    template_name = 'curriculum/course_history.html'
+    context_object_name = 'course'
 
     def get_queryset(self):
-        return Enrollment.objects.filter(
-            student=self.request.user.student,
-            is_active=True
-        ).select_related('course', 'current_lesson')
-
-    def get_object(self, queryset=None):
-        obj = super().get_object(queryset)
-        if obj.student != self.request.user.student:
-            raise PermissionDenied("Вы не можете получить доступ к истории этого курса")
-        return obj
+        return Course.objects.prefetch_related("professional_tags", )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update(self.get_chat_context(request=self.request))
-        enrollment = self.object
-        course = enrollment.course
-        context['course'] = course
+        course = self.object
+        user = self.request.user
 
-        try:
-            # Получаем прогресс по курсу
-            progress_details = self.enrollment_service.get_course_progress(enrollment)
-            context['progress_details'] = progress_details
-            context['overall_progress'] = progress_details.get('progress_percent', 0)
-            context['completed_lessons_count'] = progress_details.get('completed_lessons', 0)
-            context['total_lessons_count'] = progress_details.get('total_lessons', 0)
-            context['is_course_completed'] = progress_details.get('is_course_completed', False)
-
-            # Получаем детальную статистику по каждому уроку
-            context['all_lessons'] = self._get_lesson_details(enrollment, course)
-
-            # Считаем статистику по задачам
-            context['total_completed_tasks'] = StudentTaskResponse.objects.filter(
-                student=enrollment.student,
-                task__lesson__course=course,
-                task__is_active=True
-            ).count()
-
-            # Получаем снимки навыков для визуализации прогресса
-            context['skill_snapshots'] = SkillSnapshot.objects.filter(
-                student=enrollment.student
-            ).order_by('-snapshot_at')[:5]
-
-            # Рассчитываем среднее время на урок
-            completed_lessons = Lesson.objects.filter(
+        # Получаем зачисление пользователя на курс
+        enrollment = (
+            Enrollment.objects
+            .select_related("student")
+            .filter(
                 course=course,
-                is_active=True,
-                order__lt=enrollment.current_lesson.order + 1 if enrollment.current_lesson else 1
-            ).prefetch_related('tasks')
+                student__user=user,
+                is_active=True
+            )
+            .first()
+        )
 
-            total_time_spent = 0
-            completed_lessons_count = 0
-            for lesson in completed_lessons:
-                total_tasks = lesson.tasks.filter(is_active=True).count()
-                completed_tasks = StudentTaskResponse.objects.filter(
-                    student=enrollment.student,
-                    task__lesson=lesson,
-                    task__is_active=True
-                ).count()
+        if not enrollment:
+            context["enrollment"] = None
+            context["learning_path"] = None
+            context["progress"] = None
+            context["nodes"] = []
+            return context
 
-                if completed_tasks == total_tasks:
-                    completed_lessons_count += 1
-                    # Оценка времени: 2 минуты на задание
-                    total_time_spent += lesson.tasks.filter(is_active=True).count() * 2
+        # Получаем учебный путь
+        learning_path = getattr(enrollment, 'learning_path', None)
 
-            context['average_time_per_lesson'] = round(total_time_spent / completed_lessons_count,
-                                                       1) if completed_lessons_count > 0 else 0
-            context['total_time_spent'] = total_time_spent
+        if not learning_path or not learning_path.nodes:
+            context["enrollment"] = enrollment
+            context["learning_path"] = None
+            context["progress"] = None
+            context["nodes"] = []
+            return context
 
-        except Exception as e:
-            logger.error(f"Error loading course history for enrollment {enrollment.id}: {str(e)}", exc_info=True)
-            context['error'] = f"Ошибка при загрузке истории курса: {str(e)}"
-        pprint(context)
+        progress_data = LearningPathProgressService.get_core_progress(learning_path)
+        progress_data['percentage'] = round(
+            (progress_data['completed_lessons'] / progress_data['total_lessons'] * 100)
+            if progress_data['total_lessons'] > 0 else 0
+        )
+
+        # Статистика по типам узлов
+        nodes = learning_path.nodes
+
+        core_nodes = [n for n in nodes if n.get('type') == 'core']
+        remedial_nodes = [n for n in nodes if n.get('type') == 'remedial']
+        diagnostic_nodes = [n for n in nodes if n.get('type') == 'diagnostic']
+
+        core_stats = {
+            'total': len(core_nodes),
+            'completed': len([n for n in core_nodes if n.get('status') == 'completed'])
+        }
+
+        remedial_stats = {
+            'total': len(remedial_nodes),
+            'completed': len([n for n in remedial_nodes if n.get('status') == 'completed'])
+        }
+
+        diagnostic_stats = {
+            'total': len(diagnostic_nodes),
+            'completed': len([n for n in diagnostic_nodes if n.get('status') == 'completed'])
+        }
+
+        completed_lesson_ids = [
+            node['lesson_id']
+            for node in nodes
+            if node.get('status') == 'completed' and node.get('lesson_id')
+        ]
+
+        all_lesson_ids = [
+            node['lesson_id']
+            for node in nodes
+            if node.get('lesson_id')
+        ]
+
+        # Получаем ВСЕ оценки одним запросом
+        assessment_map = {}
+        if completed_lesson_ids:
+            assessments = LessonAssessmentResult.objects.filter(
+                enrollment=enrollment,
+                lesson_id__in=completed_lesson_ids
+            ).select_related('lesson')
+            assessment_map = {ass.lesson_id: ass for ass in assessments}
+
+        # Получаем ВСЕ уроки одним запросом
+        lesson_map = {}
+        if all_lesson_ids:
+            lessons = Lesson.objects.filter(
+                id__in=all_lesson_ids
+            ).prefetch_related(
+                'learning_objectives',
+            )
+
+            lesson_map = {lesson.id: lesson for lesson in lessons}
+
+        # Обогащаем узлы
+        enriched_nodes = []
+        for node in nodes:
+            enriched_node = node.copy()
+
+            # Добавляем оценку (если есть)
+            lesson_id = node.get('lesson_id')
+            if lesson_id:
+                enriched_node['assessment_result'] = assessment_map.get(lesson_id)
+                enriched_node['lesson'] = lesson_map.get(lesson_id)
+
+            enriched_nodes.append(enriched_node)
+
+        # ДОБАВЛЯЕМ СНИМКИ НАВЫКОВ ДЛЯ РАДАР-ЧАРТА
+
+        skill_labels = [skill.capitalize() for skill in SkillDomain.values]
+        # Последний снимок (текущий уровень) — ВСЕГДА существует благодаря сигналу
+        latest_snapshot = (
+            SkillSnapshot.objects
+            .filter(enrollment=enrollment)
+            .order_by('-snapshot_at')
+            .first()
+        )
+
+        # Начальный снимок (тот же самый при первом зачислении, или первый в истории)
+        initial_snapshot = (
+            SkillSnapshot.objects
+            .filter(enrollment=enrollment)
+            .order_by('snapshot_at')
+            .first()
+        )
+        if initial_snapshot:
+            initial_skill_snapshot = {
+                "skills": {
+                    skill: getattr(initial_snapshot, skill)
+                    for skill in SkillDomain.values
+                },
+                'timestamp': initial_snapshot.snapshot_at.isoformat(),
+                'context': initial_snapshot.snapshot_context
+            }
+
+        else:
+            # Теоретически недостижимо при корректной работе сигналов
+            # Но оставляем защиту на случай ошибок
+            initial_skill_snapshot = {
+                'skills': {skill: 0.5 for skill in list(SkillDomain.values)},
+                'timestamp': None,
+                'context': 'fallback'
+            }
+
+        # Формируем данные для чарта — всегда используем последний снимок
+        if latest_snapshot:
+            skill_snapshot = {
+                "skills": {
+                    skill: getattr(latest_snapshot, skill)
+                    for skill in SkillDomain.values
+                },
+                'timestamp': latest_snapshot.snapshot_at.isoformat(),
+                'context': latest_snapshot.snapshot_context
+            }
+        else:
+            # Теоретически недостижимо при корректной работе сигналов
+            # Но оставляем защиту на случай ошибок
+            skill_snapshot = {
+                'skills': {skill: 0.5 for skill in list(SkillDomain.values)},
+                'timestamp': None,
+                'context': 'fallback'
+            }
+
+        # Сравнение прогресса от первого к последнему снимку
+        skill_comparisons = []
+        if latest_snapshot and initial_snapshot and latest_snapshot.id != initial_snapshot.id:
+
+            for skill_name in list(SkillDomain.values):
+                current = getattr(latest_snapshot, skill_name, 0.0)
+                initial = getattr(initial_snapshot, skill_name, 0.0)
+
+                # Защита от некорректных значений (должны быть в диапазоне 0.0–1.0)
+                current = max(0.0, min(1.0, current))
+                initial = max(0.0, min(1.0, initial))
+
+                delta = current - initial
+                skill_comparisons.append({
+                    'name': skill_name.capitalize(),
+                    'current': current,
+                    'initial': initial,
+                    'delta': delta,
+                    'delta_positive': delta > 0,
+                    'delta_formatted': f"{delta:+.2f}"
+                })
+
+        context.update({
+            "enrollment": enrollment,
+            "learning_path": learning_path,
+            "progress": progress_data,
+            "nodes": enriched_nodes,
+            "core_stats": core_stats,
+            "remedial_stats": remedial_stats,
+            "diagnostic_stats": diagnostic_stats,
+            "current_node": learning_path.current_node,
+            "skill_snapshot": skill_snapshot,
+            "initial_skill_snapshot": initial_skill_snapshot,
+            "skill_comparisons": skill_comparisons,
+            "skill_labels": skill_labels,
+        })
+
         return context
-
-    def _get_lesson_details(self, enrollment, course):
-        """
-        Возвращает детальную информацию по всем урокам курса:
-        - прогресс по каждому уроку
-        - статистика по заданиям
-        - ссылки на историю урока
-        """
-        lessons = Lesson.objects.filter(
-            course=course,
-            is_active=True
-        ).order_by('order').prefetch_related('tasks', 'learning_objectives')
-
-        lesson_details = []
-        current_lesson_order = enrollment.current_lesson.order if enrollment.current_lesson else 0
-
-        for lesson in lessons:
-            # Статистика по заданиям урока
-            total_tasks = lesson.tasks.filter(is_active=True).count()
-            completed_tasks = StudentTaskResponse.objects.filter(
-                student=enrollment.student,
-                task__lesson=lesson,
-                task__is_active=True
-            ).count()
-
-            # Прогресс по уроку
-            completion_percent = round((completed_tasks / total_tasks) * 100, 1) if total_tasks > 0 else 0
-
-            # Флаг завершенности урока (простая эвристика - 80% заданий)
-            is_completed = completion_percent >= 80
-
-            # Дата последнего ответа
-            last_response = StudentTaskResponse.objects.filter(
-                student=enrollment.student,
-                task__lesson=lesson
-            ).order_by('-submitted_at').first()
-
-            # Основные навыки урока
-            skill_focus = lesson.skill_focus if hasattr(lesson, 'skill_focus') else []
-
-            responses = StudentTaskResponse.objects.filter(
-                student=enrollment.student,
-                task__lesson=lesson,
-                task__is_active=True
-            ).select_related('assessment')
-
-            # Средний балл по уроку (если есть оценки)
-            total_score = 0.0
-            score_count = 0
-
-            for response in responses:
-                assessment = getattr(response, "assessment", None)
-                if not assessment:
-                    continue
-
-                feedback = getattr(assessment, "structured_feedback", None)
-                if not feedback:
-                    continue
-
-                skill_eval = feedback.get("skill_evaluation", {})
-                if not isinstance(skill_eval, dict):
-                    continue
-
-                for skill, data in skill_eval.items():
-                    score = data.get("score")
-                    if isinstance(score, (int, float)):
-                        total_score += score
-                        score_count += 1
-
-            avg_score = round(total_score / score_count, 2) if score_count > 0 else 0.0
-
-            lesson_details.append({
-                'lesson': lesson,
-                'order': lesson.order,
-                'total_tasks': total_tasks,
-                'completed_tasks': completed_tasks,
-                'completion_percent': completion_percent,
-                'is_completed': is_completed,
-                'is_current': lesson.order == current_lesson_order,
-                'last_response_date': last_response.submitted_at if last_response else None,
-                'skill_focus': skill_focus,
-                'average_score': avg_score,
-                'objectives': lesson.learning_objectives.all()
-            })
-
-        return lesson_details
-
-#
-# class SubmitLessonResponseView(LoginRequiredMixin, ChatContextMixin, View):
-#     """
-#     Class-based view для обработки ответов на все задания урока.
-#     Поддерживает как AJAX (JSON), так и обычные POST-запросы.
-#     """
-#
-#     def post(self, request, enrollment_id):
-#         try:
-#             enrollment = Enrollment.objects.get(
-#                 id=enrollment_id,
-#                 student=request.user.student,
-#                 is_active=True
-#             )
-#         except Enrollment.DoesNotExist:
-#             error_msg = 'Зачисление не найдено или доступ запрещен'
-#             return self._handle_error(request, error_msg, 403)
-#
-#         if not enrollment.current_lesson:
-#             error_msg = 'У зачисления нет текущего урока'
-#             return self._handle_error(request, error_msg, 400)
-#
-#         # Проверяем, не находится ли урок уже в процессе оценки
-#         if enrollment.lesson_status == 'PENDING_ASSESSMENT':
-#             error_msg = 'Этот урок уже находится на оценке. Пожалуйста, подождите завершения.'
-#             return self._handle_error(request, error_msg, 400)
-#
-#         form = LessonTasksForm(
-#             request.POST,
-#             request.FILES,
-#             lesson=enrollment.current_lesson,
-#             completed_task_ids=set()
-#         )
-#
-#         if not form.is_valid():
-#             # Для AJAX возвращаем ошибку
-#             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-#                 return JsonResponse({
-#                     'error': 'Пожалуйста, дайте ответы на все задания'
-#                 }, status=400)
-#
-#             # Для обычного запроса - перенаправляем с сообщением
-#             messages.error(request, 'Пожалуйста, дайте ответы на все задания')
-#             return redirect('curriculum:learning_session', pk=enrollment_id)
-#
-#         lesson_tasks = Task.objects.filter(
-#             lesson=enrollment.current_lesson,
-#             is_active=True
-#         )
-#
-#         if not lesson_tasks.exists():
-#             error_msg = 'В уроке нет активных заданий'
-#             return self._handle_error(request, error_msg, 400)
-#
-#         responses = self._collect_responses(request, lesson_tasks)
-#         print(responses)
-#
-#         # validation_result = self._validate_responses(responses, lesson_tasks)
-#         # if not validation_result['is_valid']:
-#         #     return self._handle_error(request, validation_result['error'], 400)
-#
-#         try:
-#             # 1. Сохраняем ответы
-#             self._save_student_responses(enrollment, responses)
-#
-#             # 2. Обновляем статус урока
-#             enrollment.lesson_status = 'PENDING_ASSESSMENT'
-#             enrollment.assessment_started_at = timezone.now()
-#             enrollment.save(update_fields=['lesson_status', 'assessment_started_at'])
-#
-#             # 3. Запускаем фоновую оценку
-#             assessment_job_id = self._start_assessment(enrollment, responses)
-#             if assessment_job_id:
-#                 enrollment.assessment_job_id = assessment_job_id
-#                 enrollment.save(update_fields=['assessment_job_id'])
-#
-#             # 4. PRG паттерн: всегда редиректим на CheckLessonAssessmentView
-#             redirect_url = reverse('curriculum:check_lesson_assessment', kwargs={'enrollment_id': enrollment_id})
-#
-#             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-#                 return JsonResponse({
-#                     'status': 'REDIRECT',
-#                     'redirect_url': redirect_url,
-#                     'message': 'Ответы успешно отправлены на оценку'
-#                 })
-#             else:
-#                 messages.success(request, 'Ваши ответы успешно сохранены и отправлены на оценку.')
-#                 return redirect(redirect_url)
-#
-#         except Exception as e:
-#             logger.error(f"Error processing lesson responses: {str(e)}", exc_info=True)
-#             enrollment.lesson_status = 'ACTIVE'  # Возвращаем в активный статус при ошибке
-#             enrollment.save(update_fields=['lesson_status'])
-#             return self._handle_error(request, f'Ошибка сохранения ответов: {str(e)}', 500)
-#
-#     def _save_student_responses(self, enrollment, responses):
-#         """
-#         Сохраняет ответы студента в базу данных с защитой от дубликатов
-#         """
-#         from curriculum.models.assessment.student_response import StudentTaskResponse
-#
-#         student = enrollment.student
-#         task_ids = list(responses.keys())
-#
-#         existing_responses = {
-#             r.task_id: r
-#             for r in StudentTaskResponse.objects.filter(
-#                 student=student,
-#                 task_id__in=task_ids,
-#             )
-#         }
-#
-#         for task_id, response_data in responses.items():
-#             response_text = response_data.get("text", "")
-#             audio_file = response_data.get("audio_file")
-#
-#             existing_response = existing_responses.get(task_id)
-#
-#             if existing_response:
-#                 # Обновляем только если разрешено по статусу урока
-#                 if enrollment.lesson_status in ["ACTIVE", "ERROR"]:
-#                     logger.info(
-#                         f"Updating existing response {existing_response.id} for task {task_id}"
-#                     )
-#
-#                     existing_response.response_text = response_text or existing_response.response_text
-#                     if audio_file:
-#                         existing_response.audio_file = audio_file
-#
-#                     existing_response.submitted_at = timezone.now()
-#                     existing_response.save(update_fields=[
-#                         "response_text",
-#                         "audio_file",
-#                         "submitted_at",
-#                     ])
-#                 else:
-#                     logger.warning(
-#                         f"Attempt to modify response for lesson in {enrollment.lesson_status} status"
-#                     )
-#
-#             else:
-#                 # Создаём новый ответ
-#                 logger.info(
-#                     f"Creating new response for task {task_id}, student {student.id}"
-#                 )
-#                 st = StudentTaskResponse.objects.create(
-#                     student=student,
-#                     task_id=task_id,
-#                     response_text=response_text,
-#                     audio_file=audio_file,
-#                 )
-#
-#     def _start_assessment(self, enrollment, responses):
-#         """
-#         Запускает фоновую оценку заданий через Celery
-#
-#         Args:
-#             enrollment: Enrollment объект
-#             responses: Словарь с ответами студента
-#
-#         Returns:
-#             str: ID задачи Celery или None при ошибке
-#         """
-#         try:
-#             # Запускаем асинхронную задачу
-#             job = assess_lesson_tasks.delay(enrollment.id)
-#             logger.info(f"Started assessment task {job.id} for enrollment {enrollment.id}")
-#             return job.id
-#         except Exception as e:
-#             logger.error(f"Failed to start assessment task: {str(e)}")
-#             return None
-#
-#     def _collect_responses(self, request, lesson_tasks):
-#         """
-#         Собирает ответы из запроса.
-#
-#         Принцип:
-#         - КАЖДОЕ задание попадает в responses
-#         - Пустой / некорректный ответ → text="" / audio_file=None
-#         - Оценщик сам решает, как это интерпретировать (neutral)
-#         """
-#         responses: dict[int, dict] = {}
-#
-#         for task in lesson_tasks:
-#             field_name = f'task_{task.id}'
-#             audio_field = f'task_{task.id}_audio'
-#
-#             # === Значение по умолчанию (пустой ответ) ===
-#             responses[task.id] = {
-#                 'text': '',
-#                 'audio_file': None
-#             }
-#
-#             # ===== AUDIO =====
-#             if task.response_format == 'audio':
-#                 if audio_field in request.FILES:
-#                     responses[task.id]['audio_file'] = request.FILES[audio_field]
-#                 continue
-#
-#             # ===== MULTIPLE CHOICE =====
-#             if task.response_format == 'multiple_choice':
-#                 values = request.POST.getlist(field_name)
-#
-#                 if not values:
-#                     # пустой ответ → останется нейтральным
-#                     continue
-#
-#                 options = set(task.content.get('options', []))
-#                 invalid = [v for v in values if v not in options]
-#
-#                 if invalid:
-#                     logger.warning(
-#                         "Invalid multiple_choice values",
-#                         extra={
-#                             "task_id": task.id,
-#                             "invalid": invalid,
-#                             "allowed": list(options),
-#                         }
-#                     )
-#                     # некорректный ответ → нейтральный
-#                     continue
-#
-#                 responses[task.id]['text'] = json.dumps(values)
-#                 continue
-#
-#             # ===== TEXT / OTHER =====
-#             if field_name in request.POST:
-#                 text_value = request.POST.get(field_name, '').strip()
-#                 if text_value:
-#                     responses[task.id]['text'] = text_value
-#
-#         return responses
-#
-#     def _validate_responses(self, responses, lesson_tasks):
-#         """Валидация собранных ответов"""
-#         total_tasks = lesson_tasks.count()
-#         completed_count = len(responses)
-#
-#         # Минимум 30% заданий должно быть выполнено (вместо жестких 50%)
-#         min_required = max(1, int(total_tasks * 0.3))
-#
-#         if completed_count < min_required:
-#             return {
-#                 'is_valid': False,
-#                 'error': f'Заполните хотя бы {min_required} из {total_tasks} заданий урока'
-#             }
-#
-#         return {
-#             'is_valid': True,
-#             'completed_count': completed_count,
-#             'total_count': total_tasks
-#         }
-#
-#     def _handle_error(self, request, error_msg, status_code):
-#         """Единая обработка ошибок для AJAX и обычных запросов"""
-#         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-#             return JsonResponse({'error': error_msg}, status=status_code)
-#         else:
-#             messages.error(request, error_msg)
-#             return redirect('curriculum:course_list')
 
 
 class CheckLessonAssessmentView(LoginRequiredMixin, ChatContextMixin, View):

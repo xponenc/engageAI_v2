@@ -30,7 +30,7 @@ from curriculum.models.content.task import Task, TaskType, ResponseFormat
 from curriculum.services.content_generation.base_generator import BaseContentGenerator
 from curriculum.validation.task_schemas import TASK_CONTENT_SCHEMAS
 from llm_logger.models import LLMRequestType
-from curriculum.models import Lesson
+from curriculum.models import Lesson, LearningObjective
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +110,7 @@ class TaskGenerationService(BaseContentGenerator):
         created_tasks = []
         failed_tasks = 0
 
-        for i, task_data in enumerate(tasks_data):
+        for i, task_data in enumerate(tasks_data, start=1):
             try:
                 task = await self._create_task_in_db(lesson, task_data, order=i)
                 created_tasks.append(task)
@@ -266,7 +266,6 @@ You follow instructions precisely and return only valid JSON.
 # }}
 #         """
 
-
         user_message = f"""
 Lesson: "{lesson_context['title']}" (CEFR Level: {lesson_context['level']})
 
@@ -341,7 +340,6 @@ Return ONLY valid JSON in the following format:
   ]
 }}
         """
-        print(user_message)
         context = {
             "course_id": lesson.course.pk,
             "lesson_id": lesson.pk,
@@ -423,6 +421,13 @@ Return ONLY valid JSON in the following format:
             is_diagnostic=False,
             is_active=True,
             order=order
+        )
+
+        learning_objectives = task_data["learning_objectives"]
+        task.learning_objectives.set(
+            LearningObjective.objects.filter(
+                identifier__in=learning_objectives
+            )
         )
 
         # TODO обработка и создание фалов для listening заданий

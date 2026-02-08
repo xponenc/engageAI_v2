@@ -1,0 +1,62 @@
+{% for event in events %}
+<tr class="lesson-event-row lesson-event-row--{{ event.channel|lower }}">
+    <td>
+        <div class="lesson-event-student">
+            {% if event.student.user.get_full_name %}
+                {{ event.student.user.get_full_name }}
+            {% else %}
+                {{ event.student.user.username }}
+            {% endif %}
+            <small class="lesson-event-student-id">#{{ event.student.id }}</small>
+        </div>
+        <div class="lesson-event-timestamp">
+            {{ event.timestamp|date:"d.m.Y H:i" }}
+        </div>
+    </td>
+    <td>
+        <div class="lesson-event-lesson">
+            {% if event.lesson %}
+                {{ event.lesson.title }}
+                <small>{{ event.lesson.module.title }}</small>
+            {% else %}
+                <em>Без урока</em>
+            {% endif %}
+        </div>
+        <div class="lesson-event-type lesson-event-type--{{ event.event_type|lower }}">
+            {{ event.get_event_type_display }}
+        </div>
+    </td>
+    <td>
+        <div class="lesson-event-channel lesson-event-channel--{{ event.channel|lower }}">
+            {{ event.get_channel_display }}
+        </div>
+        <div class="lesson-event-duration">
+            {% if event.duration_minutes %}
+                {{ event.duration_minutes }} мин
+            {% else %}
+                —
+            {% endif %}
+        </div>
+    </td>
+    <td>
+        <div class="lesson-event-metadata">
+            {% if event.metadata %}
+                <details>
+                    <summary>Показать</summary>
+                    <div class="lesson-event-metadata-pre">
+                        {% include 'widgets/_json_recursive.html' with data=event.metadata level=0 %}
+                    </div>
+                </details>
+            {% else %}
+                <em>Нет данных</em>
+            {% endif %}
+        </div>
+    </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="4" class="lesson-event-empty">
+        Нет событий
+    </td>
+</tr>
+{% endfor %}

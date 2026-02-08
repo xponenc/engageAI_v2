@@ -73,6 +73,7 @@ class LessonTasksForm(forms.Form):
     - Не содержит сложной бизнес-логики
     - Используется только для проверки form.is_valid()
     """
+    lesson_id = forms.IntegerField(widget=forms.HiddenInput())
 
     def __init__(self, *args, **kwargs):
         self.lesson = kwargs.pop('lesson', None)
@@ -80,10 +81,11 @@ class LessonTasksForm(forms.Form):
         super().__init__(*args, **kwargs)
 
         if self.lesson:
+            self.fields['lesson_id'].initial = self.lesson.id
             self._add_task_fields()
 
     def _add_task_fields(self):
-        tasks = self.lesson.tasks.filter(is_active=True).order_by('order')
+        tasks = self.lesson.active_tasks
 
         for task in tasks:
             if task.id in self.completed_task_ids:

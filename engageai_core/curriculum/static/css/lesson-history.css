@@ -8,21 +8,21 @@
     --color-warning: #f59e0b;
     --color-danger: #ef4444;
     --color-info: #3b82f6;
-    
+
     --color-bg: #f9fafb;
     --color-card-bg: #ffffff;
     --color-text: #1f2937;
     --color-text-secondary: #6b7280;
     --color-border: #e5e7eb;
-    
+
     --border-radius-sm: 4px;
     --border-radius-md: 8px;
     --border-radius-lg: 12px;
-    
+
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    
+
     --transition: all 0.3s ease;
 }
 
@@ -138,12 +138,35 @@ body {
     border: 1px solid var(--color-border);
 }
 
-.skill-badge--grammar { background-color: #dbeafe; color: #1e40af; }
-.skill-badge--vocabulary { background-color: #fef3c7; color: #92400e; }
-.skill-badge--listening { background-color: #dcfce7; color: #15803d; }
-.skill-badge--reading { background-color: #f0abfc; color: #701a75; }
-.skill-badge--writing { background-color: #bfdbfe; color: #1e3a8a; }
-.skill-badge--speaking { background-color: #fed7aa; color: #c2410c; }
+.skill-badge--grammar {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.skill-badge--vocabulary {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.skill-badge--listening {
+    background-color: #dcfce7;
+    color: #15803d;
+}
+
+.skill-badge--reading {
+    background-color: #f0abfc;
+    color: #701a75;
+}
+
+.skill-badge--writing {
+    background-color: #bfdbfe;
+    color: #1e3a8a;
+}
+
+.skill-badge--speaking {
+    background-color: #fed7aa;
+    color: #c2410c;
+}
 
 /* ======================
    ОСНОВНОЙ КОНТЕНТ
@@ -195,7 +218,7 @@ body {
 
 .score-card__percentage {
     position: relative;
-    font-size: 2.5rem;
+    font-size: 1.5rem;
     font-weight: 700;
     z-index: 1;
 }
@@ -203,6 +226,9 @@ body {
 .score-card__percentage::before {
     content: '';
     position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     width: 100px;
     height: 100px;
     border-radius: 50%;
@@ -213,12 +239,25 @@ body {
 .score-card__percentage::after {
     content: '';
     position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     width: 100px;
     height: 100px;
     border-radius: 50%;
-    background: conic-gradient(white var(--score, 0)%, transparent var(--score, 0)%);
+    background: conic-gradient(var(--color-primary) var(--score, 0%),
+            var(--color-border) var(--score, 0%));
     clip-path: circle(45px at center);
     z-index: 0;
+}
+
+.score-card__percentage span {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+    display: block;
 }
 
 .score-card__details {
@@ -234,9 +273,17 @@ body {
     background-color: rgba(255, 255, 255, 0.2);
 }
 
-.status-badge--completed { background-color: rgba(16, 185, 129, 0.3); }
-.status-badge--pending { background-color: rgba(245, 158, 11, 0.3); }
-.status-badge--error { background-color: rgba(239, 68, 68, 0.3); }
+.status-badge--completed {
+    background-color: rgba(16, 185, 129, 0.3);
+}
+
+.status-badge--pending {
+    background-color: rgba(245, 158, 11, 0.3);
+}
+
+.status-badge--error {
+    background-color: rgba(239, 68, 68, 0.3);
+}
 
 .score-card__stats {
     display: grid;
@@ -457,13 +504,21 @@ body {
     gap: 1.5rem;
 }
 
-/* Карточка задания */
+/* ======================
+   КАРТОЧКА ЗАДАНИЯ
+   ====================== */
 .task-card {
     background-color: var(--color-card-bg);
-    border-radius: var(--border-radius-md);
+    border-radius: var(--border-radius-lg);
     padding: 1.5rem;
     border: 2px solid var(--color-border);
     transition: var(--transition);
+    margin-bottom: 1.5rem;
+}
+
+.task-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
 }
 
 .task-card--completed {
@@ -475,24 +530,25 @@ body {
     opacity: 0.6;
 }
 
-.task-card:hover {
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-2px);
-}
-
+/* Заголовок карточки */
 .task-card__header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border);
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
 
 .task-card__info {
     display: flex;
     gap: 0.75rem;
+    flex-wrap: wrap;
 }
 
-.task-type {
+.task-card__type {
     display: inline-flex;
     align-items: center;
     padding: 0.375rem 0.75rem;
@@ -513,6 +569,9 @@ body {
 .task-card__format {
     font-size: 0.8rem;
     color: var(--color-text-secondary);
+    background-color: var(--color-bg);
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--border-radius-sm);
 }
 
 .task-card__status {
@@ -524,35 +583,42 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    font-size: 1rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    cursor: help;
 }
 
 .status-indicator--correct {
-    background-color: rgba(16, 185, 129, 0.1);
+    background-color: rgba(16, 185, 129, 0.15);
     color: var(--color-success);
 }
 
 .status-indicator--incorrect {
-    background-color: rgba(239, 68, 68, 0.1);
+    background-color: rgba(239, 68, 68, 0.15);
     color: var(--color-danger);
 }
 
 .status-indicator--partial {
-    background-color: rgba(245, 158, 11, 0.1);
+    background-color: rgba(245, 158, 11, 0.15);
     color: var(--color-warning);
 }
 
 .status-indicator--pending {
-    background-color: rgba(59, 130, 246, 0.1);
+    background-color: rgba(59, 130, 246, 0.15);
     color: var(--color-info);
 }
 
 .status-indicator--locked {
-    background-color: rgba(107, 114, 128, 0.1);
+    background-color: rgba(107, 114, 128, 0.15);
     color: var(--color-text-secondary);
+}
+
+/* Контент задания */
+.task-card__content {
+    margin-bottom: 1.5rem;
 }
 
 .task-card__title {
@@ -560,109 +626,478 @@ body {
     font-weight: 600;
     margin-bottom: 1rem;
     color: var(--color-text);
+    line-height: 1.6;
+}
+
+/* Список вариантов ответов */
+.options-list {
+    margin-bottom: 1.5rem;
+}
+
+.options-list__header {
+    margin-bottom: 0.75rem;
+}
+
+.options-list__label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.options-list__items {
+    list-style: none;
+    display: grid;
+    gap: 0.5rem;
+}
+
+.options-list__item {
+    padding: 0.75rem 1rem;
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-sm);
+    border-left: 3px solid var(--color-border);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    transition: var(--transition);
+}
+
+.options-list__item:hover {
+    background-color: rgba(99, 102, 241, 0.05);
+    border-left-color: var(--color-primary);
+}
+
+.options-list__item--correct {
+    background-color: rgba(16, 185, 129, 0.1);
+    border-left-color: var(--color-success);
+}
+
+.options-list__marker {
+    font-weight: 600;
+    color: var(--color-primary);
+    min-width: 24px;
+}
+
+.options-list__text {
+    flex: 1;
     line-height: 1.5;
 }
 
-/* Ответ студента */
-.task-card__response {
-    margin-top: 1rem;
+/* Пояснение */
+.explanation-box {
+    background-color: rgba(99, 102, 241, 0.05);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: var(--border-radius-md);
     padding: 1rem;
-    background-color: var(--color-bg);
-    border-radius: var(--border-radius-sm);
-}
-
-.task-card__response-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-}
-
-.task-card__response-label {
-    font-weight: 500;
-    font-size: 0.875rem;
-    color: var(--color-text-secondary);
-}
-
-.task-card__submitted-at {
-    font-size: 0.8rem;
-    color: var(--color-text-secondary);
-}
-
-.task-card__response-content {
-    padding: 0.75rem;
-    background-color: white;
-    border-radius: var(--border-radius-sm);
-    border: 1px solid var(--color-border);
-    font-style: italic;
-    color: var(--color-text);
-}
-
-/* Оценка задания */
-.task-card__assessment {
     margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--color-border);
 }
 
-.task-card__score {
+.explanation-box__header {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     margin-bottom: 0.75rem;
 }
 
-.task-card__score-label {
-    font-weight: 500;
-    color: var(--color-text-secondary);
-}
-
-.task-card__score-value {
-    font-size: 1.25rem;
-    font-weight: 700;
+.explanation-box__icon {
     color: var(--color-primary);
 }
 
-.task-card__feedback {
-    margin-bottom: 0.75rem;
+.explanation-box__title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-primary);
 }
 
-.task-card__feedback-label {
-    display: block;
+.explanation-box__content {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--color-text);
+}
+
+/* Ответ студента */
+.student-response {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--color-border);
+}
+
+.student-response__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.student-response__label {
     font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.student-response__submitted {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     font-size: 0.875rem;
     color: var(--color-text-secondary);
-    margin-bottom: 0.25rem;
 }
 
-.task-card__feedback-text {
-    padding: 0.75rem;
+.student-response__icon {
+    width: 16px;
+    height: 16px;
+    color: var(--color-text-secondary);
+}
+
+.student-response__content {
+    padding: 1rem;
     background-color: var(--color-bg);
     border-radius: var(--border-radius-sm);
+    border: 1px solid var(--color-border);
+    font-style: italic;
     color: var(--color-text);
     line-height: 1.6;
 }
 
-.task-card__structured-feedback {
-    margin-top: 0.75rem;
+/* Оценка задания */
+.assessment-result {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--color-border);
 }
 
-.task-card__feedback-list {
-    list-style: none;
+/* Бейдж оценки */
+.score-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    border-radius: var(--border-radius-md);
+    color: white;
+    margin-bottom: 1rem;
+}
+
+.score-badge__label {
     font-size: 0.9rem;
+    opacity: 0.9;
 }
 
-.task-card__feedback-item {
-    margin-bottom: 0.25rem;
+.score-badge__value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    position: relative;
+}
+
+.score-badge__value::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: calc(var(--score, 0) * 1%);
+    height: 2px;
+    background-color: white;
+    opacity: 0.5;
+}
+
+/* Бокс комментария */
+.feedback-box {
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-md);
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.feedback-box__header {
+    margin-bottom: 0.5rem;
+}
+
+.feedback-box__label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.feedback-box__content {
+    font-size: 0.95rem;
+    line-height: 1.6;
     color: var(--color-text);
 }
 
-.task-card__placeholder {
+/* Детальный анализ */
+.detailed-analysis {
     margin-top: 1rem;
+}
+
+.detailed-analysis__header {
+    margin-bottom: 0.75rem;
+}
+
+.detailed-analysis__label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.detailed-analysis__content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.detailed-analysis__item {
+    padding: 0.75rem;
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* Анализ навыка */
+.skill-analysis {
     padding: 1rem;
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-md);
+    border-left: 3px solid var(--color-primary);
+    font-size: 0.85em;
+}
+
+.skill-analysis__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.skill-analysis__name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.skill-analysis__score {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.skill-analysis__confidence {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    opacity: 0.8;
+}
+
+.skill-analysis__evidence {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.skill-analysis__evidence-item {
+    color: var(--color-text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+/* Плейсхолдер */
+.task-placeholder {
     text-align: center;
+    padding: 2rem;
+    background-color: var(--color-bg);
+    border-radius: var(--border-radius-md);
+}
+
+.task-placeholder__icon {
+    color: var(--color-text-secondary);
+    margin-bottom: 1rem;
+}
+
+.task-placeholder__text {
     color: var(--color-text-secondary);
     font-style: italic;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .task-card {
+        padding: 1rem;
+    }
+
+    .task-card__title {
+        font-size: 1rem;
+    }
+
+    .options-list__items {
+        gap: 0.25rem;
+    }
+
+    .options-list__item {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+    }
+
+    .score-badge {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .score-badge__value {
+        font-size: 1.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .task-card__header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .task-card__status {
+        align-self: flex-end;
+    }
+
+    .student-response__header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .student-response__submitted {
+        align-self: flex-end;
+    }
+}
+
+/* ======================
+   БЛОК РЕКОМЕНДАЦИЙ
+   ====================== */
+.advice-box {
+    background-color: rgba(99, 102, 241, 0.05);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: var(--border-radius-md);
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.advice-box__header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+}
+
+.advice-box__icon {
+    width: 20px;
+    height: 20px;
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+.advice-box__title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    margin: 0;
+}
+
+.advice-box__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.advice-box__item {
+    padding: 0.75rem;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: var(--border-radius-sm);
+    border-left: 3px solid var(--color-primary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--color-text);
+    position: relative;
+}
+
+.advice-box__item::before {
+    content: '💡';
+    position: absolute;
+    left: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    color: var(--color-primary);
+}
+
+/* Альтернативный стиль с нумерацией */
+.advice-box--numbered .advice-box__list {
+    list-style: decimal;
+    padding-left: 1.5rem;
+}
+
+.advice-box--numbered .advice-box__item {
+    padding: 0.5rem 0.75rem;
+    background-color: transparent;
+    border-left: none;
+    border-radius: 0;
+}
+
+.advice-box--numbered .advice-box__item::before {
+    display: none;
+}
+
+/* Компактный стиль */
+.advice-box--compact {
+    padding: 0.75rem;
+}
+
+.advice-box--compact .advice-box__list {
+    gap: 0.5rem;
+}
+
+.advice-box--compact .advice-box__item {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+}
+
+/* Стиль с иконками для каждого пункта */
+.advice-box--iconized .advice-box__item::before {
+    content: '✓';
+    color: var(--color-success);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .advice-box {
+        padding: 0.75rem;
+    }
+
+    .advice-box__header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .advice-box__title {
+        font-size: 0.95rem;
+    }
+
+    .advice-box__item {
+        font-size: 0.9rem;
+        padding: 0.625rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .advice-box__item::before {
+        left: -10px;
+        font-size: 0.9rem;
+    }
 }
 
 /* ======================

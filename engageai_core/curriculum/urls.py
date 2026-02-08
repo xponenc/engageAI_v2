@@ -6,7 +6,7 @@ from .views.learning_session_views import (
     LearningSessionView,
     LessonHistoryView, CourseHistoryView, CheckLessonAssessmentView
 )
-
+from .views.lesson_event_log_view import LessonEventLogListView
 
 app_name = "curriculum"
 
@@ -15,13 +15,16 @@ urlpatterns = [
     path('', CourseListView.as_view(), name='course_list'),
     path('course/<int:pk>/', CourseDetailView.as_view(), name='course_detail'),
     path('enroll/<int:course_id>/', EnrollCourseView.as_view(), name='enroll_course'),
-    #
-    # # Learning Session views
+    # Learning Session views
     path('session/<int:pk>/', LearningSessionView.as_view(), name='learning_session'),
     path('session/<int:enrollment_id>/check-assessment/', CheckLessonAssessmentView.as_view(),
          name='check_lesson_assessment'),
-    #
-    # # История обучения
-    path('course/<int:enrollment_id>/history/', CourseHistoryView.as_view(), name='course_history'),
+
+    # История обучения
+    path('course/<int:pk>/history/', CourseHistoryView.as_view(), name='course_history'),
     path('lesson/<int:pk>/history/', LessonHistoryView.as_view(), name='lesson_history'),
+
+    # Учебные события
+    path('lesson-events/', LessonEventLogListView.as_view(), name='lesson_event_log_list'),
+
 ]

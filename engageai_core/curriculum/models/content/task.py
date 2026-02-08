@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -17,6 +19,12 @@ class TaskType(models.TextChoices):
     LISTENING = ('listening', _('Listening'))
     WRITING = ('writing', _('Writing'))
     SPEAKING = ('speaking', _('Speaking'))
+
+
+class TaskDifficulty(models.TextChoices):
+    EASY = ('easy', _('Легкое'))
+    MEDIUM = ('medium', _('Среднее'))
+    HARD = ('hard', _('Сложное'))
 
 
 class Task(models.Model):
@@ -67,10 +75,24 @@ class Task(models.Model):
     """
     objects = models.Manager()
 
+    DIFFICULTY_WEIGHTS = {
+        'easy': Decimal('0.5'),
+        'medium': Decimal('1.0'),
+        'hard': Decimal('2.0'),
+    }
+
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, null=True, blank=True, verbose_name=_("Lesson"),
                                related_name="tasks")
     task_type = models.CharField(max_length=20, choices=TaskType, verbose_name=_("Task Type"))
     response_format = models.CharField(max_length=20, choices=ResponseFormat, verbose_name=_("Response Format"))
+
+    difficulty = models.CharField(
+        max_length=10,
+        choices=TaskDifficulty.choices,
+        default=TaskDifficulty.MEDIUM,
+        verbose_name=_("Сложность задания"),
+        help_text=_("Легкое (0.5), Среднее (1.0), Сложное (2.0)")
+    )
     content = models.JSONField(verbose_name=_("Content"))
     # схема задается в engageai_core/curriculum/schemas.py:TASK_CONTENT_SCHEMAS
     content_schema_version = models.CharField(default="v1", verbose_name=_("Content Schema"))
@@ -87,7 +109,6 @@ class Task(models.Model):
     professional_tags = models.ManyToManyField(ProfessionalTag, blank=True, verbose_name=_("Professional Tags"))
     is_active = models.BooleanField(default=True, verbose_name=_("Задание актуально"))
     order = models.PositiveIntegerField(
-        default=0,
         verbose_name=_("Порядок задачи в уроке"),
         help_text=_("Порядок задания в уроке (чем меньше число, тем раньше задание)")
     )
@@ -124,3 +145,7 @@ class Task(models.Model):
             )['max_order'] or 0
             self.order = max_order + 1
         super().save(*args, **kwargs)
+
+    def get_difficulty_weight(self) -> Decimal:
+        """Возвращает вес сложности для расчетов"""
+        return self.DIFFICULTY_WEIGHTS.get(self.difficulty, Decimal('1.0'))

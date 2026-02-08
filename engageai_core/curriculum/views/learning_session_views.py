@@ -288,6 +288,7 @@ class LearningSessionView(LoginRequiredMixin, ChatContextMixin, TemplateView):
 
         for task_id, response_data in responses.items():
             response_text = response_data.get("text", "")
+
             audio_file = response_data.get("audio_file")
 
             existing_response = existing_responses.get(task_id)
@@ -318,6 +319,7 @@ class LearningSessionView(LoginRequiredMixin, ChatContextMixin, TemplateView):
                 logger.info(
                     f"Creating new response for task {task_id}, student {student.id}"
                 )
+                print(f"{response_text=}")
                 st = StudentTaskResponse.objects.create(
                     enrollment=enrollment,
                     student=student,

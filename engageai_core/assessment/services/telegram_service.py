@@ -56,9 +56,11 @@ class TelegramAssessmentService:
         chat, created = self._get_or_create_chat(user, assistant)
         reply_to_msg = self._get_reply_message(chat, incoming_message_id)
 
+        question_txt = question.task.content  # TODO добавить сохранение клавиатур это бахнется json
+
         ai_message = Message.objects.create(
             chat=chat,
-            content=question.question_json["question_text"],  # TODO добавить сохранение клавиатур
+            content=question_txt,  # TODO добавить сохранение клавиатур
             is_ai=True,
             source_type=MessageSource.TELEGRAM,
             sender=None,

@@ -1,4 +1,8 @@
 import html
+import os
+import sys
+from enum import StrEnum
+from pathlib import Path
 from typing import Union
 
 import yaml
@@ -11,14 +15,25 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, StateFilter
 
 from bots.services.utils import get_assistant_slug
-from bots.test_bot.config import YES_EMOJI, CUSTOMER_COMMANDS, NO_EMOJI, bot_logger, BOT_NAME
+from bots.test_bot.config import YES_EMOJI, CUSTOMER_COMMANDS, NO_EMOJI, bot_logger, BOT_NAME, EMPTY_CHECKBOX
 from bots.test_bot.filters.require_auth import AuthFilter
 from bots.test_bot.services.api_process import core_post, auto_context
 from bots.test_bot.services.sender import reply_and_update_last_message
 
+
 assessment_router = Router()
 
 bot_tag = f"[Bot:{BOT_NAME}]"
+
+
+class ResponseFormat(StrEnum):
+    """Обязательно синхронизировать с curriculum.models.content.response_format.ResponseFormat
+    при добавлении новых форматов заданий"""
+    MULTIPLE_CHOICE = "multiple_choice"
+    SINGLE_CHOICE = "single_choice"
+    SHORT_TEXT = "short_text"
+    FREE_TEXT = "free_text"
+    AUDIO = "audio"
 
 
 class AssessmentState(StatesGroup):
@@ -55,7 +70,7 @@ async def send_question(
     current_ai_response = data.get("current_ai_response")
 
     answer_text = session_message if session_message else ""
-    if question["type"] != "mcq":
+    if question["type"] in (ResponseFormat.MULTIPLE_CHOICE, ResponseFormat.SINGLE_CHOICE):
         intro = ""
         text_content = ""
         question_content = question_text
@@ -76,11 +91,32 @@ async def send_question(
                        f"\n\n{question_text}")
 
     answer_keyboard = None
-    if question["type"] == "mcq":
+    if question["type"] == ResponseFormat.SINGLE_CHOICE:
         buttons = [
-            [InlineKeyboardButton(text=o, callback_data=f"mcq_{index}")]
+            [InlineKeyboardButton(text=o, callback_data=f"mcq_single_{index}")]
             for index, o in enumerate(question["options"])
         ]
+        answer_keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    elif question["type"] == ResponseFormat.MULTIPLE_CHOICE:
+        selected = set(data.get("selected_options", []))
+        buttons = []
+
+        for i, o in enumerate(question["options"]):
+            prefix = f"\n\n{YES_EMOJI} " if i in selected else f"{EMPTY_CHECKBOX} "
+            buttons.append([
+                InlineKeyboardButton(
+                    text=prefix + o,
+                    callback_data=f"mcq_multi_{i}"
+                )
+            ])
+
+        buttons.append([
+            InlineKeyboardButton(
+                text="Готово",
+                callback_data="mcq_multi_done"
+            )
+        ])
+
         answer_keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
     await reply_and_update_last_message(
@@ -187,7 +223,7 @@ async def process_start_assessment_test(event: Union[Message, CallbackQuery], st
     assistant_slug = get_assistant_slug(reply_target.bot)
 
     ok, response = await core_post(
-        url="/assessment/api/v1/assessment/start/",
+        url="/api/v1/assessment/start/",
         payload={"user_telegram_id": user_telegram_id},
         context=context
     )
@@ -233,9 +269,11 @@ async def process_start_assessment_test(event: Union[Message, CallbackQuery], st
                             " и мотивирующее...</b>\n\n")
 
     # Устанавливаем состояние в зависимости от типа вопроса
-    if question["type"] == "mcq":
+    if question["type"] in (ResponseFormat.MULTIPLE_CHOICE, ResponseFormat.SINGLE_CHOICE):
         await state.set_state(AssessmentState.waiting_mcq_answer)
-    else:
+    elif question["type"] in (ResponseFormat.AUDIO, ):  # Требуется доработка под audio
+        await state.set_state(AssessmentState.waiting_text_answer)
+    else:  # question["type"] in (ResponseFormat.SHORT_TEXT, ResponseFormat.FREE_TEXT)
         await state.set_state(AssessmentState.waiting_text_answer)
 
     # Отправляем первый вопрос
@@ -257,21 +295,68 @@ async def mcq_answer(callback: CallbackQuery, state: FSMContext, **kwargs):
 
     assistant_slug = get_assistant_slug(callback.message.bot)
 
-    # Извлекаем ответ пользователя из callback без префикса
-    answer_index = callback.data.lstrip("mcq_")
-
     data = await state.get_data()
     assessment_test_data = data.get("assessment_test")
-
     session_id = assessment_test_data["session_id"]
-
     question = assessment_test_data.get("question")
     question_id = question["id"]
     q_options = question["options"]
 
-    answer = q_options[int(answer_index)]
+    parts = callback.data.split("_")
+    _, mode, payload = parts[0], parts[1], parts[2]
+    print(f"MCQ_ANSWER{question=}")
 
-    escaped_answer_text = html.escape(answer)
+    # answer = None
+    if mode == "single":
+        answer_index = int(payload)
+        print(f"MCQ_ANSWER single {answer_index=}")
+
+        answer = q_options[int(answer_index)]
+        print(f"MCQ_ANSWER single {answer=}")
+
+    elif mode == "multi" and payload != "done":
+        answer_index = int(payload)
+        selected = set(data.get("selected_options", []))
+
+        if answer_index in selected:
+            selected.remove(answer_index)
+            last_message_update_text = f"{NO_EMOJI} Отменен выбор - {q_options[int(answer_index)]}"
+        else:
+            selected.add(answer_index)
+            last_message_update_text = f"{YES_EMOJI} Выбран - {q_options[int(answer_index)]}"
+        answer = None
+
+        await state.update_data(selected_options=list(selected))
+        await send_question(
+            event=callback,
+            state=state,
+            last_message_update_text=last_message_update_text,
+            session_message=None,
+        )
+        return
+
+    elif mode == "multi" and payload == "done":
+        selected = data.get("selected_options", [])
+        print(f"MCQ_ANSWER multi {selected=}")
+        if not selected:
+            answer = None
+            last_message_update_text = "Выберите хотя бы один вариант"
+            await send_question(
+                event=callback,
+                state=state,
+                last_message_update_text=last_message_update_text,
+                session_message=None,
+            )
+            return
+        else:
+            answer = [q_options[int(index)] for index in selected]
+            print(f"MCQ_ANSWER multi {answer=}")
+            await state.update_data(selected_options=[])
+
+    if isinstance(answer, list):
+        escaped_answer_text = html.escape(" ,".join(answer))
+    else:
+        escaped_answer_text = html.escape(answer)
     last_message_update_text = f"\n\n{YES_EMOJI}\tОтвет получен\n\n<blockquote>{escaped_answer_text}</blockquote>"
 
     context = kwargs.get("context", {})  # получение контекста от auto_context
@@ -282,7 +367,7 @@ async def mcq_answer(callback: CallbackQuery, state: FSMContext, **kwargs):
     }
 
     ok, response = await core_post(
-        url=f"/assessment/api/v1/assessment/session/{session_id}/{question_id}/answer/",
+        url=f"/api/v1/assessment/session/{session_id}/{question_id}/answer/",
         payload=payload,
         context=context
     )
@@ -384,9 +469,16 @@ async def mcq_answer(callback: CallbackQuery, state: FSMContext, **kwargs):
         return
 
     # Устанавливаем новое состояние в зависимости от типа следующего вопроса
-    if next_question["type"] == "mcq":
+    # if next_question["type"] == "mcq":
+    #     await state.set_state(AssessmentState.waiting_mcq_answer)
+    # else:
+    #     await state.set_state(AssessmentState.waiting_text_answer)
+
+    if next_question["type"] in (ResponseFormat.MULTIPLE_CHOICE, ResponseFormat.SINGLE_CHOICE):
         await state.set_state(AssessmentState.waiting_mcq_answer)
-    else:
+    elif next_question["type"] in (ResponseFormat.AUDIO, ):  # Требуется доработка под audio
+        await state.set_state(AssessmentState.waiting_text_answer)
+    else:  # question["type"] in (ResponseFormat.SHORT_TEXT, ResponseFormat.FREE_TEXT)
         await state.set_state(AssessmentState.waiting_text_answer)
 
     await send_question(
@@ -401,7 +493,7 @@ async def mcq_answer(callback: CallbackQuery, state: FSMContext, **kwargs):
 async def handle_text_during_mcq(message: Message, state: FSMContext):
     session_message = f"<b>Пожалуйста, выберите вариант ответа, нажав на соответствующую кнопку под вопросом.</b> \n\n"
     last_message_update_text = f"\n\n{NO_EMOJI}\tНеправильный выбор"
-
+    bot_logger.error(f"Неправильный выбор {message=} {state=}")
     await state.update_data(
         current_ai_response={}
     )
@@ -419,6 +511,7 @@ async def handle_text_during_mcq(message: Message, state: FSMContext):
 async def handle_callback_during_text_answer(callback: CallbackQuery, state: FSMContext):
     session_message = f"<b>Пожалуйста ответьте на задание текстом</b>\n\n"
     last_message_update_text = f"\n\n{NO_EMOJI}\tНеправильный выбор"
+    bot_logger.error(f"Неправильный выбор {callback.data=} {state=}")
 
     await state.update_data(
         current_ai_response={}
@@ -457,7 +550,7 @@ async def process_text_answer(message: Message, state: FSMContext, **kwargs):
     }
 
     ok, response = await core_post(
-        url=f"/assessment/api/v1/assessment/session/{session_id}/{question['id']}/answer/",
+        url=f"/api/v1/assessment/session/{session_id}/{question['id']}/answer/",
         payload=payload,
         context=context
     )
@@ -558,10 +651,18 @@ async def process_text_answer(message: Message, state: FSMContext, **kwargs):
         return
 
     # Устанавливаем новое состояние в зависимости от типа следующего вопроса
-    if next_question["type"] == "mcq":
+    # if next_question["type"] == "mcq":
+    #     await state.set_state(AssessmentState.waiting_mcq_answer)
+    # else:
+    #     await state.set_state(AssessmentState.waiting_text_answer)
+
+    if next_question["type"] in (ResponseFormat.MULTIPLE_CHOICE, ResponseFormat.SINGLE_CHOICE):
         await state.set_state(AssessmentState.waiting_mcq_answer)
-    else:
+    elif next_question["type"] in (ResponseFormat.AUDIO, ):  # Требуется доработка под audio
         await state.set_state(AssessmentState.waiting_text_answer)
+    else:  # question["type"] in (ResponseFormat.SHORT_TEXT, ResponseFormat.FREE_TEXT)
+        await state.set_state(AssessmentState.waiting_text_answer)
+
 
     await send_question(
         event=message,

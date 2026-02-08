@@ -17,19 +17,20 @@
                     <span class="navbar__link-text">Обучение</span>
                 </a>
             </li> {% endcomment %}
-            <li class="navbar__item">
-                <a href="#" class="navbar__link">
-                    <i class="fas fa-dumbbell navbar__link-icon"></i>
-                    <span class="navbar__link-text">Практика</span>
-                </a>
-            </li>
-            <li class="navbar__item">
-                <a href="{% url 'curriculum:course_list' %}" class="navbar__link  navbar__link--active">
-                    <i class="fas fa-book-open navbar__link-icon"></i>
-                    <span class="navbar__link-text">Курсы</span>
-                </a>
-            </li>
             {% if request.user.is_authenticated %}
+                <li class="navbar__item">
+                    <a href="#" class="navbar__link">
+                        <i class="fas fa-dumbbell navbar__link-icon"></i>
+                        <span class="navbar__link-text">Практика</span>
+                    </a>
+                </li>
+                <li class="navbar__item">
+                    <a href="{% url 'curriculum:course_list' %}" class="navbar__link  navbar__link--active">
+                        <i class="fas fa-book-open navbar__link-icon"></i>
+                        <span class="navbar__link-text">Курсы</span>
+                    </a>
+                </li>
+            
                 <li class="navbar__item">
                     <a href="{% url 'chat:ai-chat' 'main_orchestrator' %}" class="navbar__link">
                         <i class="fas fa-comments navbar__link-icon"></i>
@@ -42,41 +43,42 @@
                         <span class="navbar__link-text">История</span>
                     </a>
                 </li>
+                <li class="navbar__item">
+                    <a href="{% url 'llm_logger:analytics' %}" class="navbar__link">
+                        <i class="fas fa-chart-bar navbar__link-icon"></i>
+                        <span class="navbar__link-text">Аналитика</span>
+                    </a>
+                </li>
             {% endif %}
-            <li class="navbar__item">
-                <a href="{% url 'llm_logger:analytics' %}" class="navbar__link">
-                    <i class="fas fa-chart-bar navbar__link-icon"></i>
-                    <span class="navbar__link-text">Аналитика</span>
-                </a>
-            </li>
         </ul>
 
         <!-- Правая часть: тема + пользователь -->
         <div class="navbar__right">
             <!-- Поиск -->
-            <div class="navbar__search">
-                <button class="navbar__search-btn" aria-label="Поиск">
-                    <i class="fas fa-search"></i>
-                </button>
-                <div class="navbar__search-dropdown">
-                    <input type="text" class="navbar__search-input" placeholder="Поиск...">
-                    <div class="navbar__search-results">
-                        <div class="navbar__search-result">
-                            <i class="fas fa-file-alt"></i>
-                            <span>Материалы по машинному обучению</span>
-                        </div>
-                        <div class="navbar__search-result">
-                            <i class="fas fa-video"></i>
-                            <span>Видеоуроки Python</span>
-                        </div>
-                        <div class="navbar__search-result">
-                            <i class="fas fa-book"></i>
-                            <span>Курс по нейросетям</span>
+            {% if request.user.is_authenticated %}
+                <div class="navbar__search">
+                    <button class="navbar__search-btn" aria-label="Поиск">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <div class="navbar__search-dropdown">
+                        <input type="text" class="navbar__search-input" placeholder="Поиск...">
+                        <div class="navbar__search-results">
+                            <div class="navbar__search-result">
+                                <i class="fas fa-file-alt"></i>
+                                <span>Материалы по машинному обучению</span>
+                            </div>
+                            <div class="navbar__search-result">
+                                <i class="fas fa-video"></i>
+                                <span>Видеоуроки Python</span>
+                            </div>
+                            <div class="navbar__search-result">
+                                <i class="fas fa-book"></i>
+                                <span>Курс по нейросетям</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-
+            {% endif %}
             <!-- Компактный переключатель тем -->
             <div class="theme-switcher" aria-label="Сменить тему">
                 <button class="theme-switcher__btn theme-switcher__btn--light" data-theme="light" title="Светлая тема">
@@ -89,53 +91,55 @@
                     <i class="fas fa-moon"></i>
                 </button>
             </div>
+            {% if request.user.is_authenticated %}
+                <div class="navbar__notifications">
+                    <button class="navbar__notifications-btn" aria-label="Уведомления">
+                        <i class="fas fa-bell"></i>
+                        <span class="navbar__notifications-badge">3</span>
+                    </button>
+                    <div class="navbar__notifications-dropdown">
+                        <div class="navbar__notifications-header">
+                            <h3>Уведомления</h3>
+                            <button class="navbar__notifications-clear">Очистить</button>
+                        </div>
+                        <div class="navbar__notifications-list">
+                            <div class="navbar__notification">
+                                <div class="navbar__notification-icon navbar__notification-icon--success">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="navbar__notification-content">
+                                    <p class="navbar__notification-title">Курс завершен</p>
+                                    <p class="navbar__notification-text">Вы успешно завершили курс "Основы Python"</p>
+                                    <time class="navbar__notification-time">2 часа назад</time>
+                                </div>
+                            </div>
+                            <div class="navbar__notification">
+                                <div class="navbar__notification-icon navbar__notification-icon--info">
+                                    <i class="fas fa-info-circle"></i>
+                                </div>
+                                <div class="navbar__notification-content">
+                                    <p class="navbar__notification-title">Новое задание</p>
+                                    <p class="navbar__notification-text">Доступно новое практическое задание</p>
+                                    <time class="navbar__notification-time">5 часов назад</time>
+                                </div>
+                            </div>
+                            <div class="navbar__notification">
+                                <div class="navbar__notification-icon navbar__notification-icon--warning">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                                <div class="navbar__notification-content">
+                                    <p class="navbar__notification-title">Срок истекает</p>
+                                    <p class="navbar__notification-text">У вас осталось 2 дня на выполнение модуля</p>
+                                    <time class="navbar__notification-time">Вчера</time>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="#" class="navbar__notifications-view-all">Посмотреть все</a>
+                    </div>
+                </div>
+            {% endif %}
 
             <!-- Уведомления -->
-            <div class="navbar__notifications">
-                <button class="navbar__notifications-btn" aria-label="Уведомления">
-                    <i class="fas fa-bell"></i>
-                    <span class="navbar__notifications-badge">3</span>
-                </button>
-                <div class="navbar__notifications-dropdown">
-                    <div class="navbar__notifications-header">
-                        <h3>Уведомления</h3>
-                        <button class="navbar__notifications-clear">Очистить</button>
-                    </div>
-                    <div class="navbar__notifications-list">
-                        <div class="navbar__notification">
-                            <div class="navbar__notification-icon navbar__notification-icon--success">
-                                <i class="fas fa-check-circle"></i>
-                            </div>
-                            <div class="navbar__notification-content">
-                                <p class="navbar__notification-title">Курс завершен</p>
-                                <p class="navbar__notification-text">Вы успешно завершили курс "Основы Python"</p>
-                                <time class="navbar__notification-time">2 часа назад</time>
-                            </div>
-                        </div>
-                        <div class="navbar__notification">
-                            <div class="navbar__notification-icon navbar__notification-icon--info">
-                                <i class="fas fa-info-circle"></i>
-                            </div>
-                            <div class="navbar__notification-content">
-                                <p class="navbar__notification-title">Новое задание</p>
-                                <p class="navbar__notification-text">Доступно новое практическое задание</p>
-                                <time class="navbar__notification-time">5 часов назад</time>
-                            </div>
-                        </div>
-                        <div class="navbar__notification">
-                            <div class="navbar__notification-icon navbar__notification-icon--warning">
-                                <i class="fas fa-exclamation-triangle"></i>
-                            </div>
-                            <div class="navbar__notification-content">
-                                <p class="navbar__notification-title">Срок истекает</p>
-                                <p class="navbar__notification-text">У вас осталось 2 дня на выполнение модуля</p>
-                                <time class="navbar__notification-time">Вчера</time>
-                            </div>
-                        </div>
-                    </div>
-                    <a href="#" class="navbar__notifications-view-all">Посмотреть все</a>
-                </div>
-            </div>
 
             <!-- Личный кабинет / Авторизация -->
             <div class="navbar__user">

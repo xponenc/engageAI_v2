@@ -245,7 +245,6 @@ async def internal_update(
         except Exception as e:
             logger.error(f"Ошибка при проверке дубликата в Redis: {e}")
             # При ошибке продолжаем обработку (лучше обработать лишний раз, чем потерять апдейт)
-
     # background_tasks.add_task(
     #     feed_update_with_retry,
     #     bot_conf["bot"],

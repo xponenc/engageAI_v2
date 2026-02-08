@@ -6,6 +6,10 @@ from pathlib import Path
 from celery.signals import worker_ready, worker_shutdown
 from dotenv import load_dotenv
 
+import sys
+import os
+from pathlib import Path
+
 load_dotenv()
 
 REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')

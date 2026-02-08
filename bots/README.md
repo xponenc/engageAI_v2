@@ -147,3 +147,4 @@ handlers/z_fallback.py
 ```
 
 4. Перезапустить сервер — бот будет загружен автоматически.
+5ю celery -A bots.celery_app worker --loglevel=INFO --pool=solo --queues=telegram_updates,drf_save

@@ -19,8 +19,8 @@ from .test_flow import (
     can_generate_next_main_packet,
     finalize_session,
 )
-from .process_llm import evaluate_open_answer, generate_final_recommendations, task_evaluate_open_answer, \
-    task_generate_final_report
+from .process_llm import task_generate_final_report
+from ..tasks import evaluate_answer_to_test_task
 
 assessment_logger = setup_logger(name=__file__, log_dir="logs/core/assessment", log_file="assessment.log")
 
@@ -81,7 +81,6 @@ def get_next_question_for_session(session: TestSession, source_question_request:
 
     if not next_question and can_generate_next_main_packet(session):
         low, high = determine_range_from_diagnostic(session)
-        print(f"{low=} {high=}")
         exclude_tasks = [qi.task_id for qi in session.questions.all() if qi.task]
         load_questions_for_range(session, low, high, exclude_tasks)
         next_question = get_next_unanswered_question(session)
@@ -122,31 +121,49 @@ def get_next_question_for_session(session: TestSession, source_question_request:
 #
 #     return ans
 
-def submit_answer(session, qinst, answer_text):
+def submit_answer(
+        user: 'User',
+        session: TestSession,
+        qinst: QuestionInstance,
+        answer_text: str):
     """Обработка ответа с учетом Task.content"""
-
-    auto_adapter = AutoAssessorAdapter()
-    llm_adapter = LLMAssessmentAdapter()
 
     task = qinst.task
 
-    if task.response_format in AutoAssessorAdapter.SUPPORTED_FORMATS:
-        result = auto_adapter.assess_task(task, answer_text)
-    else:
-        result = llm_adapter.assess_task(task, answer_text)
+    if task.response_format == "audio":
+        audio_file = ""  # TODO загрузка файла из Telegram
+        test_answer = TestAnswer.objects.create(
+            question=qinst,
+            audio_file=audio_file,
+        )
 
-    ans.ai_feedback = {
-        "task_id": result.task_id,
-        "is_correct": result.is_correct,
-        "cefr_target": result.cefr_target,
-        "skill_evaluation": result.skill_evaluation,
-        "summary": result.summary,
-        "error_tags": result.error_tags,
-        "metadata": result.metadata,
-    }
-    ans.save()
-    assessment_logger.info(f"Обработан ответ для QuestionInstance {qinst.id}, score: {ans.score}")
-    return ans
+        # TODO: постановка задачи на транскрибацию
+        # enqueue_audio_transcription(answer.id)
+
+    else:
+        if task.response_format == 'multiple_choice':
+            answer = []  # видимо массив
+        else:
+            answer = answer_text.strip()
+        test_answer = TestAnswer.objects.create(
+            question=qinst,
+            response_text=answer,
+            answered_at=timezone.now()
+        )
+
+        result = evaluate_answer_to_test_task.delay(
+            test_answer_id=test_answer.pk,
+            user_id=user.id,
+            test_session_id=session.id
+        )
+    #
+    # if task.response_format in AutoAssessorAdapter.SUPPORTED_FORMATS:
+    #     result = auto_adapter.assess_task(task, test_answer)
+    # else:
+    #     result = llm_adapter.assess_task(task, test_answer)
+
+    assessment_logger.info(f"Создан ответ для QuestionInstance {qinst.id}")
+    return test_answer
 
 
 def finish_assessment(session):

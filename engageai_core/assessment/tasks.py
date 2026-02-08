@@ -21,12 +21,12 @@ def evaluate_answer_to_test_task(
     llm_adapter = LLMAssessmentAdapter()
 
     try:
-
+        print(test_answer)
         if task.response_format in AutoAssessorAdapter.SUPPORTED_FORMATS:
             result = auto_adapter.assess_task(task, test_answer)
         else:
             result = llm_adapter.assess_task(task, test_answer)
-
+        print(result)
         test_answer.ai_feedback = {
             "task_id": result.task_id,
             "is_correct": result.is_correct,

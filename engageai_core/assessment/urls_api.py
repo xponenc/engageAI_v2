@@ -4,5 +4,5 @@ app_name = "assessment-api"
 
 # API-версия
 urlpatterns = [
-    path("assessment/", include("assessment.api.urls")),
+    path("", include("assessment.api.urls")),
 ]

@@ -29,6 +29,8 @@ async def forward_update(bot_name: str, bot_conf, update_data: dict):
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+                # print(f'{GATEWAY_SETTINGS.internal_bot_api_url}, headers={{"X-Internal-Key": {bot_conf.internal_key}}},'
+                #       f' json={{"bot_name": {bot_name}, "update": {update_data}}}')
                 resp = await client.post(
                     GATEWAY_SETTINGS.internal_bot_api_url,
                     headers={"X-Internal-Key": bot_conf.internal_key},

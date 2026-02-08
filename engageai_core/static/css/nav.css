@@ -448,6 +448,8 @@
 /* Пользователь */
 .navbar__user {
     position: relative;
+    display: flex;
+    gap: 8px;
 }
 
 .navbar__user-avatar {

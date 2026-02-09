@@ -1239,6 +1239,7 @@
 
 .telegram-method__invite-code {
     font-size: 1.1em;
+    font-weight: 600;
 }
 
 .telegram-connect__features {

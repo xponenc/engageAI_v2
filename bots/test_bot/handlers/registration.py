@@ -189,7 +189,7 @@ async def receive_registration_code(message: Message, state: FSMContext, **kwarg
     if not ok:
         bot_logger.error(f"{bot_tag} Ошибка при регистрации пользователя telegram_id={user_telegram_id}: {response}")
 
-        await message.bot.set_my_commands(MAIN_MENU + GUEST_MENU, scope=BotCommandScopeChat(chat_id=message.chat.id))
+        # await message.bot.set_my_commands(MAIN_MENU + GUEST_MENU, scope=BotCommandScopeChat(chat_id=message.chat.id))
         answer_text = "Хьюстон, у нас проблема...попробуй еще раз попозже, мы уже все чиним"
         last_message_update_text = f"\n\n{NO_EMOJI}\t Код не получен"
 
@@ -252,7 +252,7 @@ async def receive_registration_code(message: Message, state: FSMContext, **kwarg
     bot_logger.info(f"[{BOT_NAME}] Привязан аккаунт для telegram ID {user_telegram_id}:\n\t{profile} ")
 
     # await message.bot.set_my_commands([])
-    await message.bot.set_my_commands(MAIN_MENU + CUSTOMER_MENU, scope=BotCommandScopeChat(chat_id=message.chat.id))
+    # await message.bot.set_my_commands(MAIN_MENU + CUSTOMER_MENU, scope=BotCommandScopeChat(chat_id=message.chat.id))
 
     answer_text = (f"Привет, {profile['user_first_name']}\n\nСтартовое меню\n\n"
                    + "\n\n".join(f'{command.get("name")} - {command.get("help_text")}'

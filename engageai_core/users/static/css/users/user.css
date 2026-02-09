@@ -1237,6 +1237,10 @@
     margin: 8px 0 0 0;
 }
 
+.telegram-method__invite-code {
+    font-size: 1.1em;
+}
+
 .telegram-connect__features {
     background: var(--color-surface-alt);
     border-radius: var(--radius-md);

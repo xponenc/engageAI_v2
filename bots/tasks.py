@@ -4,6 +4,7 @@ import logging
 import sys
 
 import yaml
+from asgiref.sync import async_to_sync
 
 from .celery_app import celery_app
 from .bots_engine import feed_update_with_retry
@@ -54,13 +55,20 @@ def process_update_task(self, bot_name: str, update_data: dict):
             ))
         else:
             # Linux / любой нормальный пул → чистый asyncio.run
-            return asyncio.run(_async_process_update(
+            # return asyncio.run(_async_process_update(
+            #     bot_name=bot_name,
+            #     bot=bot,
+            #     dispatcher=dp,
+            #     update_data=update_data,
+            #     assistant_slug=assistant_slug
+            # ))
+            return async_to_sync(_async_process_update)(
                 bot_name=bot_name,
-                bot=bot,
-                dispatcher=dp,
+                bot=bot_conf["bot"],
+                dispatcher=bot_conf["dp"],
                 update_data=update_data,
-                assistant_slug=assistant_slug
-            ))
+                assistant_slug=bot_conf["assistant_slug"],
+            )
 
     except Exception as e:
         logger.exception(f"{bot_tag} Update ID {update_id} Критическая ошибка в задаче Celery: {e}")

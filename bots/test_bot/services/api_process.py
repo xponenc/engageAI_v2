@@ -6,7 +6,6 @@ from typing import Callable, Any
 import httpx
 import yaml
 from aiogram.types import Message, CallbackQuery
-from asgiref.sync import async_to_sync
 
 from bots.test_bot.config import CORE_API, BOT_INTERNAL_KEY, bot_logger, BOT_NAME
 
@@ -193,27 +192,87 @@ def auto_context(explicit_caller: str = None):
         await core_post(url="...", payload=...)  # context добавится автоматически!
     """
 
+    # def decorator(func: Callable) -> Callable:
+    #     @functools.wraps(func)
+    #     async def async_wrapper(*args, **kwargs) -> Any:
+    #         return await _add_context(func, explicit_caller, *args, **kwargs)
+    #
+    #     @functools.wraps(func)
+    #     def sync_wrapper(*args, **kwargs) -> Any:
+    #         return _add_context(func, explicit_caller, *args, **kwargs)
+    #
+    #     # Возвращаем async или sync версию в зависимости от оригинальной функции
+    #     return async_wrapper if inspect.iscoroutinefunction(func) else sync_wrapper
+    #
+    # return decorator
+
     def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs) -> Any:
-            return async_to_sync(_add_context)(func, explicit_caller, *args, **kwargs)
+        if inspect.iscoroutinefunction(func):
+            @functools.wraps(func)
+            async def async_wrapper(*args, **kwargs) -> Any:
+                args, kwargs = _prepare_context(func, explicit_caller, *args, **kwargs)
+                return await func(*args, **kwargs)
 
-        @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs) -> Any:
-            return _add_context(func, explicit_caller, *args, **kwargs)
+            return async_wrapper
+        else:
+            @functools.wraps(func)
+            def sync_wrapper(*args, **kwargs) -> Any:
+                args, kwargs = _prepare_context(func, explicit_caller, *args, **kwargs)
+                return func(*args, **kwargs)
 
-        # Возвращаем async или sync версию в зависимости от оригинальной функции
-        return async_wrapper if inspect.iscoroutinefunction(func) else sync_wrapper
+            return sync_wrapper
 
     return decorator
 
 
-def _add_context(func, explicit_caller: str, *args, **kwargs):
+def _prepare_context(func, explicit_caller: str, *args, **kwargs):
     """
     Формирует context для core_post автоматически.
     Работает для Message и CallbackQuery.
     """
     # TODO надо расширить
+    # func_name = explicit_caller or func.__name__
+    # module_name = func.__module__
+    #
+    # context = {
+    #     "handler": f"{func_name} ({module_name})",
+    #     "function": func_name,
+    #     "caller_module": module_name,
+    # }
+    #
+    # event = None
+    # for arg in args:
+    #     if isinstance(arg, (Message, CallbackQuery)):
+    #         event = arg
+    #         break
+    #
+    # if isinstance(event, Message):
+    #     context["event_type"] = "message"
+    #     context["user_id"] = event.from_user.id
+    #     context["user_telegram_id"] = event.from_user.id
+    #     context["chat_id"] = event.chat.id
+    #     context["message_id"] = event.message_id
+    #
+    # elif isinstance(event, CallbackQuery):
+    #     context["event_type"] = "callback"
+    #     context["user_id"] = event.from_user.id
+    #     context["user_telegram_id"] = event.from_user.id
+    #
+    #     # callback может быть без .message → inline mode
+    #     if event.message:
+    #         # context["user_id"] = event.message.from_user.id
+    #         # context["user_telegram_id"] = event.from_user.id
+    #         context["chat_id"] = event.message.chat.id
+    #         context["message_id"] = event.message.message_id
+    #     else:
+    #         # inline callback — chat_id нет
+    #         context["chat_id"] = None
+    #         context["message_id"] = None
+    #
+    # kwargs.setdefault("context", {}).update(context)
+    #
+    # return func(*args, **kwargs)
+
     func_name = explicit_caller or func.__name__
     module_name = func.__module__
 
@@ -223,35 +282,40 @@ def _add_context(func, explicit_caller: str, *args, **kwargs):
         "caller_module": module_name,
     }
 
-    event = None
-    for arg in args:
-        if isinstance(arg, (Message, CallbackQuery)):
-            event = arg
-            break
+    # Extract Telegram event (Message/CallbackQuery) from args
+    event = next(
+        (arg for arg in args if isinstance(arg, (Message, CallbackQuery))),
+        None
+    )
 
     if isinstance(event, Message):
-        context["event_type"] = "message"
-        context["user_id"] = event.from_user.id
-        context["user_telegram_id"] = event.from_user.id
-        context["chat_id"] = event.chat.id
-        context["message_id"] = event.message_id
-
+        context.update({
+            "event_type": "message",
+            "user_id": event.from_user.id,
+            "user_telegram_id": event.from_user.id,
+            "chat_id": event.chat.id,
+            "message_id": event.message_id,
+        })
     elif isinstance(event, CallbackQuery):
-        context["event_type"] = "callback"
-        context["user_id"] = event.from_user.id
-        context["user_telegram_id"] = event.from_user.id
-
-        # callback может быть без .message → inline mode
+        context.update({
+            "event_type": "callback",
+            "user_id": event.from_user.id,
+            "user_telegram_id": event.from_user.id,
+        })
         if event.message:
-            # context["user_id"] = event.message.from_user.id
-            # context["user_telegram_id"] = event.from_user.id
-            context["chat_id"] = event.message.chat.id
-            context["message_id"] = event.message.message_id
+            context.update({
+                "chat_id": event.message.chat.id,
+                "message_id": event.message.message_id,
+            })
         else:
-            # inline callback — chat_id нет
-            context["chat_id"] = None
-            context["message_id"] = None
+            context.update({
+                "chat_id": None,
+                "message_id": None,
+            })
 
-    kwargs.setdefault("context", {}).update(context)
+    # Merge with existing context (preserve user-provided values)
+    existing_context = kwargs.get("context", {})
+    merged_context = {**existing_context, **context}
+    kwargs = {**kwargs, "context": merged_context}
 
-    return func(*args, **kwargs)
+    return args, kwargs

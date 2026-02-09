@@ -1,6 +1,8 @@
 import asyncio
 import sys
 
+from asgiref.sync import async_to_sync
+
 from bots.test_bot.config import BOT_NAME, bot_logger
 from bots.test_bot.services.api_process import auto_context, core_post
 from ..celery_app import celery_app
@@ -20,10 +22,14 @@ def process_save_message(self, payload: dict):
         ))
     else:
         # Linux / любой нормальный пул → чистый asyncio.run
-        return asyncio.run(_save_update_to_drf(
+        # return asyncio.run(_save_update_to_drf(
+        #     url=url,
+        #     payload=payload,
+        # ))
+        return async_to_sync(_save_update_to_drf)(
             url=url,
             payload=payload,
-        ))
+        )
 
 
 @auto_context()

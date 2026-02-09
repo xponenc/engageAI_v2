@@ -102,7 +102,7 @@ async def send_question(
         buttons = []
 
         for i, o in enumerate(question["options"]):
-            prefix = f"\n\n{YES_EMOJI} " if i in selected else f"{EMPTY_CHECKBOX} "
+            prefix = f"{YES_EMOJI} " if i in selected else f"{EMPTY_CHECKBOX} "
             buttons.append([
                 InlineKeyboardButton(
                     text=prefix + o,
@@ -304,15 +304,12 @@ async def mcq_answer(callback: CallbackQuery, state: FSMContext, **kwargs):
 
     parts = callback.data.split("_")
     _, mode, payload = parts[0], parts[1], parts[2]
-    print(f"MCQ_ANSWER{question=}")
 
     # answer = None
     if mode == "single":
         answer_index = int(payload)
-        print(f"MCQ_ANSWER single {answer_index=}")
 
         answer = q_options[int(answer_index)]
-        print(f"MCQ_ANSWER single {answer=}")
 
     elif mode == "multi" and payload != "done":
         answer_index = int(payload)
@@ -320,10 +317,10 @@ async def mcq_answer(callback: CallbackQuery, state: FSMContext, **kwargs):
 
         if answer_index in selected:
             selected.remove(answer_index)
-            last_message_update_text = f"{NO_EMOJI} Отменен выбор - {q_options[int(answer_index)]}"
+            last_message_update_text = f"\n\n{NO_EMOJI} Отменен выбор - {q_options[int(answer_index)]}"
         else:
             selected.add(answer_index)
-            last_message_update_text = f"{YES_EMOJI} Выбран - {q_options[int(answer_index)]}"
+            last_message_update_text = f"\n\n{YES_EMOJI} Выбран - {q_options[int(answer_index)]}"
         answer = None
 
         await state.update_data(selected_options=list(selected))

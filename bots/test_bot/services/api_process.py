@@ -6,6 +6,7 @@ from typing import Callable, Any
 import httpx
 import yaml
 from aiogram.types import Message, CallbackQuery
+from asgiref.sync import async_to_sync
 
 from bots.test_bot.config import CORE_API, BOT_INTERNAL_KEY, bot_logger, BOT_NAME
 
@@ -195,7 +196,7 @@ def auto_context(explicit_caller: str = None):
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         async def async_wrapper(*args, **kwargs) -> Any:
-            return await _add_context(func, explicit_caller, *args, **kwargs)
+            return async_to_sync(_add_context)(func, explicit_caller, *args, **kwargs)
 
         @functools.wraps(func)
         def sync_wrapper(*args, **kwargs) -> Any:
